@@ -1,0 +1,59 @@
+{
+  "name": "@bcpros/ecash-escrow",
+  "version": "0.0.1",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "build:app": "turbo run build --filter=@bcpros/telegram-ecash-escrow",
+    "dev": "turbo run dev --parallel --no-cache",
+    "dev:next": "turbo run dev --filter=@bcpros/telegram-ecash-escrow --no-cache",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.7",
+    "@typescript-eslint/eslint-plugin": "^7.9.0",
+    "@typescript-eslint/parser": "^7.9.0",
+    "eslint": "8.56.0",
+    "husky": "^9.0.11",
+    "prettier": "^3.2.5",
+    "syncpack": "^12.3.2",
+    "turbo": "^2.0.12"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "lint-staged": {
+    "**/*.{json,css,scss,md}": [
+      "prettier --write"
+    ],
+    "**/*.css": "stylelint --fix",
+    "**/*.{js,jsx,ts,tsx}": [
+      "prettier --write"
+    ]
+  },
+  "dependencies": {
+    "prettier-plugin-organize-imports": "^3.2.4",
+    "prettier-plugin-packagejson": "2.5.0",
+    "prettier-plugin-stylex-key-sort": "^1.0.1"
+  },
+  "packageManager": "pnpm@7.0.0",
+  "resolutions": {
+    "@abcpros/bitcore-lib": "8.25.43"
+  },
+  "pnpm": {
+    "overrides": {
+      "cookie": "^0.7.0",
+      "micromatch": "^4.0.8",
+      "ws": "8.17.1",
+      "axios": "0.28.0",
+      "elliptic": "6.5.7"
+    }
+  }
+}

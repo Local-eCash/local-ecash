@@ -1,0 +1,17 @@
+node_modules
+dist
+build
+public
+storybook-static
+types
+model
+
+# nextjs
+.next
+next.config.js
+out
+
+# test
+coverage/*
+__stubs__
+__snapshots__
