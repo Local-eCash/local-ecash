@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  OfferQueryItem,
   OfferStatus,
   openActionSheet,
   PostQueryItem,
@@ -50,13 +51,15 @@ const OfferDetailWrap = styled.div`
 
 type OfferItemProps = {
   timelineItem?: TimelineQueryItem;
+  offer?: OfferQueryItem;
+  isItemTimeline?: boolean;
 };
 
-const OfferDetailInfo = ({ timelineItem }: OfferItemProps) => {
+const OfferDetailInfo = ({ timelineItem, offer, isItemTimeline = true }: OfferItemProps) => {
   const dispatch = useLixiSliceDispatch();
   const router = useRouter();
   const postData = timelineItem?.data as PostQueryItem;
-  const offerData = postData?.postOffer;
+  const offerData = postData?.postOffer ?? offer;
   const countryName = offerData?.country?.name;
   const stateName = offerData?.state?.name;
 
@@ -72,7 +75,7 @@ const OfferDetailInfo = ({ timelineItem }: OfferItemProps) => {
           <span className="prefix">Headline: </span>
           {offerData?.message}
         </Typography>
-        {offerData?.status === OfferStatus.Active && (
+        {offerData?.status === OfferStatus.Active && isItemTimeline && (
           <IconButton onClick={e => handleClickAction(e)}>
             <MoreHorizIcon />
           </IconButton>

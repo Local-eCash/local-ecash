@@ -350,7 +350,9 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
         if (!foundUtxo) throw new Error('No suitable UTXO found!');
 
         const totalAmountEscrow =
-          Number(amountXEC) + calDisputeFee * 2 + estimatedFee(Buffer.from(scriptSmartContract.bytecode).toString('hex'));
+          Number(amountXEC) +
+          calDisputeFee * 2 +
+          estimatedFee(Buffer.from(scriptSmartContract.bytecode).toString('hex'));
         const scriptEscrow = new Script(scriptSmartContract.bytecode);
         hexTxBuyerDeposit = buyerDepositFee(foundUtxo, buyerSk, buyerPk, totalAmountEscrow, scriptEscrow);
       }

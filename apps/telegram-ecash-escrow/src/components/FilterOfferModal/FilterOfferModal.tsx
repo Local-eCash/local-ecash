@@ -15,17 +15,16 @@ import {
 import styled from '@emotion/styled';
 import { CloseOutlined } from '@mui/icons-material';
 import {
-  Autocomplete,
-  Box,
   Button,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   FormControl,
-  FormHelperText,
   Grid,
   IconButton,
+  InputLabel,
+  NativeSelect,
   Slide,
   TextField,
   Typography,
@@ -35,6 +34,7 @@ import {
 import { TransitionProps } from '@mui/material/transitions';
 import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
+import FilterListModal from '../FilterList/FilterListModal';
 
 interface FilterOfferModalProps {
   isOpen: boolean;
@@ -163,7 +163,10 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
       coin: null
     }
   });
+
   const [selectedOptionsPayment, setSelectedOptionsPayment] = useState<number[]>([]);
+  const [openCountryList, setOpenCountryList] = useState(false);
+  const [openStateList, setOpenStateList] = useState(false);
 
   const dispatch = useLixiSliceDispatch();
   const paymenthods = useLixiSliceSelector(getAllPaymentMethods);
@@ -190,8 +193,8 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
       countryName: country && country.name,
       stateName: state && state.name,
       paymentMethodIds: selectedOptionsPayment,
-      coin: coin && coin.ticker,
-      fiatCurrency: currency && currency.code
+      coin: coin ? coin : null,
+      fiatCurrency: currency ? currency : null
     };
 
     dispatch(saveOfferFilterConfig(offerFilterInput));
@@ -255,32 +258,28 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
                   control={control}
                   render={({ field: { onChange, onBlur, value, ref } }) => (
                     <FormControl fullWidth>
-                      <Autocomplete
-                        id="currency-select"
-                        options={LIST_CURRENCIES_USED}
-                        autoHighlight
-                        getOptionLabel={option => (option ? `${option.name} (${option.code})` : '')}
-                        value={value}
+                      <InputLabel variant="outlined" htmlFor="select-currency">
+                        Currency
+                      </InputLabel>
+                      <NativeSelect
+                        id="select-currency"
+                        value={value ?? ''}
                         onBlur={onBlur}
                         ref={ref}
-                        onChange={(e, value) => {
-                          onChange(value);
+                        onChange={e => {
+                          onChange(e);
                           setValue('coin', null);
                         }}
-                        renderOption={(props, option) => {
-                          const { ...optionProps } = props;
-
+                      >
+                        <option aria-label="None" value="" />
+                        {LIST_CURRENCIES_USED.map(item => {
                           return (
-                            <Box {...optionProps} key={option.code} component="li">
-                              {option.name} ({option.code})
-                            </Box>
+                            <option key={item.code} value={item.code}>
+                              {item.name} ({item.code})
+                            </option>
                           );
-                        }}
-                        renderInput={params => <TextField {...params} label="Currency" />}
-                      />
-                      {errors && errors?.currency && (
-                        <FormHelperText error={true}>{errors.currency.message as string}</FormHelperText>
-                      )}
+                        })}
+                      </NativeSelect>
                     </FormControl>
                   )}
                 />
@@ -291,32 +290,28 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
                   control={control}
                   render={({ field: { onChange, onBlur, value, ref } }) => (
                     <FormControl fullWidth>
-                      <Autocomplete
-                        id="coin-select"
-                        options={LIST_COIN}
-                        autoHighlight
-                        getOptionLabel={option => (option ? `${option.name} (${option.ticker})` : '')}
-                        value={value}
+                      <InputLabel variant="outlined" htmlFor="select-coin">
+                        Coin
+                      </InputLabel>
+                      <NativeSelect
+                        id="select-coin"
+                        value={value ?? ''}
                         onBlur={onBlur}
                         ref={ref}
-                        onChange={(e, value) => {
-                          onChange(value);
+                        onChange={e => {
+                          onChange(e);
                           setValue('currency', null);
                         }}
-                        renderOption={(props, option) => {
-                          const { ...optionProps } = props;
-
+                      >
+                        <option aria-label="None" value="" />
+                        {LIST_COIN.map(item => {
                           return (
-                            <Box {...optionProps} key={option.id} component="li">
-                              {option.name} ({option.ticker})
-                            </Box>
+                            <option key={item.ticker} value={item.ticker}>
+                              {item.name} ({item.ticker})
+                            </option>
                           );
-                        }}
-                        renderInput={params => <TextField {...params} label="Coin" />}
-                      />
-                      {errors && errors?.coin && (
-                        <FormHelperText error={true}>{errors.coin.message as string}</FormHelperText>
-                      )}
+                        })}
+                      </NativeSelect>
                     </FormControl>
                   )}
                 />
@@ -330,31 +325,20 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
                 <Controller
                   name="country"
                   control={control}
-                  render={({ field: { onChange, value } }) => (
+                  render={({ field: { onChange, value, onBlur, ref } }) => (
                     <FormControl fullWidth>
-                      <Autocomplete
-                        id="country-select"
-                        options={countries}
-                        autoHighlight
-                        getOptionLabel={option => (option ? option.name : '')}
-                        value={value}
-                        onChange={(e, value) => {
-                          onChange(value);
-                          if (value) {
-                            dispatch(getStates(value.id));
-                            setValue('state', null);
-                          }
+                      <TextField
+                        label="Country"
+                        variant="outlined"
+                        fullWidth
+                        onChange={onChange}
+                        onBlur={onBlur}
+                        value={value?.name ?? ''}
+                        inputRef={ref}
+                        onClick={() => setOpenCountryList(true)}
+                        InputProps={{
+                          readOnly: true
                         }}
-                        renderOption={(props, option) => {
-                          const { ...optionProps } = props;
-
-                          return (
-                            <Box {...optionProps} key={option.id} component="li">
-                              {option.name}
-                            </Box>
-                          );
-                        }}
-                        renderInput={params => <TextField {...params} label="Country" />}
                       />
                     </FormControl>
                   )}
@@ -364,30 +348,21 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
                 <Controller
                   name="state"
                   control={control}
-                  render={({ field: { onChange, value } }) => (
+                  render={({ field: { onChange, value, onBlur, ref } }) => (
                     <FormControl fullWidth>
-                      <Autocomplete
-                        id="state-select"
-                        options={states}
-                        autoHighlight
-                        getOptionLabel={option => (option ? option.name : '')}
-                        value={value}
-                        onChange={(e, value) => {
-                          if (value) {
-                            onChange(value);
-                          }
-                        }}
+                      <TextField
+                        label="State"
+                        variant="outlined"
+                        fullWidth
+                        onChange={onChange}
+                        onBlur={onBlur}
+                        value={value?.name ?? ''}
+                        inputRef={ref}
+                        onClick={() => setOpenStateList(true)}
                         disabled={!getValues('country')}
-                        renderOption={(props, option) => {
-                          const { ...optionProps } = props;
-
-                          return (
-                            <Box {...optionProps} key={option.id} component="li">
-                              {option.name}
-                            </Box>
-                          );
+                        InputProps={{
+                          readOnly: true
                         }}
-                        renderInput={params => <TextField {...params} label="State" />}
                       />
                     </FormControl>
                   )}
@@ -413,6 +388,24 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
           Confirm
         </Button>
       </DialogActions>
+      <FilterListModal
+        isOpen={openCountryList}
+        onDissmissModal={value => setOpenCountryList(value)}
+        setSelectedItem={value => {
+          setValue('country', value);
+          dispatch(getStates(value?.id));
+          setValue('state', null);
+        }}
+        listItems={countries}
+      />
+      <FilterListModal
+        isOpen={openStateList}
+        onDissmissModal={value => setOpenStateList(value)}
+        setSelectedItem={value => {
+          setValue('state', value);
+        }}
+        listItems={states}
+      />
     </StyledDialog>
   );
 };

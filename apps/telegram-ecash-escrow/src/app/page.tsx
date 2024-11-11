@@ -5,7 +5,6 @@ import Header from '@/src/components/Header/Header';
 import OfferItem from '@/src/components/OfferItem/OfferItem';
 import TopSection from '@/src/components/TopSection/TopSection';
 import {
-  OfferFilterInput,
   TimelineQueryItem,
   accountsApi,
   axiosClient,
@@ -18,7 +17,6 @@ import {
   offerApi,
   removeAllWallets,
   removeWalletPaths,
-  saveOfferFilterConfig,
   setNewPostAvailable,
   useInfiniteOfferFilterQuery,
   useInfiniteOffersByScoreQuery,
@@ -218,16 +216,8 @@ export default function Home() {
     })();
   }, []);
 
-  //reset fitler and flag for new-post when reload
+  //reset flag for new-post when reload
   useEffect(() => {
-    const offerFilterInput: OfferFilterInput = {
-      countryId: null,
-      countryName: '',
-      stateId: null,
-      stateName: '',
-      paymentMethodIds: []
-    };
-    dispatch(saveOfferFilterConfig(offerFilterInput));
     dispatch(setNewPostAvailable(false));
   }, []);
 

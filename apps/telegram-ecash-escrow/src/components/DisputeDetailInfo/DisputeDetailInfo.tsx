@@ -4,13 +4,17 @@ import { DisputeQueryItem, TimelineQueryItem } from '@bcpros/redux-store';
 import styled from '@emotion/styled';
 import { Typography } from '@mui/material';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
 
 const DisputeDetailInfoWrap = styled.div`
   display: flex;
   flex-direction: column;
   gap: 8px;
   cursor: pointer;
+
+  background: linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05));
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
 
   .prefix {
     font-size: 14px;
@@ -49,7 +53,6 @@ type DisputeItemProps = {
 
 const DisputeDetailInfo = ({ timelineItem }: DisputeItemProps) => {
   const router = useRouter();
-  const [isOpenModal, setIsOpenModal] = useState<boolean>(false);
   const disputeData = timelineItem?.data as DisputeQueryItem;
   const orderOfDispute = disputeData?.escrowOrder;
   const offerOfDispute = orderOfDispute?.offer;
@@ -58,39 +61,21 @@ const DisputeDetailInfo = ({ timelineItem }: DisputeItemProps) => {
 
   return (
     <DisputeDetailInfoWrap onClick={() => router.push(`/dispute-detail?id=${disputeData.id}`)}>
-      {/* <Typography variant="body1">
-          <span className="prefix">Dispute by seller: </span>No show
-        </Typography> */}
       <Typography variant="body1">
         <span className="prefix">Offer: </span> {offerOfDispute.message}
       </Typography>
-      {/* <Typography variant="body1">
-          <span className="prefix">Price: </span>USD 50/ 1M XEC
-        </Typography> */}
-      {/* <div className="payment-group-btns">
-          <Button className="cash-in-btn" size="small" color="success" variant="outlined">
-            Cash in person
-          </Button>
-          <Button className="bank-transfer-btn" size="small" color="warning" variant="outlined">
-            Bank transfer
-          </Button>
-        </div> */}
+      {(stateName || countryName) && (
+        <Typography variant="body1">
+          <span className="prefix">Location: </span>
+          {[stateName, countryName].filter(Boolean).join(', ')}
+        </Typography>
+      )}
       <Typography variant="body1">
-        <span className="prefix">Location: </span>
-        {[stateName, countryName].filter(Boolean).join(', ')}
-      </Typography>
-      <Typography variant="body1">
-        <span className="prefix">Posted: </span> {offerOfDispute.createdAt}
+        <span className="prefix">Posted: </span> {new Date(disputeData.createdAt).toLocaleString('en-US')}
       </Typography>
       <Typography variant="body1" className="amount-escrowed">
         {orderOfDispute.amount} XEC escrowed!
       </Typography>
-      {/* <Typography variant="body1" className="amount-seller">
-          200k XEC dispute fees by seller
-        </Typography>
-        <Typography variant="body1" className="amount-buyer">
-          200k XEC dispute fees by buyer
-        </Typography> */}
       <Typography variant="body1">
         <span className="prefix">Seller: </span> {orderOfDispute.sellerAccount.telegramUsername}
       </Typography>

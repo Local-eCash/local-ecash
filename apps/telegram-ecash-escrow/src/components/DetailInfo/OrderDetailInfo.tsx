@@ -16,6 +16,11 @@ const OrderDetailWrap = styled.div`
   gap: 8px;
   cursor: pointer;
 
+  background: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.15));
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+
   .prefix {
     font-size: 14px;
     color: #79869b;
@@ -61,7 +66,7 @@ const OrderDetailInfo = ({ item }: OrderItemProps) => {
       </Typography>
       <Typography variant="body1">
         <span className="prefix">Ordered at: </span>
-        {new Date(order.createdAt).toTimeString()}
+        {new Date(order.createdAt).toLocaleString('en-US')}
       </Typography>
       <Typography variant="body1">
         <span className="prefix">Price: </span>
@@ -79,10 +84,12 @@ const OrderDetailInfo = ({ item }: OrderItemProps) => {
         </span>
         {order.amountCoinOrCurrency} {order?.escrowOffer?.coinPayment ?? order?.escrowOffer?.localCurrency ?? 'XEC'}
       </Typography>
-      <Typography variant="body1">
-        <span className="prefix">Message: </span>
-        {order.message}
-      </Typography>
+      {order?.message && (
+        <Typography variant="body1">
+          <span className="prefix">Message: </span>
+          {order.message}
+        </Typography>
+      )}
       <div className="payment-group-btns">
         <Button className="cash-in-btn" size="small" color="success" variant="outlined">
           {order.paymentMethod.name}

@@ -11,7 +11,7 @@ import {
 import styled from '@emotion/styled';
 import { CheckCircleOutline } from '@mui/icons-material';
 import { Alert, Button, Typography } from '@mui/material';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import BackupSeed, { BackupWordModel } from './backup-seed';
 
@@ -58,6 +58,7 @@ const WordGuessContainer = styled.div`
 
 export default function Backup() {
   const dispatch = useLixiSliceDispatch();
+  const searchParams = useSearchParams();
   const walletMnemonic = useLixiSliceSelector(getWalletMnemonic);
   const [mnemonicWordsConverted, setMnemonicWordsConverted] = useState<Array<BackupWordModel>>(
     walletMnemonic
@@ -70,7 +71,7 @@ export default function Backup() {
         })
       : []
   );
-  const [isPlayGame, setIsPlayGame] = useState<boolean>(false);
+  const [isPlayGame, setIsPlayGame] = useState<boolean>(searchParams.get('playgame') === 'true');
   const [countWord, setCountWord] = useState(0);
   const [libWord, setLibWord] = useState<string[]>([]);
   const [randomListFinal, setRandomListFinal] = useState<string[]>([]);

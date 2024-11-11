@@ -26,7 +26,7 @@ export const BackupModal = () => {
 
   const handleABackup = () => {
     dispatch(closeModal());
-    router.push('/backup');
+    router.push('/backup?playgame=true');
   };
 
   return (
@@ -38,7 +38,12 @@ export const BackupModal = () => {
     >
       <Box sx={{ ...style, width: 300 }}>
         <h2 style={{ color: 'white' }}>You need to back up your seed phrase before continuing!</h2>
-        <Button variant="contained" fullWidth onClick={() => handleABackup()}>
+        <Button
+          style={{ textTransform: 'none', fontWeight: 'bold', fontSize: '16px' }}
+          variant="contained"
+          fullWidth
+          onClick={() => handleABackup()}
+        >
           Backup
         </Button>
       </Box>

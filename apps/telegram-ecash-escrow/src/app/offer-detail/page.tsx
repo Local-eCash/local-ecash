@@ -1,12 +1,14 @@
 'use client';
 
 import MiniAppBackdrop from '@/src/components/Common/MiniAppBackdrop';
+import OfferDetailInfo from '@/src/components/DetailInfo/OfferDetailInfo';
 import OrderDetailInfo from '@/src/components/DetailInfo/OrderDetailInfo';
 import MobileLayout from '@/src/components/layout/MobileLayout';
 import TickerHeader from '@/src/components/TickerHeader/TickerHeader';
 import {
   EscrowOrderQueryItem,
   EscrowOrderStatus,
+  Offer,
   offerApi,
   useInfiniteEscrowOrderByOfferIdQuery
 } from '@bcpros/redux-store';
@@ -27,49 +29,20 @@ const OfferDetailPage = styled.div`
     div:not(.payment-group-btns) {
       border-bottom: 2px dashed rgba(255, 255, 255, 0.3);
       padding-bottom: 16px;
-      margin: 10px;
+      margin: 10px 5px;
 
       &:last-of-type {
         border-bottom: 0;
       }
     }
 
-    button {
-      color: white;
+    .btn-timeline {
+      color: white !important;
       text-transform: math-auto;
       border-color: rgba(255, 255, 255, 0.2);
-
-      &.active {
-        border-color: rgba(255, 255, 255, 1);
-      }
     }
-  }
-`;
-
-const OfferDetailContent = styled.div`
-  padding: 0 16px;
-
-  .group-button-wrap {
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    padding-bottom: 16px;
-
-    button {
-      text-transform: none;
-      color: white;
-    }
-  }
-
-  .payment-group-btns {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    button {
-      border-radius: 10px;
-      text-transform: capitalize;
+    .active {
+      border: 1px solid rgba(255, 255, 255, 1);
     }
   }
 `;
@@ -100,6 +73,19 @@ const OfferDetail = () => {
     return <div style={{ color: 'white' }}>Invalid order id</div>;
   }
 
+  const ButtonTimeline = (escrowStatus: EscrowOrderStatus) => {
+    return (
+      <Button
+        onClick={() => setOrderStatus(escrowStatus)}
+        className={`btn-timeline ${orderStatus === EscrowOrderStatus.Pending ? 'active' : ''}`}
+        color="info"
+        variant="contained"
+      >
+        {escrowStatus}
+      </Button>
+    );
+  };
+
   return (
     <MobileLayout>
       {(isLoading || isUninitialized) && (
@@ -110,71 +96,39 @@ const OfferDetail = () => {
       <MiniAppBackdrop />
       <OfferDetailPage>
         <TickerHeader title="Offer Detail" />
-        {currentData?.offer && (
-          <OfferDetailContent>
-            <Typography variant="body1">
-              <span className="prefix">Price: {currentData?.offer.price}</span>
-            </Typography>
-            <Typography variant="body1">
-              <span className="prefix">
-                Order limit: {currentData?.offer.orderLimitMin} XEC - {currentData?.offer.orderLimitMax} XEC
-              </span>
-            </Typography>
-            <Typography variant="body1">
-              <span className="prefix">Message: {currentData?.offer.message}</span>
-            </Typography>
-            <Typography variant="body1">
-              <span className="prefix">State: {currentData?.offer.state.name}</span>
-            </Typography>
-            <Typography variant="body1">
-              <span className="prefix">Country: {currentData?.offer.country.name}</span>
-            </Typography>
-            <div className="payment-group-btns">
-              {currentData.offer.paymentMethods.map(data => {
-                return (
-                  <Button size="small" color="success" variant="outlined" key={data.paymentMethod.name}>
-                    {data.paymentMethod.name}
-                  </Button>
-                );
-              })}
-            </div>
-          </OfferDetailContent>
-        )}
+        {currentData?.offer && <OfferDetailInfo offer={currentData.offer as Offer} isItemTimeline={false} />}
         <hr />
         <div className="list-item">
           <Stack direction="row" gap="20px" justifyContent="center">
             <Button
               onClick={() => setOrderStatus(EscrowOrderStatus.Pending)}
-              className={orderStatus === EscrowOrderStatus.Pending ? 'active' : ''}
-              color="inherit"
-              variant="outlined"
+              className={`btn-timeline ${orderStatus === EscrowOrderStatus.Pending ? 'active' : ''}`}
+              color="info"
+              variant="contained"
             >
               {EscrowOrderStatus.Pending}
             </Button>
-
             <Button
               onClick={() => setOrderStatus(EscrowOrderStatus.Escrow)}
-              className={orderStatus === EscrowOrderStatus.Escrow ? 'active' : ''}
-              color="inherit"
-              variant="outlined"
+              className={`btn-timeline ${orderStatus === EscrowOrderStatus.Escrow ? 'active' : ''}`}
+              color="info"
+              variant="contained"
             >
               {EscrowOrderStatus.Escrow}
             </Button>
-
             <Button
               onClick={() => setOrderStatus(EscrowOrderStatus.Complete)}
-              className={orderStatus === EscrowOrderStatus.Complete ? 'active' : ''}
-              color="inherit"
-              variant="outlined"
+              className={`btn-timeline ${orderStatus === EscrowOrderStatus.Complete ? 'active' : ''}`}
+              color="info"
+              variant="contained"
             >
               {EscrowOrderStatus.Complete}
             </Button>
-
             <Button
               onClick={() => setOrderStatus(EscrowOrderStatus.Cancel)}
-              className={orderStatus === EscrowOrderStatus.Cancel ? 'active' : ''}
-              color="inherit"
-              variant="outlined"
+              className={`btn-timeline ${orderStatus === EscrowOrderStatus.Cancel ? 'active' : ''}`}
+              color="info"
+              variant="contained"
             >
               {EscrowOrderStatus.Cancel}
             </Button>

@@ -32,7 +32,7 @@ import { CopyToClipboard } from 'react-copy-to-clipboard';
 const ContainerSetting = styled.div`
   padding: 1rem;
   .setting-content {
-    padding: 0 0 1rem;
+    padding: 0 0 4rem;
     .setting-item {
       margin-bottom: 1rem;
       .title {
@@ -88,78 +88,16 @@ export default function Setting() {
   const selectedMnemonic = useLixiSliceSelector(getWalletMnemonic);
   const selectedAccount = useLixiSliceSelector(getSelectedAccount);
 
-  // const mainButton = useMainButton();
-  // const backButton = useBackButton();
-  // const popUp = usePopup();
-  // const haptic = useHapticFeedback();
-
-  // useEffect(() => {
-  //   backButton.show();
-  // }, []);
-
-  // useEffect(() => {
-  //   backButton.on('click', onBackButtonClick);
-  // }, [backButton]);
-
   const [openToastCopySuccess, setOpenToastCopySuccess] = useState(false);
 
   const handleOnCopy = () => {
     setOpenToastCopySuccess(true);
   };
 
-  const onBackButtonClick = () => {
-    // router.back();
-    //   backButton.hide();
-    //   mainButton.hide();
-  };
-
   const handleSignOut = () => {
     dispatch(removeWalletPaths(selectedAccount.address));
     dispatch(removeAllWallets());
     signOut({ redirect: true, callbackUrl: '/' });
-  };
-
-  const handleDeleteAccount = () => {
-    // haptic.notificationOccurred('warning');
-    // popUp
-    //   .open({
-    //     title: 'DELETE ACCOUNT',
-    //     message: 'Please backup your seed before delete account to avoid lost your account!',
-    //     buttons: [
-    //       { id: 'delete-cancel', type: 'cancel' },
-    //       { id: 'delete-ok', type: 'ok' }
-    //     ]
-    //   })
-    //   .then((rs) => {
-    //     if (rs === 'delete-ok') {
-    //       localStorage.removeItem('accounts');
-    //     }
-    //     console.log(rs);
-    //   })
-    //   .catch((err) => {
-    //     console.log(err);
-    //   });
-  };
-
-  const handleVerifyAddress = () => {
-    // haptic.notificationOccurred('warning');
-    // popUp
-    //   .open({
-    //     title: 'VERIFY ADDRESS',
-    //     message: 'Your address: eCash:qp8ks7622cklc7c9pm2d3ktwzctack6njq6q83ed9x',
-    //     buttons: [
-    //       { id: 'delete-cancel', type: 'cancel' },
-    //       { id: 'delete-ok', type: 'ok' }
-    //     ]
-    //   })
-    //   .then((rs) => {
-    //     // if (rs === 'delete-ok') {
-    //     // }
-    //     console.log(rs);
-    //   })
-    //   .catch((err) => {
-    //     console.log(err);
-    //   });
   };
 
   if (selectedWalletPath === null && sessionData) {
@@ -227,9 +165,6 @@ export default function Setting() {
                 <p>Click to reveal seed phrase</p>
               </AccordionSummary>
               <AccordionDetails>
-                <Typography variant="body2" className="mnemonic">
-                  {selectedMnemonic}
-                </Typography>
                 <CopyToClipboard
                   style={{
                     display: 'inline-block',
@@ -238,9 +173,9 @@ export default function Setting() {
                   text={selectedMnemonic}
                   onCopy={handleOnCopy}
                 >
-                  <Button className="btn-backup" variant="outlined">
-                    Backup
-                  </Button>
+                  <Typography variant="body2" className="mnemonic">
+                    {selectedMnemonic}
+                  </Typography>
                 </CopyToClipboard>
               </AccordionDetails>
             </Accordion>
@@ -256,10 +191,11 @@ export default function Setting() {
               </AccordionSummary>
               <AccordionDetails>
                 <Button
-                  variant="outlined"
+                  variant="contained"
                   style={{
                     display: 'inline-block',
-                    width: '100%'
+                    width: '100%',
+                    fontWeight: 'bold'
                   }}
                   onClick={() => handleSignOut()}
                 >
@@ -281,25 +217,6 @@ export default function Setting() {
             </AccordionSummary>
             <AccordionDetails>
               <Button onClick={handleDeleteAccount}>Delete</Button>
-            </AccordionDetails>
-          </Accordion>
-        </div> */}
-
-          {/*TODO: import account*/}
-          {/* <div className="setting-item">
-          <p className="title">Import account</p>
-          <Alert icon={<CheckCircleOutline className="ico-alert" fontSize="inherit" />} severity="info">
-            Enter your recovery phrase (12 words) in the correct order. Separate each word with a single space only (no
-            commas or any other punctuation).
-          </Alert>
-          <Accordion className="collapse-backup-seed">
-            <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel1a-content" id="panel1a-header">
-              <p>Click to import account</p>
-            </AccordionSummary>
-            <AccordionDetails>
-              <Link href="/import">
-                <Button>Import account</Button>
-              </Link>
             </AccordionDetails>
           </Accordion>
         </div> */}

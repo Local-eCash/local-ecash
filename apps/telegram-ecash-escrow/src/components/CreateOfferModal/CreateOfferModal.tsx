@@ -20,8 +20,6 @@ import {
 import styled from '@emotion/styled';
 import { ChevronLeft } from '@mui/icons-material';
 import {
-  Autocomplete,
-  Box,
   Button,
   Dialog,
   DialogActions,
@@ -34,6 +32,8 @@ import {
   Grid,
   IconButton,
   InputAdornment,
+  InputLabel,
+  NativeSelect,
   Portal,
   Radio,
   RadioGroup,
@@ -46,6 +46,7 @@ import {
 import { TransitionProps } from '@mui/material/transitions';
 import React, { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
+import FilterListModal from '../FilterList/FilterListModal';
 import CustomToast from '../Toast/CustomToast';
 
 const StyledDialog = styled(Dialog)`
@@ -180,6 +181,9 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
   const [currencyState, setCurrencyState] = useState(null);
   const [coinState, setCoinState] = useState(null);
 
+  const [openCountryList, setOpenCountryList] = useState(false);
+  const [openStateList, setOpenStateList] = useState(false);
+
   const {
     handleSubmit,
     control,
@@ -223,14 +227,20 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       message: data.message,
       noteOffer: data.note,
       paymentMethodIds: [option],
-      coinPayment: data?.coin ? data.coin.ticker : null,
-      localCurrency: data?.currency?.code ? data.currency.code : null,
+      coinPayment: data?.coin ? data.coin : null,
+      localCurrency: data?.currency ? data.currency : null,
       marginPercentage: Number(data.percentage),
       orderLimitMin: minNum,
       orderLimitMax: maxNum,
       countryId: country?.id ?? null,
       stateId: state?.id ?? null
     };
+
+    //Just have location when paymentmethods is 1 or 2
+    if (option !== 1 && option !== 2) {
+      input.countryId = null;
+      input.stateId = null;
+    }
 
     if (isEdit) {
       let inputUpdateOffer: UpdateOfferInput;
@@ -245,8 +255,8 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       } else {
         inputUpdateOffer = {
           ...input,
-          coinPayment: data?.coin ? data.coin.ticker : null,
-          localCurrency: data?.currency?.code ? data.currency.code : null,
+          coinPayment: data?.coin ? data.coin : null,
+          localCurrency: data?.currency?.code ? data.currency : null,
           id: offer?.postId
         };
       }
@@ -383,29 +393,28 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                           }}
                           render={({ field: { onChange, onBlur, value, ref } }) => (
                             <FormControl fullWidth>
-                              <Autocomplete
-                                id="currency-select"
-                                options={LIST_CURRENCIES_USED}
-                                autoHighlight
-                                getOptionLabel={option => (option ? `${option.name} (${option.code})` : '')}
-                                value={value || currencyState || null}
+                              <InputLabel variant="outlined" htmlFor="select-currency">
+                                Currency
+                              </InputLabel>
+                              <NativeSelect
+                                id="select-currency"
+                                value={value ?? ''}
                                 onBlur={onBlur}
                                 ref={ref}
-                                onChange={(e, value) => {
-                                  onChange(value);
+                                onChange={e => {
+                                  onChange(e);
                                   setValue('coin', null);
                                 }}
-                                renderOption={(props, option) => {
-                                  const { ...optionProps } = props;
-
+                              >
+                                <option aria-label="None" value="" />
+                                {LIST_CURRENCIES_USED.map(item => {
                                   return (
-                                    <Box {...optionProps} key={option.code} component="li">
-                                      {option.name} ({option.code})
-                                    </Box>
+                                    <option key={item.code} value={item.code}>
+                                      {item.name} ({item.code})
+                                    </option>
                                   );
-                                }}
-                                renderInput={params => <TextField {...params} label="Currency" />}
-                              />
+                                })}
+                              </NativeSelect>
                               {errors && errors?.currency && (
                                 <FormHelperText error={true}>{errors.currency.message as string}</FormHelperText>
                               )}
@@ -427,29 +436,28 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                           }}
                           render={({ field: { onChange, onBlur, value, ref } }) => (
                             <FormControl fullWidth>
-                              <Autocomplete
-                                id="coin-select"
-                                options={LIST_COIN}
-                                autoHighlight
-                                getOptionLabel={option => (option ? `${option.name} (${option.ticker})` : '')}
-                                value={value || coinState || null}
+                              <InputLabel variant="outlined" htmlFor="select-coin">
+                                Coin
+                              </InputLabel>
+                              <NativeSelect
+                                id="select-coin"
+                                value={value ?? ''}
                                 onBlur={onBlur}
                                 ref={ref}
-                                onChange={(e, value) => {
-                                  onChange(value);
+                                onChange={e => {
+                                  onChange(e);
                                   setValue('currency', null);
                                 }}
-                                renderOption={(props, option) => {
-                                  const { ...optionProps } = props;
-
+                              >
+                                <option aria-label="None" value="" />
+                                {LIST_COIN.map(item => {
                                   return (
-                                    <Box {...optionProps} key={option.id} component="li">
-                                      {option.name} ({option.ticker})
-                                    </Box>
+                                    <option key={item.ticker} value={item.ticker}>
+                                      {item.name} ({item.ticker})
+                                    </option>
                                   );
-                                }}
-                                renderInput={params => <TextField {...params} label="Coin" />}
-                              />
+                                })}
+                              </NativeSelect>
                               {errors && errors?.coin && (
                                 <FormHelperText error={true}>{errors.coin.message as string}</FormHelperText>
                               )}
@@ -470,47 +478,35 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
             <Grid item xs={12}>
               {' '}
               <FormLabel component="legend" className="heading">
-                Payment method
+                Location
               </FormLabel>
             </Grid>
             <Grid item xs={6}>
               <FormControl fullWidth>
-                <Autocomplete
-                  id="country-select"
-                  options={countries}
-                  autoHighlight
-                  getOptionLabel={option => (option ? option.name : '')}
-                  value={country || null}
-                  onChange={(e, value) => {
-                    setCountry(value as Country);
-                    dispatch(getStates(value.id));
+                <TextField
+                  label="Country"
+                  variant="outlined"
+                  fullWidth
+                  value={country?.name ?? ''}
+                  onClick={() => setOpenCountryList(true)}
+                  InputProps={{
+                    readOnly: true
                   }}
-                  renderOption={(props, option) => (
-                    <Box {...props} key={option.id} component="li">
-                      {option.name}
-                    </Box>
-                  )}
-                  renderInput={params => <TextField {...params} label="Country" />}
                 />
               </FormControl>
             </Grid>
             <Grid item xs={6}>
               <FormControl fullWidth>
-                <Autocomplete
-                  id="state-select"
-                  options={states}
-                  autoHighlight
-                  getOptionLabel={option => (option ? option.name : '')}
-                  value={state || null}
-                  onChange={(e, value) => {
-                    setState(value as State);
+                <TextField
+                  label="State"
+                  variant="outlined"
+                  fullWidth
+                  value={state?.name ?? ''}
+                  onClick={() => setOpenStateList(true)}
+                  disabled={!country}
+                  InputProps={{
+                    readOnly: true
                   }}
-                  renderOption={(props, option) => (
-                    <Box {...props} key={option.id} component="li">
-                      {option.name}
-                    </Box>
-                  )}
-                  renderInput={params => <TextField {...params} label="State" />}
                 />
               </FormControl>
             </Grid>
@@ -828,7 +824,11 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       </DialogTitle>
       <DialogContent>{stepContents[`stepContent${activeStep}`]}</DialogContent>
       <DialogActions>
-        <Button variant="contained" onClick={() => handleBack()} disabled={isEdit ? activeStep === 2 : activeStep === 1}>
+        <Button
+          variant="contained"
+          onClick={() => handleBack()}
+          disabled={isEdit ? activeStep === 2 : activeStep === 1}
+        >
           Back
         </Button>
         <Button
@@ -866,6 +866,23 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
           autoHideDuration={3000}
         />
       </Portal>
+      <FilterListModal
+        isOpen={openCountryList}
+        onDissmissModal={value => setOpenCountryList(value)}
+        setSelectedItem={value => {
+          setCountry(value as Country);
+          dispatch(getStates(value?.id));
+        }}
+        listItems={countries}
+      />
+      <FilterListModal
+        isOpen={openStateList}
+        onDissmissModal={value => setOpenStateList(value)}
+        setSelectedItem={value => {
+          setState(value as State);
+        }}
+        listItems={states}
+      />
     </StyledDialog>
   );
 };

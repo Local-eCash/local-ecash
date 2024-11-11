@@ -428,7 +428,7 @@ export default function DisputeDetail() {
             </Typography>
             <Typography variant="body1">
               <span className="prefix">Created At: </span>
-              {new Date(escrowOrder?.createdAt).toLocaleString()}
+              {new Date(escrowOrder?.createdAt).toLocaleString('en-US')}
             </Typography>
             <Typography variant="body1">
               <span className="prefix">Seller: </span>

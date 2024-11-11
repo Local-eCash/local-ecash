@@ -236,10 +236,12 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
         <CardContent>{OfferItem}</CardContent>
         <Collapse in={expanded} timeout="auto" unmountOnExit className="hidden-item-wrap">
           <CardContent>
-            <Typography variant="body2">
-              <span className="prefix">Location: </span>
-              {[stateName, countryName].filter(Boolean).join(', ')}
-            </Typography>
+            {(countryName || stateName) && (
+              <Typography variant="body2">
+                <span className="prefix">Location: </span>
+                {[stateName, countryName].filter(Boolean).join(', ')}
+              </Typography>
+            )}
             {offerData?.noteOffer && (
               <Typography variant="body2">
                 <span className="prefix">Note: </span>
