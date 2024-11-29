@@ -35,7 +35,30 @@ const theme = createTheme({
       color: '#fff'
     }
   },
-  components: {}
+  components: {
+    MuiAlert: {
+      styleOverrides: {
+        action: {
+          color: '#fff'
+        },
+        message: {
+          color: '#fff'
+        },
+        icon: {
+          color: '#fff'
+        }
+      }
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          color: '#fff',
+          fontWeight: 600,
+          borderRadius: '8px'
+        }
+      }
+    }
+  }
 });
 
 export default theme;

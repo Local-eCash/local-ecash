@@ -33,8 +33,10 @@ const Content = styled.div`
 `;
 export const WrapFooter = styled.div`
   .Footer-content {
+    padding-bottom: 16px;
     width: 500px;
     @media (max-width: 576px) {
+      padding-bottom: 32px;
       width: 100%;
       box-shadow: none;
     }

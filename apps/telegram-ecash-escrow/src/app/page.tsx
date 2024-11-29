@@ -157,15 +157,6 @@ export default function Home() {
       fetchNextFilter();
     }
   };
-  const handleCreateOfferClick = () => {
-    if (status === 'loading') return;
-
-    if (status === 'unauthenticated') {
-      askAuthorization();
-    } else {
-      setOpen(true);
-    }
-  };
 
   const handleRefresh = () => {
     dispatch(offerApi.api.util.resetApiState());
@@ -333,8 +324,9 @@ export default function Home() {
               </Typography>
             </div>
             <div className="offer-list">
-              {offerFilterConfig.countryId ||
-              offerFilterConfig.stateId ||
+              {offerFilterConfig.countryCode ||
+              offerFilterConfig.stateName ||
+              offerFilterConfig.cityName ||
               offerFilterConfig.coin ||
               offerFilterConfig.fiatCurrency ||
               (offerFilterConfig.paymentMethodIds?.length ?? 0) > 0 ? (
@@ -380,7 +372,18 @@ export default function Home() {
                   scrollableTarget="scrollableDiv"
                   scrollThreshold={'100px'}
                   endMessage={
-                    <Typography style={{ textAlign: 'center', marginTop: '2rem' }}>It&apos;s so empty here</Typography>
+                    <Typography
+                      style={{
+                        textAlign: 'center',
+                        marginTop: '2rem',
+                        position: 'absolute',
+                        left: '50%',
+                        top: '35%',
+                        transform: 'translate(-50%, -50%)'
+                      }}
+                    >
+                      It&apos;s so empty here
+                    </Typography>
                   }
                 >
                   {data.map(item => {

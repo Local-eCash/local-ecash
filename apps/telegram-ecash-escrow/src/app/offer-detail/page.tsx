@@ -103,7 +103,7 @@ const OfferDetail = () => {
             <Button
               onClick={() => setOrderStatus(EscrowOrderStatus.Pending)}
               className={`btn-timeline ${orderStatus === EscrowOrderStatus.Pending ? 'active' : ''}`}
-              color="info"
+              color="warning"
               variant="contained"
             >
               {EscrowOrderStatus.Pending}
@@ -119,7 +119,7 @@ const OfferDetail = () => {
             <Button
               onClick={() => setOrderStatus(EscrowOrderStatus.Complete)}
               className={`btn-timeline ${orderStatus === EscrowOrderStatus.Complete ? 'active' : ''}`}
-              color="info"
+              color="success"
               variant="contained"
             >
               {EscrowOrderStatus.Complete}
@@ -127,7 +127,7 @@ const OfferDetail = () => {
             <Button
               onClick={() => setOrderStatus(EscrowOrderStatus.Cancel)}
               className={`btn-timeline ${orderStatus === EscrowOrderStatus.Cancel ? 'active' : ''}`}
-              color="info"
+              color="error"
               variant="contained"
             >
               {EscrowOrderStatus.Cancel}

@@ -56,8 +56,9 @@ const DisputeDetailInfo = ({ timelineItem }: DisputeItemProps) => {
   const disputeData = timelineItem?.data as DisputeQueryItem;
   const orderOfDispute = disputeData?.escrowOrder;
   const offerOfDispute = orderOfDispute?.offer;
-  const countryName = offerOfDispute?.country.name;
-  const stateName = offerOfDispute?.state.name;
+  const countryName = offerOfDispute?.location?.country;
+  const stateName = offerOfDispute?.location?.adminNameAscii;
+  const cityName = offerOfDispute?.location?.cityAscii;
 
   return (
     <DisputeDetailInfoWrap onClick={() => router.push(`/dispute-detail?id=${disputeData.id}`)}>
@@ -67,7 +68,7 @@ const DisputeDetailInfo = ({ timelineItem }: DisputeItemProps) => {
       {(stateName || countryName) && (
         <Typography variant="body1">
           <span className="prefix">Location: </span>
-          {[stateName, countryName].filter(Boolean).join(', ')}
+          {[cityName, stateName, countryName].filter(Boolean).join(', ')}
         </Typography>
       )}
       <Typography variant="body1">

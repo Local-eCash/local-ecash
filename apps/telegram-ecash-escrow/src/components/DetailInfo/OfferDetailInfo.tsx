@@ -60,8 +60,9 @@ const OfferDetailInfo = ({ timelineItem, offer, isItemTimeline = true }: OfferIt
   const router = useRouter();
   const postData = timelineItem?.data as PostQueryItem;
   const offerData = postData?.postOffer ?? offer;
-  const countryName = offerData?.country?.name;
-  const stateName = offerData?.state?.name;
+  const countryName = offerData?.location?.country;
+  const stateName = offerData?.location?.adminNameAscii;
+  const cityName = offerData?.location?.cityAscii;
 
   const handleClickAction = e => {
     e.stopPropagation();
@@ -93,7 +94,7 @@ const OfferDetailInfo = ({ timelineItem, offer, isItemTimeline = true }: OfferIt
       {(stateName || countryName) && (
         <Typography variant="body2">
           <span className="prefix">Location: </span>
-          {[stateName, countryName].filter(Boolean).join(', ')}
+          {[cityName, stateName, countryName].filter(Boolean).join(', ')}
         </Typography>
       )}
       {offerData?.noteOffer && (

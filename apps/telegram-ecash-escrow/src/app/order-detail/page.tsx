@@ -1,5 +1,6 @@
 'use client';
 
+import ConfirmCancelModal from '@/src/components/Cancel/ConfirmCancelModal';
 import MiniAppBackdrop from '@/src/components/Common/MiniAppBackdrop';
 import OrderDetailInfo from '@/src/components/DetailInfo/OrderDetailInfo';
 import MobileLayout from '@/src/components/layout/MobileLayout';
@@ -103,6 +104,7 @@ const OrderDetail = () => {
   const [cancel, setCancel] = useState(false);
   const [loading, setLoading] = useState(false);
   const [notEnoughFund, setNotEnoughFund] = useState(false);
+  const [openCancelModal, setOpenCancelModal] = useState(false);
 
   const { useEscrowOrderQuery, useUpdateEscrowOrderStatusMutation } = escrowOrderApi;
   const { isLoading, currentData, isError, isSuccess, isUninitialized } = useEscrowOrderQuery(
@@ -470,7 +472,7 @@ const OrderDetail = () => {
       return isSeller ? (
         <div className="group-button-wrap">
           <Button
-            color="warning"
+            style={{ backgroundColor: '#a41208' }}
             variant="contained"
             onClick={() => updateOrderStatus(EscrowOrderStatus.Cancel)}
             disabled={loading}
@@ -488,7 +490,7 @@ const OrderDetail = () => {
         </div>
       ) : (
         <Button
-          color="warning"
+          style={{ backgroundColor: '#a41208' }}
           variant="contained"
           fullWidth
           onClick={() => updateOrderStatus(EscrowOrderStatus.Cancel)}
@@ -568,33 +570,40 @@ const OrderDetail = () => {
           </div>
         </ActionStatusRelease>
       ) : (
-        <div className="group-button-wrap">
-          <Button color="warning" variant="contained" disabled={loading} onClick={() => handleCreateDispute()}>
-            Dispute
-          </Button>
-          <Button
-            color="success"
-            variant="contained"
-            onClick={() => handleBuyerReturnEscrow(EscrowOrderStatus.Cancel)}
-            disabled={loading}
-          >
-            Cancel
-          </Button>
+        <div>
+          {telegramButton(true, 'Chat with seller for payment details')}
+
+          <div className="group-button-wrap">
+            <Button color="warning" variant="contained" disabled={loading} onClick={() => handleCreateDispute()}>
+              Dispute
+            </Button>
+            <Button
+              style={{ backgroundColor: '#a41208' }}
+              variant="contained"
+              onClick={() => setOpenCancelModal(true)}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+          </div>
         </div>
       );
     }
   };
 
-  const telegramButton = () => {
+  const telegramButton = (alwaysShow = false, content?: string) => {
     const isSeller = selectedWalletPath?.hash160 === currentData?.escrowOrder.sellerAccount.hash160;
     const isArbiOrMod =
       selectedWalletPath?.hash160 === currentData?.escrowOrder.arbitratorAccount.hash160 ||
       selectedWalletPath?.hash160 === currentData?.escrowOrder.moderatorAccount.hash160;
 
+    //remove bottom button when buyer in status escrow
+    if (!isSeller && currentData?.escrowOrder?.escrowOrderStatus === EscrowOrderStatus.Escrow && !alwaysShow) {
+      return;
+    }
     return (
       !isArbiOrMod && (
         <React.Fragment>
-          <hr />
           <TelegramButton
             escrowOrderId={id}
             username={
@@ -602,7 +611,7 @@ const OrderDetail = () => {
                 ? currentData?.escrowOrder.buyerAccount.telegramUsername
                 : currentData?.escrowOrder.sellerAccount.telegramUsername
             }
-            isSeller={isSeller}
+            content={content ? content : isSeller ? `Chat with buyer` : `Chat with seller`}
           />
         </React.Fragment>
       )
@@ -692,6 +701,12 @@ const OrderDetail = () => {
             {telegramButton()}
           </OrderDetailContent>
         )}
+
+        <ConfirmCancelModal
+          isOpen={openCancelModal}
+          returnAction={() => handleBuyerReturnEscrow(EscrowOrderStatus.Cancel)}
+          onDissmissModal={value => setOpenCancelModal(value)}
+        />
 
         <Stack zIndex={999}>
           <CustomToast

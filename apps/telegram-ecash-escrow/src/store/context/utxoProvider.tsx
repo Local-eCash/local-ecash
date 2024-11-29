@@ -3,7 +3,7 @@ import {
   UtxoInNode,
   UtxoInNodeInput,
   escrowOrderApi,
-  getWalletUtxosNode,
+  getSlpBalancesAndUtxosNode,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
 import _ from 'lodash';
@@ -18,7 +18,7 @@ export const UtxoContext = createContext<UtxoContextType>(undefined);
 
 export function UtxoProvider({ children }) {
   const [token, setToken] = useState<string | null>(sessionStorage.getItem('Authorization'));
-  const utxos = useLixiSliceSelector(getWalletUtxosNode);
+  const utxosNode = useLixiSliceSelector(getSlpBalancesAndUtxosNode);
 
   const [totalValidAmount, setTotalValidAmount] = useState<number>(0);
   const [totalValidUtxos, setTotalValidUtxos] = useState([]);
@@ -51,9 +51,9 @@ export function UtxoProvider({ children }) {
 
   // Call to validate UTXOs
   useEffect(() => {
-    if (_.isNil(utxos) || utxos.length === 0) return;
+    if (_.isNil(utxosNode) || utxosNode.length === 0) return;
 
-    const listUtxos: UtxoInNodeInput[] = utxos.map(item => ({
+    const listUtxos: UtxoInNodeInput[] = utxosNode.map(item => ({
       txid: item.outpoint.txid,
       outIdx: item.outpoint.outIdx,
       value: item.value
@@ -72,7 +72,7 @@ export function UtxoProvider({ children }) {
           console.error('Error filtering UTXOs:', error);
         }
       })();
-  }, [utxos, token]);
+  }, [utxosNode, token]);
 
   return <UtxoContext.Provider value={contextValue}>{children}</UtxoContext.Provider>;
 }

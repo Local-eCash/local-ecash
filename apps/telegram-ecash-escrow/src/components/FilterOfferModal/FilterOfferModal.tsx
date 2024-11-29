@@ -3,17 +3,17 @@
 import { LIST_COIN } from '@/src/store/constants';
 import { LIST_CURRENCIES_USED } from '@bcpros/lixi-models';
 import {
+  Location,
   OfferFilterInput,
+  countryApi,
   getAllCountries,
   getAllPaymentMethods,
-  getAllStates,
-  getStates,
   saveOfferFilterConfig,
   useSliceDispatch as useLixiSliceDispatch,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
 import styled from '@emotion/styled';
-import { CloseOutlined } from '@mui/icons-material';
+import { Close, CloseOutlined } from '@mui/icons-material';
 import {
   Button,
   Dialog,
@@ -23,6 +23,7 @@ import {
   FormControl,
   Grid,
   IconButton,
+  InputAdornment,
   InputLabel,
   NativeSelect,
   Slide,
@@ -34,6 +35,7 @@ import {
 import { TransitionProps } from '@mui/material/transitions';
 import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
+import FilterListLocationModal from '../FilterList/FilterListLocationModal';
 import FilterListModal from '../FilterList/FilterListModal';
 
 interface FilterOfferModalProps {
@@ -75,6 +77,8 @@ const StyledDialog = styled(Dialog)`
 
   .MuiDialogActions-root {
     justify-content: space-evenly;
+    padding: 16px;
+    padding-bottom: 32px;
 
     button {
       text-transform: math-auto;
@@ -100,24 +104,31 @@ const StyledDialog = styled(Dialog)`
   }
 `;
 
+export const FormControlWithNativeSelect = styled(FormControl)`
+  width: 100%;
+
+  .MuiFormLabel-root {
+    transform: translate(0, 16px);
+
+    &[data-shrink='true'] {
+      display: none;
+    }
+  }
+`;
+
 const FilterWrap = styled.div`
   .filter-item {
     border-bottom: 1px solid rgba(255, 255, 255, 0.2);
     padding: 20px 16px;
 
-    &::last-of-type {
+    &:last-of-type {
       border-bottom: 0;
-    }
-
-    &::first-of-type {
-      padding-top: 0;
     }
 
     .content {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 8px;
-      margin-top: 18px;
     }
 
     p {
@@ -127,9 +138,12 @@ const FilterWrap = styled.div`
     button {
       text-transform: math-auto;
       border-color: rgba(255, 255, 255, 0.2);
+      font-size: 14px;
+      padding: 8px;
 
       &.active {
-        border-color: rgba(255, 255, 255, 1);
+        font-weight: bold;
+        border-color: rgb(41, 142, 23);
       }
     }
   }
@@ -159,6 +173,7 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
     defaultValues: {
       country: null,
       state: null,
+      city: null,
       currency: null,
       coin: null
     }
@@ -167,11 +182,13 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
   const [selectedOptionsPayment, setSelectedOptionsPayment] = useState<number[]>([]);
   const [openCountryList, setOpenCountryList] = useState(false);
   const [openStateList, setOpenStateList] = useState(false);
+  const [openCityList, setOpenCityList] = useState(false);
 
   const dispatch = useLixiSliceDispatch();
   const paymenthods = useLixiSliceSelector(getAllPaymentMethods);
   const countries = useLixiSliceSelector(getAllCountries);
-  const states = useLixiSliceSelector(getAllStates);
+  const [listStates, setListStates] = useState<Location[]>([]);
+  const [listCities, setListCities] = useState<Location[]>([]);
 
   const handleSelect = (id: number) => {
     const isSelected = !!selectedOptionsPayment.includes(id);
@@ -185,13 +202,14 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
   };
 
   const handleFilter = async data => {
-    const { country, state, coin, currency } = data;
+    const { country, state, coin, currency, city } = data;
 
     const offerFilterInput: OfferFilterInput = {
-      countryId: country && country.id,
-      stateId: state && state.id,
       countryName: country && country.name,
-      stateName: state && state.name,
+      countryCode: country && country.iso2,
+      stateName: state && state.adminNameAscii,
+      adminCode: state && state.adminCode,
+      cityName: city && city.cityAscii,
       paymentMethodIds: selectedOptionsPayment,
       coin: coin ? coin : null,
       fiatCurrency: currency ? currency : null
@@ -205,10 +223,10 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
     reset();
     setSelectedOptionsPayment([]);
     const offerFilterInput: OfferFilterInput = {
-      countryId: null,
       countryName: '',
-      stateId: null,
+      countryCode: '',
       stateName: '',
+      adminCode: '',
       paymentMethodIds: [],
       coin: null,
       fiatCurrency: null
@@ -231,25 +249,6 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
       <DialogContent>
         <FilterWrap>
           <div className="filter-item">
-            <Typography variant="body2">Payment method</Typography>
-            <div className="content">
-              {paymenthods.map(item => {
-                return (
-                  <Button
-                    key={item.id}
-                    onClick={() => handleSelect(item.id)}
-                    className={selectedOptionsPayment.includes(item.id) ? 'active' : ''}
-                    size="small"
-                    color="inherit"
-                    variant="outlined"
-                  >
-                    {item.name}
-                  </Button>
-                );
-              })}
-            </div>
-          </div>
-          <div className="filter-item">
             <Typography variant="body2">Fiat/Coin</Typography>
             <div className="content">
               <Grid item xs={6}>
@@ -257,7 +256,7 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
                   name="currency"
                   control={control}
                   render={({ field: { onChange, onBlur, value, ref } }) => (
-                    <FormControl fullWidth>
+                    <FormControlWithNativeSelect>
                       <InputLabel variant="outlined" htmlFor="select-currency">
                         Currency
                       </InputLabel>
@@ -272,7 +271,11 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
                         }}
                       >
                         <option aria-label="None" value="" />
-                        {LIST_CURRENCIES_USED.map(item => {
+                        {LIST_CURRENCIES_USED.sort((a, b) => {
+                          if (a.name < b.name) return -1;
+                          if (a.name > b.name) return 1;
+                          return 0;
+                        }).map(item => {
                           return (
                             <option key={item.code} value={item.code}>
                               {item.name} ({item.code})
@@ -280,7 +283,7 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
                           );
                         })}
                       </NativeSelect>
-                    </FormControl>
+                    </FormControlWithNativeSelect>
                   )}
                 />
               </Grid>
@@ -289,7 +292,7 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
                   name="coin"
                   control={control}
                   render={({ field: { onChange, onBlur, value, ref } }) => (
-                    <FormControl fullWidth>
+                    <FormControlWithNativeSelect>
                       <InputLabel variant="outlined" htmlFor="select-coin">
                         Coin
                       </InputLabel>
@@ -312,14 +315,38 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
                           );
                         })}
                       </NativeSelect>
-                    </FormControl>
+                    </FormControlWithNativeSelect>
                   )}
                 />
               </Grid>
             </div>
           </div>
           <div className="filter-item">
-            <Typography variant="body2">Country/State</Typography>
+            <Typography style={{ marginBottom: '12px' }} variant="body2">
+              Payment method
+            </Typography>
+            <div className="content">
+              {paymenthods.map(item => {
+                return (
+                  <Button
+                    key={item.id}
+                    onClick={() => handleSelect(item.id)}
+                    className={selectedOptionsPayment.includes(item.id) ? 'active' : ''}
+                    size="small"
+                    color="inherit"
+                    variant="outlined"
+                  >
+                    {item.name}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="filter-item">
+            <Typography style={{ marginBottom: '12px' }} variant="body2">
+              Country/State
+            </Typography>
+            <Typography variant="body2">Location</Typography>
             <div className="content">
               <Grid item xs={6}>
                 <Controller
@@ -337,6 +364,21 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
                         inputRef={ref}
                         onClick={() => setOpenCountryList(true)}
                         InputProps={{
+                          endAdornment: getValues('country') && (
+                            <InputAdornment position="end">
+                              <IconButton
+                                style={{ padding: 0, width: '13px' }}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setValue('country', null);
+                                  setValue('state', null);
+                                  setValue('city', null);
+                                }}
+                              >
+                                <Close />
+                              </IconButton>
+                            </InputAdornment>
+                          ),
                           readOnly: true
                         }}
                       />
@@ -356,11 +398,25 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
                         fullWidth
                         onChange={onChange}
                         onBlur={onBlur}
-                        value={value?.name ?? ''}
+                        value={value?.adminNameAscii ?? ''}
                         inputRef={ref}
                         onClick={() => setOpenStateList(true)}
                         disabled={!getValues('country')}
                         InputProps={{
+                          endAdornment: getValues('state') && (
+                            <InputAdornment position="end">
+                              <IconButton
+                                style={{ padding: 0, width: '13px' }}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setValue('state', null);
+                                  setValue('city', null);
+                                }}
+                              >
+                                <Close />
+                              </IconButton>
+                            </InputAdornment>
+                          ),
                           readOnly: true
                         }}
                       />
@@ -369,6 +425,46 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
                 />
               </Grid>
             </div>
+            {getValues('country') && getValues('state') && (
+              <Grid item xs={12}>
+                <Controller
+                  name="city"
+                  control={control}
+                  render={({ field: { onChange, value, onBlur, ref } }) => (
+                    <FormControl fullWidth>
+                      <TextField
+                        style={{ marginTop: '10px' }}
+                        label="City"
+                        variant="outlined"
+                        fullWidth
+                        onChange={onChange}
+                        onBlur={onBlur}
+                        value={value?.cityAscii ?? ''}
+                        inputRef={ref}
+                        onClick={() => setOpenCityList(true)}
+                        disabled={!getValues('country') && !getValues('state')}
+                        InputProps={{
+                          endAdornment: getValues('city') && (
+                            <InputAdornment position="end">
+                              <IconButton
+                                style={{ padding: 0, width: '13px' }}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setValue('city', null);
+                                }}
+                              >
+                                <Close />
+                              </IconButton>
+                            </InputAdornment>
+                          ),
+                          readOnly: true
+                        }}
+                      />
+                    </FormControl>
+                  )}
+                />
+              </Grid>
+            )}
           </div>
         </FilterWrap>
       </DialogContent>
@@ -391,20 +487,34 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
       <FilterListModal
         isOpen={openCountryList}
         onDissmissModal={value => setOpenCountryList(value)}
-        setSelectedItem={value => {
+        setSelectedItem={async value => {
           setValue('country', value);
-          dispatch(getStates(value?.id));
+          const states = await countryApi.getStates(value?.iso2 ?? '');
+          setListStates(states);
           setValue('state', null);
         }}
         listItems={countries}
       />
-      <FilterListModal
+      <FilterListLocationModal
         isOpen={openStateList}
+        listItems={listStates}
+        propertyToSearch="adminNameAscii"
         onDissmissModal={value => setOpenStateList(value)}
-        setSelectedItem={value => {
+        setSelectedItem={async value => {
           setValue('state', value);
+          const cities = await countryApi.getCities(value?.iso2 ?? '', value?.adminCode ?? '');
+          setListCities(cities);
+          setValue('city', null);
         }}
-        listItems={states}
+      />
+      <FilterListLocationModal
+        isOpen={openCityList}
+        listItems={listCities}
+        propertyToSearch="cityAscii"
+        onDissmissModal={value => setOpenCityList(value)}
+        setSelectedItem={value => {
+          setValue('city', value);
+        }}
       />
     </StyledDialog>
   );

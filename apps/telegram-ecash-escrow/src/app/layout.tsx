@@ -15,6 +15,7 @@ import React from 'react';
 import ActionSheet from '../components/ActionSheet/ActionSheet';
 import ModalManager from '../components/ModalManager';
 import ToastNotificationManage from '../components/ToastNotificationManage';
+import { SettingProvider } from '../store/context/settingProvider';
 import { UtxoProvider } from '../store/context/utxoProvider';
 import ReduxProvider from '../store/provider';
 import { TelegramAuthProvider } from '../store/telegram-auth-provider';
@@ -40,14 +41,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <SDKProvider acceptCustomStyles debug>
               <TelegramMiniAppProvider>
                 <AppRouterCacheProvider>
-                  <UtxoProvider>
-                    <ThemeProvider theme={theme}>
-                      <ModalManager />
-                      <ToastNotificationManage />
-                      {children}
-                      <ActionSheet />
-                    </ThemeProvider>
-                  </UtxoProvider>
+                  <SettingProvider>
+                    <UtxoProvider>
+                      <ThemeProvider theme={theme}>
+                        <ModalManager />
+                        <ToastNotificationManage />
+                        {children}
+                        <ActionSheet />
+                      </ThemeProvider>
+                    </UtxoProvider>
+                  </SettingProvider>
                 </AppRouterCacheProvider>
               </TelegramMiniAppProvider>
             </SDKProvider>

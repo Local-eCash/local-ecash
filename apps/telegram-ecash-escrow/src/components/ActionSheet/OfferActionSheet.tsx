@@ -12,7 +12,8 @@ import { useState } from 'react';
 
 const ListStyled = styled(List)`
   background-color: #121212;
-  padding: 8px 5px;
+  padding: 32px 16px;
+  padding-top: 16px;
 
   li {
     background-color: #494949;

@@ -5,10 +5,10 @@ import AuthorizationLayout from '@/src/components/layout/AuthorizationLayout';
 import MobileLayout from '@/src/components/layout/MobileLayout';
 import QRCode from '@/src/components/QRcode/QRcode';
 import SendComponent from '@/src/components/Send/send';
+import { SettingContext } from '@/src/store/context/settingProvider';
 import { UtxoContext } from '@/src/store/context/utxoProvider';
 import { COIN } from '@bcpros/lixi-models';
 import {
-  getSeedBackupTime,
   getSelectedWalletPath,
   openModal,
   parseCashAddressToPrefix,
@@ -46,10 +46,12 @@ const WrapContentWallet = styled.div`
     h5 {
       font-weight: bold;
     }
+
     .amount {
+      margin: 16px 0;
       background-color: rgba(255, 255, 255, 0.08);
-      padding: 25px 10px;
-      border-radius: 15px;
+      padding: 28px 16px;
+      border-radius: 16px;
       display: flex;
       justify-content: center;
 
@@ -92,7 +94,8 @@ export default function Wallet() {
   const dispatch = useLixiSliceDispatch();
 
   const selectedWalletPath = useLixiSliceSelector(getSelectedWalletPath);
-  const seedBackupTime = useLixiSliceSelector(getSeedBackupTime);
+  const settingContext = useContext(SettingContext);
+  const seedBackupTime = settingContext?.setting?.lastSeedBackupTime ?? '';
 
   const [address, setAddress] = useState(parseCashAddressToPrefix(COIN.XEC, selectedWalletPath?.cashAddress));
   const [openReceive, setOpenReceive] = useState(true);

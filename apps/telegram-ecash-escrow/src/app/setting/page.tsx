@@ -1,6 +1,5 @@
 'use client';
 import Footer from '@/src/components/Footer/Footer';
-import Header from '@/src/components/Header/Header';
 import MobileLayout from '@/src/components/layout/MobileLayout';
 import CustomToast from '@/src/components/Toast/CustomToast';
 import {
@@ -36,7 +35,8 @@ const ContainerSetting = styled.div`
     .setting-item {
       margin-bottom: 1rem;
       .title {
-        padding: 0 1rem;
+        padding-top: 1rem;
+        padding-bottom: 0.5rem;
         font-size: 16px;
         font-weight: 400;
         color: #edeff099;
@@ -129,7 +129,6 @@ export default function Setting() {
   return (
     <MobileLayout>
       <ContainerSetting>
-        <Header />
         <div className="setting-info">
           <Typography variant="h4" className="title">
             Setting
@@ -155,14 +154,16 @@ export default function Setting() {
         </div> */}
 
           <div className="setting-item">
-            <p className="title">Backup your account</p>
+            <Typography variant="subtitle1" className="title">
+              Backup your account
+            </Typography>
             <Alert icon={<CheckCircleOutline className="ico-alert" fontSize="inherit" />} severity="warning">
               Your seed phrase is the only way to restore your account. Write it down. Keep it safe. Do not share with
               anyone!
             </Alert>
             <Accordion className="collapse-backup-seed">
               <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel1a-content" id="panel1a-header">
-                <p>Click to reveal seed phrase</p>
+                <Typography variant="body1">Click to reveal seed phrase</Typography>
               </AccordionSummary>
               <AccordionDetails>
                 <CopyToClipboard
@@ -180,14 +181,16 @@ export default function Setting() {
               </AccordionDetails>
             </Accordion>
           </div>
-          <hr />
           <div className="setting-item">
+            <Typography variant="subtitle1" className="title">
+              Sign out
+            </Typography>
             <Alert icon={<CheckCircleOutline className="ico-alert" fontSize="inherit" />} severity="error">
               Sign out of the current session
             </Alert>
             <Accordion className="collapse-backup-seed">
               <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel1a-content" id="panel1a-header">
-                <p>Click to reveal sign out button</p>
+                <Typography variant="body1">Click to reveal sign out button</Typography>
               </AccordionSummary>
               <AccordionDetails>
                 <Button

@@ -31,7 +31,7 @@ const TopSection: React.FC = () => {
   const [open, setOpen] = useState<boolean>(false);
 
   const offerFilterConfig = useLixiSliceSelector(getOfferFilterConfig);
-  const { countryName, stateName, coin, fiatCurrency } = offerFilterConfig;
+  const { countryName, stateName, cityName, coin, fiatCurrency } = offerFilterConfig;
 
   return (
     <>
@@ -42,7 +42,9 @@ const TopSection: React.FC = () => {
               <LocationOnOutlinedIcon />
             </IconButton>
             <Typography variant="body2">
-              {stateName || countryName ? [stateName, countryName].filter(Boolean).join(', ') : 'All the world'}
+              {stateName || countryName || cityName
+                ? [cityName, stateName, countryName].filter(Boolean).join(', ')
+                : 'All the world'}
             </Typography>
           </div>
           <div onClick={() => setOpen(true)}>

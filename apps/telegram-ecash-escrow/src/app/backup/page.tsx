@@ -2,9 +2,12 @@
 import CustomToast from '@/src/components/Toast/CustomToast';
 import AuthorizationLayout from '@/src/components/layout/AuthorizationLayout';
 import MobileLayout from '@/src/components/layout/MobileLayout';
+import { SettingContext } from '@/src/store/context/settingProvider';
+import { UpdateSettingCommand } from '@bcpros/lixi-models';
 import {
+  getSelectedAccountId,
   getWalletMnemonic,
-  updateSeedBackupTime,
+  settingApi,
   useSliceDispatch as useLixiSliceDispatch,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
@@ -12,7 +15,7 @@ import styled from '@emotion/styled';
 import { CheckCircleOutline } from '@mui/icons-material';
 import { Alert, Button, Typography } from '@mui/material';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import BackupSeed, { BackupWordModel } from './backup-seed';
 
 const ContainerBackupGame = styled.div`
@@ -57,9 +60,12 @@ const WordGuessContainer = styled.div`
 `;
 
 export default function Backup() {
+  const settingContext = useContext(SettingContext);
+  const { setSetting } = settingContext;
   const dispatch = useLixiSliceDispatch();
   const searchParams = useSearchParams();
   const walletMnemonic = useLixiSliceSelector(getWalletMnemonic);
+  const selectedAccountId = useLixiSliceSelector(getSelectedAccountId);
   const [mnemonicWordsConverted, setMnemonicWordsConverted] = useState<Array<BackupWordModel>>(
     walletMnemonic
       ? walletMnemonic.split(' ').map(item => {
@@ -78,9 +84,20 @@ export default function Backup() {
   const [finished, setFinished] = useState(false);
 
   const router = useRouter();
-  const finalStep = () => {
+  const finalStep = async () => {
     //set time backup
-    dispatch(updateSeedBackupTime(new Date().toDateString()));
+    try {
+      const updateSettingCommand: UpdateSettingCommand = {
+        accountId: selectedAccountId,
+        lastSeedBackupTime: new Date()
+      };
+      if (selectedAccountId) {
+        const updatedSetting = await settingApi.updateSetting(updateSettingCommand);
+        setSetting(updatedSetting);
+      }
+    } catch (err) {
+      console.log('err when update setting: ', err);
+    }
 
     setFinished(true);
     //router after 2s

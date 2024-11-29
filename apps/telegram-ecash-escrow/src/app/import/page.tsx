@@ -12,14 +12,12 @@ import {
   WalletContextNode
 } from '@bcpros/redux-store';
 import styled from '@emotion/styled';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import QrCodeScannerOutlinedIcon from '@mui/icons-material/QrCodeScannerOutlined';
 import {
   Backdrop,
   Button,
   CircularProgress,
   FormControl,
-  IconButton,
   InputAdornment,
   Stack,
   TextField,
@@ -36,10 +34,12 @@ const ContainerImportWallet = styled.div`
     display: flex;
     justify-content: space-between;
     align-items: baseline;
+
     .title-icon {
+      margin-bottom: 16px;
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 8px;
     }
   }
   .coin-address {
@@ -64,14 +64,20 @@ const ContainerImportWallet = styled.div`
   }
   .receive-form {
     padding: 1rem 0;
+
     .title {
-      margin: 0 0 10px 0;
+      margin-bottom: 10px;
     }
+
     .btn-import,
     .btn-create {
       font-weight: bold;
       width: 100%;
-      margin-top: 3px;
+      margin-top: 16px;
+    }
+
+    .btn-create {
+      margin-top: 4px;
     }
   }
 `;
@@ -206,22 +212,18 @@ export default function ImportWallet() {
       <ContainerImportWallet>
         <div className="header-receive">
           <div className="title-icon">
-            <h2 className="title" style={{ color: 'white' }}>
-              Import
-            </h2>
+            <Typography variant="h4">Import</Typography>
             <picture>
               <img width={24} height={24} src="/import.svg" alt="" />
             </picture>
           </div>
-          <IconButton>
-            <InfoOutlinedIcon />
-          </IconButton>
+          <span></span>
         </div>
-        <div className="receive-form">
-          <p className="title" style={{ color: 'white' }}>
+        <div className="receive-form" style={{ paddingTop: '0' }}>
+          <Typography variant="body1" className="title">
             We detected telegram account already exists. Please import your mnemonic seed phrase to continue.
-          </p>
-          <FormControl fullWidth={true}>
+          </Typography>
+          <FormControl style={{ marginTop: '8px' }} fullWidth={true}>
             <Controller
               name="recoveryPhrase"
               control={control}
@@ -266,9 +268,9 @@ export default function ImportWallet() {
           </Button>
         </div>
         <div className="receive-form">
-          <p className="title" style={{ color: 'white' }}>
+          <Typography variant="body1" className="title">
             I forgot my wallet recovery phrase. Create me a new one.
-          </p>
+          </Typography>
           <Button
             className="btn-create"
             variant="contained"
