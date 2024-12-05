@@ -1,6 +1,6 @@
 'use client';
 
-import { LaunchParams, postEvent, retrieveLaunchParams } from '@telegram-apps/sdk';
+import { LaunchParams, init, postEvent, retrieveLaunchParams } from '@telegram-apps/sdk-react';
 import { createContext, useEffect, useState } from 'react';
 
 export type TelegramMiniAppValue = {
@@ -18,6 +18,7 @@ export function TelegramMiniAppProvider({ children }: { children: React.ReactNod
 
   useEffect(() => {
     try {
+      init();
       setLaunchParams(retrieveLaunchParams());
       postEvent('web_app_expand');
       postEvent('web_app_setup_closing_behavior', { need_confirmation: true });

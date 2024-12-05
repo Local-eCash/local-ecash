@@ -1,12 +1,13 @@
 'use client';
 import OfferDetailInfo from '@/src/components/DetailInfo/OfferDetailInfo';
-import AuthorizationLayout from '@/src/components/layout/AuthorizationLayout';
-import MobileLayout from '@/src/components/layout/MobileLayout';
 import { TabPanel } from '@/src/components/Tab/Tab';
 import TickerHeader from '@/src/components/TickerHeader/TickerHeader';
+import AuthorizationLayout from '@/src/components/layout/AuthorizationLayout';
+import MobileLayout from '@/src/components/layout/MobileLayout';
 import { TabType } from '@/src/store/constants';
 import { OfferStatus, useInfiniteMyOffersQuery } from '@bcpros/redux-store';
 import styled from '@emotion/styled';
+import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
 import { Skeleton, Tab, Tabs, Typography } from '@mui/material';
 import React, { useState } from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
@@ -89,7 +90,12 @@ export default function MyOffer() {
     <MobileLayout>
       <AuthorizationLayout>
         <MyOfferPage>
-          <TickerHeader hideIcon={true} title="My offers" showBtnCreateOffer={true} />
+          <TickerHeader
+            hideIcon={true}
+            title="My offers"
+            showBtnCreateOffer={true}
+            iconHeader={<LocalOfferOutlinedIcon />}
+          />
           <Tabs
             value={value}
             onChange={handleChange}

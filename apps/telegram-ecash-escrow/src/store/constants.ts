@@ -21,7 +21,7 @@ export const LIST_COIN = [
   },
   {
     id: 3,
-    name: 'Ecash',
+    name: 'eCash',
     ticker: 'XEC',
     fixAmount: 1000
   },

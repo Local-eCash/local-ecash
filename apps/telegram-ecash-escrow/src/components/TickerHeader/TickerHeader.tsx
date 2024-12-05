@@ -21,6 +21,13 @@ const Header = styled.div`
     }
   }
 
+  .icon-header {
+    position: relative;
+    .MuiSvgIcon-root {
+      color: #fff;
+    }
+  }
+
   h4 {
     font-size: 26px;
     display: flex;
@@ -37,11 +44,17 @@ const Header = styled.div`
 
 interface TickerHeaderProps {
   title: string;
+  iconHeader?: any;
   hideIcon?: boolean;
   showBtnCreateOffer?: boolean;
 }
 
-const TickerHeader: React.FC<TickerHeaderProps> = ({ title, hideIcon, showBtnCreateOffer = false }) => {
+const TickerHeader: React.FC<TickerHeaderProps> = ({
+  title,
+  hideIcon,
+  showBtnCreateOffer = false,
+  iconHeader = null
+}) => {
   const router = useRouter();
   const dispatch = useLixiSliceDispatch();
 
@@ -66,6 +79,7 @@ const TickerHeader: React.FC<TickerHeaderProps> = ({ title, hideIcon, showBtnCre
         </IconButton>
       )}
       <Typography variant="h4">
+        {iconHeader && <IconButton className="icon-header">{iconHeader}</IconButton>}
         {title} {showBtnCreateOffer && <AddCircleOutlineIcon onClick={handleOpenCreateOffer} />}{' '}
       </Typography>
     </Header>

@@ -10,7 +10,6 @@
 
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v13-appRouter';
 import { ThemeProvider } from '@mui/material/styles';
-import { SDKProvider } from '@telegram-apps/sdk-react';
 import React from 'react';
 import ActionSheet from '../components/ActionSheet/ActionSheet';
 import ModalManager from '../components/ModalManager';
@@ -38,22 +37,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body style={{ background: '#04080F', margin: '0' }}>
         <TelegramAuthProvider>
           <ReduxProvider>
-            <SDKProvider acceptCustomStyles debug>
-              <TelegramMiniAppProvider>
-                <AppRouterCacheProvider>
-                  <SettingProvider>
-                    <UtxoProvider>
-                      <ThemeProvider theme={theme}>
-                        <ModalManager />
-                        <ToastNotificationManage />
-                        {children}
-                        <ActionSheet />
-                      </ThemeProvider>
-                    </UtxoProvider>
-                  </SettingProvider>
-                </AppRouterCacheProvider>
-              </TelegramMiniAppProvider>
-            </SDKProvider>
+            <TelegramMiniAppProvider>
+              <AppRouterCacheProvider>
+                <SettingProvider>
+                  <UtxoProvider>
+                    <ThemeProvider theme={theme}>
+                      <ModalManager />
+                      <ToastNotificationManage />
+                      {children}
+                      <ActionSheet />
+                    </ThemeProvider>
+                  </UtxoProvider>
+                </SettingProvider>
+              </AppRouterCacheProvider>
+            </TelegramMiniAppProvider>
           </ReduxProvider>
         </TelegramAuthProvider>
       </body>

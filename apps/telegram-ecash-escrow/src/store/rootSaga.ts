@@ -30,9 +30,9 @@ export function* emptySaga() {
 
 export default function* rootSaga() {
   yield all([
+    accountSaga(),
     walletSaga(),
     localAccountSaga(),
-    accountSaga(),
     lixiSaga(),
     sendSaga(),
     claimSaga(),

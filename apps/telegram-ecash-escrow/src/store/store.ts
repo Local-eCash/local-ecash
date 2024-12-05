@@ -68,7 +68,17 @@ export const makeStore = () => {
         .concat(api.middleware)
         .concat(sagaMiddleware);
     },
-    devTools: true
+    devTools:
+      process.env.NODE_ENV === 'production'
+        ? false
+        : {
+            actionsDenylist: [
+              'wallet/writeWalletStatus',
+              'posts/setShowCreatePost',
+              'analyticEvent/batchEvents',
+              'analyticEvent/analyticEvent'
+            ]
+          }
   });
   setupListeners(store.dispatch);
 

@@ -4,7 +4,6 @@ import {
   WalletContextNode,
   axiosClient,
   generateAccount,
-  getCountries,
   getSelectedWalletPath,
   importAccount,
   useSliceDispatch as useLixiSliceDispatch,
@@ -14,6 +13,7 @@ import styled from '@emotion/styled';
 import SignalWifiConnectedNoInternet4Icon from '@mui/icons-material/SignalWifiConnectedNoInternet4';
 import { Alert, Backdrop, Button, FormControl, Snackbar, Stack, TextField, Typography } from '@mui/material';
 import { TelegramAuthData } from '@telegram-auth/react';
+import _ from 'lodash';
 import { signIn, useSession } from 'next-auth/react';
 import React, { useContext, useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -134,14 +134,13 @@ const MiniAppBackdrop = () => {
         accountType: AccountType.NORMAL
       };
 
-      dispatch(getCountries());
       dispatch(generateAccount(dataGenerateAccount));
 
       await signIn('telegram-login', { redirect: false }, data as any);
 
       setSuccess(true);
     } catch (e) {
-      console.log('🚀 ~ handleCreateNewAccount ~ e:', e);
+      console.log('handleCreateNewAccount ~ e:', e);
     }
   };
 
@@ -191,7 +190,7 @@ const MiniAppBackdrop = () => {
 
       setSuccess(true);
     } catch (e) {
-      console.log('🚀 ~ handleCreateNewWal ~ e:', e);
+      console.log('handleCreateNewWal ~ e:', e);
       setError(true);
     }
 
@@ -210,13 +209,13 @@ const MiniAppBackdrop = () => {
       >
         <Stack>
           <Typography variant="h5" align="center">
-            Welcome to Local Ecash
+            Welcome to Local eCash
           </Typography>
           <Button
             className="btn-create"
             variant="contained"
             onClick={() => handleCreateNewAccount()}
-            disabled={loading || success}
+            disabled={loading || success || !_.isNil(selectedWalletPath)}
           >
             Create new account
           </Button>
@@ -277,7 +276,7 @@ const MiniAppBackdrop = () => {
                       onChange={onChange}
                       onBlur={onBlur}
                       value={value}
-                      disabled={loading || success}
+                      disabled={loading || success || !_.isNil(selectedWalletPath)}
                       id="recoveryPhrase"
                       label="Recovery phrase"
                       placeholder="Enter your recovery phrase (12 words) in the correct order. Separate each word with a single space only (no commas or any other punctuation)."
@@ -296,7 +295,7 @@ const MiniAppBackdrop = () => {
                 className="btn-import"
                 variant="contained"
                 onClick={handleSubmit(importWallet)}
-                disabled={loading || success}
+                disabled={loading || success || !_.isNil(selectedWalletPath)}
               >
                 Import
               </Button>
@@ -309,7 +308,7 @@ const MiniAppBackdrop = () => {
                 className="btn-create"
                 variant="contained"
                 onClick={() => handleCreateNewWallet()}
-                disabled={loading || success}
+                disabled={loading || success || !_.isNil(selectedWalletPath)}
               >
                 Create new wallet
               </Button>

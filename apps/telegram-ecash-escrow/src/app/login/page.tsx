@@ -121,7 +121,7 @@ export default function Login() {
   return (
     <MobileLayout>
       <WrapLoginPage>
-        <Typography variant="h5">Welcome to Local-ecash</Typography>
+        <Typography variant="h5">Welcome to Local eCash</Typography>
         <h2 style={{ color: 'white' }}>Please login to continue</h2>
         <LoginButton
           botUsername={process.env.NEXT_PUBLIC_BOT_USERNAME!}

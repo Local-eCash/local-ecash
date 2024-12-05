@@ -1,12 +1,13 @@
 'use client';
 import OrderDetailInfo from '@/src/components/DetailInfo/OrderDetailInfo';
-import AuthorizationLayout from '@/src/components/layout/AuthorizationLayout';
-import MobileLayout from '@/src/components/layout/MobileLayout';
 import { TabPanel } from '@/src/components/Tab/Tab';
 import TickerHeader from '@/src/components/TickerHeader/TickerHeader';
+import AuthorizationLayout from '@/src/components/layout/AuthorizationLayout';
+import MobileLayout from '@/src/components/layout/MobileLayout';
 import { TabType } from '@/src/store/constants';
 import { EscrowOrderQueryItem, EscrowOrderStatus, useInfiniteMyEscrowOrderQuery } from '@bcpros/redux-store';
 import styled from '@emotion/styled';
+import InventoryOutlinedIcon from '@mui/icons-material/InventoryOutlined';
 import { Skeleton, Tab, Tabs, Typography } from '@mui/material';
 import React, { useState } from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
@@ -102,7 +103,7 @@ export default function MyOrder() {
     <MobileLayout>
       <AuthorizationLayout>
         <MyOrderPage>
-          <TickerHeader hideIcon={true} title="My orders" />
+          <TickerHeader hideIcon={true} title="My orders" iconHeader={<InventoryOutlinedIcon />} />
 
           <Tabs
             value={value}

@@ -19,6 +19,7 @@ import styled from '@emotion/styled';
 import { Close } from '@mui/icons-material';
 import {
   Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -269,8 +270,8 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       message: data.message,
       noteOffer: data.note,
       paymentMethodIds: [option],
-      coinPayment: data?.coin ? data.coin : null,
-      localCurrency: data?.currency ? data.currency : null,
+      coinPayment: data?.coin ? data.coin.split(':')[0] : null,
+      localCurrency: data?.currency ? data.currency.split(':')[0] : null,
       marginPercentage: Number(data.percentage),
       orderLimitMin: minNum,
       orderLimitMax: maxNum,
@@ -358,7 +359,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
           control={control}
           rules={{
             validate: value => {
-              if (value >= 30) return 'Margin is between 0 - 30%';
+              if (value > 30) return 'Margin is between 0 - 30%';
               return true;
             }
           }}
@@ -388,8 +389,10 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
           <FormHelperText error={true}>{errors.percentage.message as string}</FormHelperText>
         )}
         <Typography className="example-value">
-          For each <span className="bold">${fixAmount.toFixed(2)}</span> worth of {coinCurrency} that you sell, you will
-          receive <span className="bold">${(fixAmount * (percentageValue / 100)).toFixed(2)}</span> margin.
+          For each <span className="bold">${Intl.NumberFormat('de-DE').format(fixAmount)}</span> worth of {coinCurrency}{' '}
+          that you sell, you will get{' '}
+          <span className="bold">${Intl.NumberFormat('de-DE').format(fixAmount * (percentageValue / 100))}</span>{' '}
+          margin.
         </Typography>
       </div>
     </Grid>
@@ -556,7 +559,6 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
             <Grid item xs={12}>
               <FormControl fullWidth>
                 <TextField
-                  label="Country"
                   variant="outlined"
                   fullWidth
                   value={
@@ -566,7 +568,8 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                   }
                   onClick={() => setOpenLocationList(true)}
                   InputProps={{
-                    readOnly: true
+                    readOnly: true,
+                    endAdornment: loadingLocation && <CircularProgress />
                   }}
                 />
               </FormControl>
@@ -828,19 +831,6 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       console.error('Geolocation is not supported by this browser.');
     }
   };
-
-  function cleanString(str: string, isState = true): string {
-    if (!str) return;
-    const noPunctuation = str.replace(/[-]/g, ' ');
-
-    const lowerStr = noPunctuation.toLowerCase();
-
-    const cleanedStr = isState
-      ? lowerStr.replace(/thanh pho|thành phố |city/gi, '').trim()
-      : lowerStr.replace(/quan|huyen|quận|huyện/gi, '').trim();
-
-    return cleanedStr;
-  }
 
   //get coin and currency from data exist
   useEffect(() => {
