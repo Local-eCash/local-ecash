@@ -180,6 +180,7 @@ export default function ImportWallet() {
 
       setSuccess(true);
     } catch (e) {
+      console.log('🚀 ~ handleCreateNewWal ~ e:', e);
       setError(true);
     }
 

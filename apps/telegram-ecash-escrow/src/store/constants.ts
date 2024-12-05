@@ -10,41 +10,49 @@ export const LIST_COIN = [
   {
     id: 1,
     name: 'Bitcoin',
-    ticker: 'BTC'
+    ticker: 'BTC',
+    fixAmount: 1
   },
   {
     id: 2,
     name: 'Bitcoin Cash',
-    ticker: 'BCH'
+    ticker: 'BCH',
+    fixAmount: 100
   },
   {
     id: 3,
     name: 'Ecash',
-    ticker: 'XEC'
+    ticker: 'XEC',
+    fixAmount: 1000
   },
   {
     id: 4,
     name: 'Ethereum',
-    ticker: 'ETH'
+    ticker: 'ETH',
+    fixAmount: 100
   },
   {
     id: 5,
     name: 'Lotus',
-    ticker: 'XPI'
+    ticker: 'XPI',
+    fixAmount: 1000000
   },
   {
     id: 6,
     name: 'DogeCoin',
-    ticker: 'DOGE'
+    ticker: 'DOGE',
+    fixAmount: 100
   },
   {
     id: 7,
     name: 'XRP',
-    ticker: 'XRP'
+    ticker: 'XRP',
+    fixAmount: 100
   },
   {
     id: 8,
     name: 'LiteCoin',
-    ticker: 'LTC'
+    ticker: 'LTC',
+    fixAmount: 100
   }
 ];

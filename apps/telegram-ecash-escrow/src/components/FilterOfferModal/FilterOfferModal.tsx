@@ -343,10 +343,9 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
             </div>
           </div>
           <div className="filter-item">
-            <Typography style={{ marginBottom: '12px' }} variant="body2">
-              Country/State
+            <Typography style={{ marginBottom: '15px' }} variant="body2">
+              Location
             </Typography>
-            <Typography variant="body2">Location</Typography>
             <div className="content">
               <Grid item xs={6}>
                 <Controller

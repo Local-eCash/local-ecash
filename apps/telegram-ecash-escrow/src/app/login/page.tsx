@@ -1,6 +1,6 @@
 'use client';
 import MobileLayout from '@/src/components/layout/MobileLayout';
-import { COIN } from '@bcpros/lixi-models';
+import { AccountType, COIN, GenerateAccountType } from '@bcpros/lixi-models';
 import {
   axiosClient,
   generateAccount,
@@ -130,7 +130,12 @@ export default function Login() {
               await axiosClient.get(`/api/accounts/telegram/${data.id}`);
               await signIn('telegram-login', { redirect: true, callbackUrl: `/import?id=${data.id}` }, data as any);
             } catch {
-              dispatch(generateAccount({ coin: COIN.XEC, telegramId: data.id!.toString() }));
+              const dataGenerateAccount: GenerateAccountType = {
+                coin: COIN.XEC,
+                telegramId: data.id!.toString(),
+                accountType: AccountType.NORMAL
+              };
+              dispatch(generateAccount(dataGenerateAccount));
               dispatch(
                 showToast('success', {
                   message: 'Success',

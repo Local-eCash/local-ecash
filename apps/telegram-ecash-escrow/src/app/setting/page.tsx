@@ -7,7 +7,6 @@ import {
   getSelectedWalletPath,
   getWalletMnemonic,
   removeAllWallets,
-  removeWalletPaths,
   useSliceDispatch as useLixiSliceDispatch,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
@@ -95,7 +94,6 @@ export default function Setting() {
   };
 
   const handleSignOut = () => {
-    dispatch(removeWalletPaths(selectedAccount.address));
     dispatch(removeAllWallets());
     signOut({ redirect: true, callbackUrl: '/' });
   };
@@ -114,7 +112,6 @@ export default function Setting() {
             variant="contained"
             style={{ marginTop: '15px' }}
             onClick={() => {
-              dispatch(removeWalletPaths(selectedAccount.address));
               dispatch(removeAllWallets());
               signOut({ redirect: true, callbackUrl: '/' });
             }}

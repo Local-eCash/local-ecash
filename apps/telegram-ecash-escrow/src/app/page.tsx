@@ -16,7 +16,6 @@ import {
   getSelectedWalletPath,
   offerApi,
   removeAllWallets,
-  removeWalletPaths,
   setNewPostAvailable,
   useInfiniteOfferFilterQuery,
   useInfiniteOffersByScoreQuery,
@@ -277,7 +276,6 @@ export default function Home() {
             variant="contained"
             style={{ marginTop: '15px' }}
             onClick={() => {
-              dispatch(removeWalletPaths(selectedAccount.address));
               dispatch(removeAllWallets());
               signOut({ redirect: true, callbackUrl: '/' });
             }}
@@ -343,11 +341,6 @@ export default function Home() {
                     }
                     scrollableTarget="scrollableDiv"
                     scrollThreshold={'100px'}
-                    endMessage={
-                      <Typography style={{ textAlign: 'center', marginTop: '2rem' }}>
-                        It&apos;s so empty here
-                      </Typography>
-                    }
                   >
                     {dataFilter.map(item => {
                       return <OfferItem key={item.id} timelineItem={item as TimelineQueryItem} />;
@@ -371,20 +364,6 @@ export default function Home() {
                   }
                   scrollableTarget="scrollableDiv"
                   scrollThreshold={'100px'}
-                  endMessage={
-                    <Typography
-                      style={{
-                        textAlign: 'center',
-                        marginTop: '2rem',
-                        position: 'absolute',
-                        left: '50%',
-                        top: '35%',
-                        transform: 'translate(-50%, -50%)'
-                      }}
-                    >
-                      It&apos;s so empty here
-                    </Typography>
-                  }
                 >
                   {data.map(item => {
                     return <OfferItem key={item.id} timelineItem={item as TimelineQueryItem} />;

@@ -105,7 +105,7 @@ const QueryListLocationModal: React.FC<QueryListLocationModalProps> = props => {
             <Box sx={{ mt: 1 }}>
               {listItems.map(option => (
                 <Button
-                  key={option?.primaryId}
+                  key={option?.id}
                   onClick={() => handleSelect(option)}
                   fullWidth
                   variant="text"
