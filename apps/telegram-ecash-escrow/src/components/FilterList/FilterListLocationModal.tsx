@@ -101,6 +101,7 @@ const FilterListLocationModal: React.FC<FilterListLocationModalProps> = props =>
               fullWidth
               onChange={e => setSearchTerm(e.target.value)}
               value={searchTerm}
+              autoFocus
             />
             <Box sx={{ mt: 1 }}>
               {filteredOptions.map(option => (

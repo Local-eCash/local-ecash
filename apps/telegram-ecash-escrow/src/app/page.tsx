@@ -12,7 +12,6 @@ import {
   getNewPostAvailable,
   getOfferFilterConfig,
   getPaymenMethods,
-  getSelectedAccount,
   getSelectedWalletPath,
   offerApi,
   removeAllWallets,
@@ -35,14 +34,12 @@ import {
   Slide,
   Stack,
   Typography,
-  useMediaQuery,
   useTheme
 } from '@mui/material';
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useContext, useEffect, useRef, useState } from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
-import useAuthorization from '../components/Auth/use-authorization.hooks';
 import MiniAppBackdrop from '../components/Common/MiniAppBackdrop';
 import MobileLayout from '../components/layout/MobileLayout';
 import { TelegramMiniAppContext } from '../store/telegram-mini-app-provider';
@@ -106,19 +103,15 @@ export default function Home() {
   const theme = useTheme();
   const router = useRouter();
   const { data: sessionData, status } = useSession();
-  const askAuthorization = useAuthorization();
-  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const { launchParams } = useContext(TelegramMiniAppContext);
 
   const selectedWalletPath = useLixiSliceSelector(getSelectedWalletPath);
   const offerFilterConfig = useLixiSliceSelector(getOfferFilterConfig);
   const newPostAvailable = useLixiSliceSelector(getNewPostAvailable);
-  const selectedAccount = useLixiSliceSelector(getSelectedAccount);
 
   const [mismatchAccount, setMismatchAccount] = useState(false);
   const [networkError, setNetworkError] = useState(false);
   const [visible, setVisible] = useState(true);
-  const [open, setOpen] = useState<boolean>(false);
 
   const { useUpdateAccountTelegramUsernameMutation, useGetAccountByAddressQuery } = accountsApi;
   const { currentData: accountQueryData } = useGetAccountByAddressQuery(

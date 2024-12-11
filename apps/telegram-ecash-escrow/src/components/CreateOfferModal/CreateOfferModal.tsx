@@ -10,6 +10,7 @@ import {
   UpdateOfferInput,
   closeModal,
   countryApi,
+  getAllCountries,
   getAllPaymentMethods,
   offerApi,
   useSliceDispatch as useLixiSliceDispatch,
@@ -19,7 +20,6 @@ import styled from '@emotion/styled';
 import { Close } from '@mui/icons-material';
 import {
   Button,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -42,10 +42,10 @@ import {
   useTheme
 } from '@mui/material';
 import { TransitionProps } from '@mui/material/transitions';
-import { debounce } from 'lodash';
 import React, { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import FilterListLocationModal from '../FilterList/QueryListLocationModal';
+import FilterListLocationModal from '../FilterList/FilterListLocationModal';
+import FilterListModal from '../FilterList/FilterListModal';
 import { FormControlWithNativeSelect } from '../FilterOfferModal/FilterOfferModal';
 import CustomToast from '../Toast/CustomToast';
 
@@ -213,20 +213,20 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
 
   const paymentMethods = useLixiSliceSelector(getAllPaymentMethods);
+  const countries = useLixiSliceSelector(getAllCountries);
+  const [listStates, setListStates] = useState<Location[]>([]);
+  const [listCities, setListCities] = useState<Location[]>([]);
+
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeStep, setActiveStep] = React.useState(isEdit ? 2 : 1);
   const [coinCurrency, setCoinCurrency] = useState('XEC');
-  const [currencyState, setCurrencyState] = useState(null);
-  const [coinState, setCoinState] = useState(null);
   const [fixAmount, setFixAmount] = useState(1000);
 
-  const [openLocationList, setOpenLocationList] = useState(false);
-
-  const [loadingLocation, setLoadingLocation] = useState(false);
-  const [listLocation, setListLocation] = useState<Location[]>([]);
-  const [selectedLocation, setSelectedLocation] = useState<Location>(null);
+  const [openCountryList, setOpenCountryList] = useState(false);
+  const [openStateList, setOpenStateList] = useState(false);
+  const [openCityList, setOpenCityList] = useState(false);
 
   const {
     handleSubmit,
@@ -235,6 +235,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
     reset,
     setValue,
     getValues,
+    clearErrors,
     formState: { errors }
   } = useForm({
     defaultValues: {
@@ -245,7 +246,10 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       currency: null,
       coin: null,
       percentage: offer?.marginPercentage ?? 0,
-      note: offer?.noteOffer ?? ''
+      note: offer?.noteOffer ?? '',
+      country: null,
+      state: null,
+      city: null
     }
   });
 
@@ -275,7 +279,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       marginPercentage: Number(data.percentage),
       orderLimitMin: minNum,
       orderLimitMax: maxNum,
-      locationId: selectedLocation?.id ?? null
+      locationId: data?.city?.id ?? data?.country?.id?.toString() ?? null
     };
 
     //Just have location when paymentmethods is 1 or 2
@@ -284,23 +288,14 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
     }
 
     if (isEdit) {
-      let inputUpdateOffer: UpdateOfferInput;
-      //we dont choose anything, it use old value
-      if (!data?.coin && !data?.currency) {
-        inputUpdateOffer = {
-          ...input,
-          coinPayment: coinState?.ticker,
-          localCurrency: currencyState?.code,
-          id: offer?.postId
-        };
-      } else {
-        inputUpdateOffer = {
-          ...input,
-          coinPayment: data?.coin ? data.coin : null,
-          localCurrency: data?.currency?.code ? data.currency : null,
-          id: offer?.postId
-        };
-      }
+      let inputUpdateOffer: UpdateOfferInput = {
+        message: data.message,
+        marginPercentage: Number(data.percentage),
+        noteOffer: data.note,
+        orderLimitMin: minNum,
+        orderLimitMax: maxNum,
+        id: offer?.postId
+      };
       await updateOfferTrigger({ input: inputUpdateOffer })
         .unwrap()
         .then(() => setSuccess(true))
@@ -333,19 +328,6 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
 
   const handleCloseModal = () => {
     dispatch(closeModal());
-  };
-
-  const handleSearch = debounce(async searchTerm => {
-    setLoadingLocation(true);
-    const locations = await countryApi.getLocations(searchTerm);
-    setListLocation(locations);
-    locations.length > 0 && setSelectedLocation(locations[0]);
-    setLoadingLocation(false);
-  }, 500); // Debounce for 300 milliseconds
-
-  const handleChange = event => {
-    const searchTerm = event.target.value;
-    handleSearch(searchTerm);
   };
 
   const marginComponent = (
@@ -458,7 +440,8 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                 control={control}
                 rules={{
                   validate: value => {
-                    if (!value && !currencyState) return 'Currency is required';
+                    // if (!value && !currencyState) return 'Currency is required';
+                    if (!value) return 'Currency is required';
 
                     return true;
                   }
@@ -510,7 +493,8 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                 control={control}
                 rules={{
                   validate: value => {
-                    if (!value && !coinState) return 'Coin is required';
+                    // if (!value && !coinState) return 'Coin is required';
+                    if (!value) return 'Coin is required';
 
                     return true;
                   }
@@ -533,6 +517,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                     >
                       <option aria-label="None" value="" />
                       {LIST_COIN.map(item => {
+                        if (item.ticker === 'XEC') return;
                         return (
                           <option key={item.ticker} value={`${item.ticker}:${item.fixAmount}`}>
                             {item.name} ({item.ticker})
@@ -556,24 +541,156 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                 Location
               </Typography>
             </Grid>
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <TextField
-                  variant="outlined"
-                  fullWidth
-                  value={
-                    selectedLocation
-                      ? `${[selectedLocation?.cityAscii, selectedLocation?.adminNameAscii, selectedLocation?.country].filter(Boolean).join(', ')}`
-                      : ''
+
+            <Grid item xs={6}>
+              <Controller
+                name="country"
+                control={control}
+                rules={{
+                  validate: value => {
+                    if (!value) return 'Country is required';
+
+                    return true;
                   }
-                  onClick={() => setOpenLocationList(true)}
-                  InputProps={{
-                    readOnly: true,
-                    endAdornment: loadingLocation && <CircularProgress />
-                  }}
-                />
-              </FormControl>
+                }}
+                render={({ field: { onChange, value, onBlur, ref } }) => (
+                  <FormControl fullWidth>
+                    <TextField
+                      label={option === 1 ? 'Country' : ''}
+                      variant="outlined"
+                      fullWidth
+                      onChange={onChange}
+                      onBlur={onBlur}
+                      value={value?.name ?? ''}
+                      inputRef={ref}
+                      onClick={() => setOpenCountryList(true)}
+                      InputProps={{
+                        endAdornment: getValues('country') && (
+                          <InputAdornment position="end">
+                            <IconButton
+                              style={{ padding: 0, width: '13px' }}
+                              onClick={e => {
+                                e.stopPropagation();
+                                setValue('country', null);
+                                setValue('state', null);
+                                setValue('city', null);
+                              }}
+                            >
+                              <Close />
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                        readOnly: true
+                      }}
+                    />
+                    {errors && errors?.country && (
+                      <FormHelperText error={true}>{errors.country.message as string}</FormHelperText>
+                    )}
+                  </FormControl>
+                )}
+              />
             </Grid>
+            {option === 1 && (
+              <Grid item xs={6}>
+                <Controller
+                  name="state"
+                  control={control}
+                  rules={{
+                    validate: value => {
+                      if (!value) return 'State is required';
+
+                      return true;
+                    }
+                  }}
+                  render={({ field: { onChange, value, onBlur, ref } }) => (
+                    <FormControl fullWidth>
+                      <TextField
+                        label="State"
+                        variant="outlined"
+                        fullWidth
+                        onChange={onChange}
+                        onBlur={onBlur}
+                        value={value?.adminNameAscii ?? ''}
+                        inputRef={ref}
+                        onClick={() => setOpenStateList(true)}
+                        disabled={!getValues('country')}
+                        InputProps={{
+                          endAdornment: getValues('state') && (
+                            <InputAdornment position="end">
+                              <IconButton
+                                style={{ padding: 0, width: '13px' }}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setValue('state', null);
+                                  setValue('city', null);
+                                }}
+                              >
+                                <Close />
+                              </IconButton>
+                            </InputAdornment>
+                          ),
+                          readOnly: true
+                        }}
+                      />
+                      {errors && errors?.state && (
+                        <FormHelperText error={true}>{errors.state.message as string}</FormHelperText>
+                      )}
+                    </FormControl>
+                  )}
+                />
+              </Grid>
+            )}
+
+            {option === 1 && getValues('country') && getValues('state') && (
+              <Grid item xs={12}>
+                <Controller
+                  name="city"
+                  control={control}
+                  rules={{
+                    validate: value => {
+                      if (!value) return 'City is required';
+
+                      return true;
+                    }
+                  }}
+                  render={({ field: { onChange, value, onBlur, ref } }) => (
+                    <FormControl fullWidth>
+                      <TextField
+                        style={{ marginTop: '10px' }}
+                        label="City"
+                        variant="outlined"
+                        fullWidth
+                        onChange={onChange}
+                        onBlur={onBlur}
+                        value={value?.cityAscii ?? ''}
+                        inputRef={ref}
+                        onClick={() => setOpenCityList(true)}
+                        disabled={!getValues('country') && !getValues('state')}
+                        InputProps={{
+                          endAdornment: getValues('city') && (
+                            <InputAdornment position="end">
+                              <IconButton
+                                style={{ padding: 0, width: '13px' }}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setValue('city', null);
+                                }}
+                              >
+                                <Close />
+                              </IconButton>
+                            </InputAdornment>
+                          ),
+                          readOnly: true
+                        }}
+                      />
+                      {errors && errors?.city && (
+                        <FormHelperText error={true}>{errors.city.message as string}</FormHelperText>
+                      )}
+                    </FormControl>
+                  )}
+                />
+              </Grid>
+            )}
           </>
         )}
       </Grid>
@@ -724,7 +841,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                   placeholder="Input offer note..."
                   variant="filled"
                   multiline
-                  rows={4}
+                  minRows={3}
                   maxRows={10}
                 />
               </FormControl>
@@ -743,13 +860,25 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
             *You are selling XEC
           </Typography>
         </Grid>
-        {(option === 1 || option === 2) && (
+        {option === 1 && (
           <Grid item xs={12}>
             <Typography variant="body1">
               <span className="prefix">Location: </span>
-              {[selectedLocation?.cityAscii, selectedLocation?.adminNameAscii, selectedLocation?.country]
-                .filter(Boolean)
-                .join(', ')}
+              {offer?.location
+                ? [offer?.location?.cityAscii, offer?.location?.adminNameAscii, offer?.location?.country]
+                    .filter(Boolean)
+                    .join(', ')
+                : [getValues('city')?.cityAscii, getValues('city')?.adminNameAscii, getValues('city')?.country]
+                    .filter(Boolean)
+                    .join(', ')}
+            </Typography>
+          </Grid>
+        )}
+        {option === 2 && (
+          <Grid item xs={12}>
+            <Typography variant="body1">
+              <span className="prefix">Location: </span>
+              {offer?.location ? offer.location.country : getValues('country')?.name}
             </Typography>
           </Grid>
         )}
@@ -808,16 +937,14 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
           const longitude = position.coords.longitude;
 
           (async () => {
-            setLoadingLocation(true);
-
             const locations = await countryApi.getCoordinate(latitude.toString(), longitude.toString());
 
             if (locations.length > 0) {
-              setListLocation(locations);
-              setSelectedLocation(locations[0]);
+              const countryDetected = countries.find(item => item.iso2 === locations[0].iso2);
+              setValue('country', countryDetected);
+              const states = await countryApi.getStates(countryDetected?.iso2 ?? '');
+              setListStates(states);
             }
-
-            setLoadingLocation(false);
           })();
         },
         error => {
@@ -831,16 +958,6 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       console.error('Geolocation is not supported by this browser.');
     }
   };
-
-  //get coin and currency from data exist
-  useEffect(() => {
-    if (!isEdit) return;
-    const coinDetected = LIST_COIN.find(item => item.ticker === offer?.coinPayment);
-    const currencyDetected = LIST_CURRENCIES_USED.find(item => item.code === offer?.localCurrency);
-
-    setCoinState(coinDetected);
-    setCurrencyState(currencyDetected);
-  }, []);
 
   useEffect(() => {
     if (isEdit && !offer?.locationId) return;
@@ -914,15 +1031,40 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
           autoHideDuration={3000}
         />
       </Portal>
-      <FilterListLocationModal
-        isOpen={openLocationList}
-        listItems={listLocation}
-        loading={loadingLocation}
-        onDissmissModal={value => setOpenLocationList(value)}
-        setSelectedItem={value => {
-          setSelectedLocation(value);
+      <FilterListModal
+        isOpen={openCountryList}
+        onDissmissModal={value => setOpenCountryList(value)}
+        setSelectedItem={async value => {
+          setValue('country', value);
+          clearErrors('country');
+          const states = await countryApi.getStates(value?.iso2 ?? '');
+          setListStates(states);
+          setValue('state', null);
         }}
-        handleChange={e => handleChange(e)}
+        listItems={countries}
+      />
+      <FilterListLocationModal
+        isOpen={openStateList}
+        listItems={listStates}
+        propertyToSearch="adminNameAscii"
+        onDissmissModal={value => setOpenStateList(value)}
+        setSelectedItem={async value => {
+          setValue('state', value);
+          clearErrors('state');
+          const cities = await countryApi.getCities(value?.iso2 ?? '', value?.adminCode ?? '');
+          setListCities(cities);
+          setValue('city', null);
+        }}
+      />
+      <FilterListLocationModal
+        isOpen={openCityList}
+        listItems={listCities}
+        propertyToSearch="cityAscii"
+        onDissmissModal={value => setOpenCityList(value)}
+        setSelectedItem={value => {
+          setValue('city', value);
+          clearErrors('city');
+        }}
       />
     </StyledDialog>
   );

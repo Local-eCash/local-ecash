@@ -153,7 +153,7 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
       return;
     }
 
-    const amountBoost = 6;
+    const amountBoost = 100;
     dispatch(openModal('BoostModal', { amount: amountBoost, post: post }));
   };
 
