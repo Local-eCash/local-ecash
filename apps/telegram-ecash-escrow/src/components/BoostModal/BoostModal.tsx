@@ -95,6 +95,7 @@ const BoostModal: React.FC<BoostModalProps> = ({ amount, post }: BoostModalProps
   const theme = useTheme();
 
   const [error, setError] = useState(false);
+  const [notEnoughMoney, setNotEnoughMoney] = useState(false);
   const [loading, setLoading] = useState(false);
   const [boostSuccess, setBoostSuccess] = useState(false);
 
@@ -114,6 +115,9 @@ const BoostModal: React.FC<BoostModalProps> = ({ amount, post }: BoostModalProps
       const { hash: hashXEC } = cashaddr.decode(GNCAddress, false);
       const GNCHash = Buffer.from(hashXEC).toString('hex');
 
+      if (totalValidAmount < amount) {
+        setNotEnoughMoney(true);
+      }
       const txBuild = withdrawFund(totalValidUtxos, mySk, myPk, GNCHash, amount, undefined, 0);
 
       //create boost
@@ -129,7 +133,6 @@ const BoostModal: React.FC<BoostModalProps> = ({ amount, post }: BoostModalProps
         .then(() => {
           setBoostSuccess(true);
           setLoading(false);
-          handleCloseModal();
         })
         .catch(() => setError(true));
     } catch (err) {
@@ -163,11 +166,32 @@ const BoostModal: React.FC<BoostModalProps> = ({ amount, post }: BoostModalProps
       <Portal>
         <CustomToast
           isOpen={boostSuccess}
-          handleClose={() => setBoostSuccess(false)}
+          handleClose={() => {
+            setBoostSuccess(false);
+            handleCloseModal();
+          }}
           content="Boost offer successful"
           type="success"
         />
-        <CustomToast isOpen={error} handleClose={() => setError(false)} content="Boost offer failed!" type="error" />
+        <CustomToast
+          isOpen={error}
+          handleClose={() => {
+            setError(false);
+            handleCloseModal();
+          }}
+          content="Boost offer failed!"
+          type="error"
+        />
+
+        <CustomToast
+          isOpen={notEnoughMoney}
+          handleClose={() => {
+            setNotEnoughMoney(false);
+            handleCloseModal();
+          }}
+          content="Not enough XEC to boost!"
+          type="error"
+        />
       </Portal>
     </StyledDialog>
   );

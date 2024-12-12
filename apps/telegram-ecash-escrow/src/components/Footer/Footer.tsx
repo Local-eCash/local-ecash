@@ -7,16 +7,15 @@ import {
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
 import styled from '@emotion/styled';
-import { Menu, SettingsOutlined, Wallet } from '@mui/icons-material';
+import { Wallet } from '@mui/icons-material';
 import GavelOutlinedIcon from '@mui/icons-material/GavelOutlined';
 import InventoryOutlinedIcon from '@mui/icons-material/InventoryOutlined';
 import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
-import { IconButton, Popover, Slide, SvgIconTypeMap, Typography } from '@mui/material';
-import { OverridableComponent } from '@mui/material/OverridableComponent';
+import { IconButton, Slide, Typography } from '@mui/material';
 import { useSession } from 'next-auth/react';
 import { usePathname, useRouter } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import useAuthorization from '../Auth/use-authorization.hooks';
 import { WrapFooter } from '../layout/MobileLayout';
 
@@ -102,19 +101,6 @@ export default function Footer({ hidden = true }: PropsFooter) {
     { skip: !selectedWalletPath }
   );
 
-  const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
-  const open = Boolean(anchorEl);
-
-  const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
-    if (status === 'loading') return;
-
-    if (status === 'unauthenticated') {
-      askAuthorization();
-    } else {
-      setAnchorEl(anchorEl ? null : event.currentTarget);
-    }
-  };
-
   const handleIconClick = (pathName: string) => {
     if (status === 'loading') return;
 
@@ -131,41 +117,6 @@ export default function Footer({ hidden = true }: PropsFooter) {
         accountQueryData?.getAccountByAddress.role === Role.Moderator) &&
       setIsArbiMod(true);
   }, [accountQueryData]);
-
-  const ItemAction = ({
-    Icon,
-    content,
-    navigateContent,
-    isAuthor
-  }: {
-    Icon: OverridableComponent<SvgIconTypeMap<object, 'svg'>> & {
-      muiName: string;
-    };
-    content: string;
-    navigateContent: string;
-    isAuthor: boolean;
-  }) => {
-    return (
-      <div
-        className="item-action"
-        onClick={() => (isAuthor ? handleIconClick(navigateContent) : router.push(navigateContent))}
-      >
-        <IconButton>
-          <Icon />
-        </IconButton>
-        <Typography>{content}</Typography>
-      </div>
-    );
-  };
-
-  const contentMoreAction = (
-    <PopoverStyled>
-      <div className="content-action">
-        <ItemAction Icon={SettingsOutlined} content="Setting" navigateContent="/setting" isAuthor={false} />
-        <ItemAction Icon={Wallet} content="Wallet" navigateContent="/wallet" isAuthor={true} />
-      </div>
-    </PopoverStyled>
-  );
 
   return (
     <WrapFooter>
@@ -197,27 +148,11 @@ export default function Footer({ hidden = true }: PropsFooter) {
               <Typography variant="body2">Dispute</Typography>
             </TabMenu>
           )}
-          <TabMenu aria-owns={open ? 'mouse-over-popover' : undefined} aria-haspopup="true" onClick={handlePopoverOpen}>
-            <IconButton>
-              <Menu />
+          <TabMenu className={`${pathName === '/wallet' && 'active'}`}>
+            <IconButton onClick={() => handleIconClick('wallet')}>
+              <Wallet />
             </IconButton>
-            <Typography variant="body2">Menu</Typography>
-            <Popover
-              id="menu-popover"
-              open={open}
-              anchorEl={anchorEl}
-              style={{ cursor: 'pointer' }}
-              anchorOrigin={{
-                vertical: 'top',
-                horizontal: 'right'
-              }}
-              transformOrigin={{
-                vertical: 'bottom',
-                horizontal: 'right'
-              }}
-            >
-              {contentMoreAction}
-            </Popover>
+            <Typography variant="body2">Wallet</Typography>
           </TabMenu>
         </Tabs>
       </Slide>

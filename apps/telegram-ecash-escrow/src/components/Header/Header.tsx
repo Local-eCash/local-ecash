@@ -8,7 +8,7 @@ import {
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
 import styled from '@emotion/styled';
-import { CopyAllOutlined, Wallet } from '@mui/icons-material';
+import { CopyAllOutlined, SettingsOutlined, Wallet } from '@mui/icons-material';
 import AccountCircleRoundedIcon from '@mui/icons-material/AccountCircleRounded';
 import { Button, IconButton, Popover, Portal, Typography } from '@mui/material';
 import { useSession } from 'next-auth/react';
@@ -33,10 +33,13 @@ const StyledHeader = styled.div`
 
 const PopoverStyled = styled.div`
   padding: 8px 10px;
-  .heading-wallet {
+  .heading-profile {
     font-weight: bold;
     font-size: 20px;
     margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
   .item-address,
   .item-amount {
@@ -85,7 +88,10 @@ export default function Header() {
 
   const contentMoreAction = (
     <PopoverStyled>
-      <Typography className="heading-wallet">Wallet</Typography>
+      <Typography onClick={() => router.push('/wallet')} className="heading-profile">
+        <span>Wallet</span>
+        <Button className="no-border-btn" endIcon={<Wallet />} />
+      </Typography>
       <Typography variant="body1" align="center" className="item-address">
         <span className="address-amount"> {formatAddress(address)}</span>
         <CopyToClipboard text={address} onCopy={() => setCopy(true)}>
@@ -96,7 +102,10 @@ export default function Header() {
         <span className="address-amount">
           {totalValidAmount} {COIN.XEC}
         </span>
-        <Button onClick={() => router.push('/wallet')} className="no-border-btn" endIcon={<Wallet />} />
+      </Typography>
+      <Typography onClick={() => router.push('/settings')} className="heading-profile">
+        <span>Settings</span>
+        <Button className="no-border-btn" endIcon={<SettingsOutlined />} />
       </Typography>
     </PopoverStyled>
   );
