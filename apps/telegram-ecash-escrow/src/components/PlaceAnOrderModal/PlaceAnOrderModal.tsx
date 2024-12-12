@@ -5,6 +5,7 @@ import { buyerDepositFee, Escrow, splitUtxos } from '@/src/store/escrow';
 import { convertXECToSatoshi, estimatedFee } from '@/src/store/util';
 import { COIN, coinInfo, CreateEscrowOrderInput } from '@bcpros/lixi-models';
 import {
+  closeModal,
   convertEscrowScriptHashToEcashAddress,
   escrowOrderApi,
   fiatCurrencyApi,
@@ -49,8 +50,6 @@ import CustomToast from '../Toast/CustomToast';
 
 interface PlaceAnOrderModalProps {
   isOpen: boolean;
-  onDissmissModal?: (value: boolean) => void;
-  onConfirmClick?: () => void;
   post: any;
 }
 
@@ -240,7 +239,7 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
   const theme = useTheme();
   const router = useRouter();
   const dispatch = useLixiSliceDispatch();
-  const { post, isOpen }: { post: PostQueryItem; isOpen: boolean } = props;
+  const { post }: { post: PostQueryItem } = props;
   const { data } = useSession();
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
   const Wallet = useContext(WalletContextNode);
@@ -263,11 +262,11 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
 
   const { currentData: moderatorCurrentData, isError: moderatorIsError } = useGetModeratorAccountQuery(
     {},
-    { skip: !data || !isOpen }
+    { skip: !data }
   );
   const { currentData: arbitratorCurrentData, isError: arbitratorIsError } = useGetRandomArbitratorAccountQuery(
     {},
-    { skip: !data || !isOpen }
+    { skip: !data }
   );
 
   const { useGetFiatRateQuery } = fiatCurrencyApi;
@@ -387,7 +386,7 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
           description: 'Create order successfully!'
         })
       );
-
+      handleCloseModal();
       router.push(`/order-detail?id=${result.createEscrowOrder.id}`);
     } catch (e) {
       console.log(e);
@@ -473,6 +472,10 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
     );
   };
 
+  const handleCloseModal = () => {
+    dispatch(closeModal());
+  };
+
   //cal escrow script
   useEffect(() => {
     calEscrowScript();
@@ -502,11 +505,13 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
     <React.Fragment>
       <StyledDialog
         fullScreen={fullScreen}
-        open={props.isOpen}
-        onClose={() => props.onDissmissModal!(false)}
+        open={true}
+        onClose={() => {
+          handleCloseModal();
+        }}
         TransitionComponent={Transition}
       >
-        <IconButton className="back-btn" onClick={() => props.onDissmissModal!(false)}>
+        <IconButton className="back-btn" onClick={() => handleCloseModal()}>
           <ChevronLeft />
         </IconButton>
         <DialogTitle>Place an order</DialogTitle>

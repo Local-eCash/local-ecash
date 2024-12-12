@@ -102,7 +102,7 @@ export default function Backup() {
     setFinished(true);
     //router after 2s
     setTimeout(() => {
-      router.push('/');
+      router.push(searchParams.get('offerId') ? `offer-detail?id=${searchParams.get('offerId')}` : '/');
     }, 2000);
   };
 

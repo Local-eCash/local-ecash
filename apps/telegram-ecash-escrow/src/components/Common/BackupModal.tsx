@@ -16,7 +16,7 @@ const style = {
   pb: 3
 };
 
-export const BackupModal = () => {
+export const BackupModal = ({ offerId }: { offerId: string }) => {
   const dispatch = useLixiSliceDispatch();
   const router = useRouter();
 
@@ -26,7 +26,7 @@ export const BackupModal = () => {
 
   const handleABackup = () => {
     dispatch(closeModal());
-    router.push('/backup?playgame=true');
+    router.push(`/backup?playgame=true&&offerId=${offerId ?? ''}`);
   };
 
   return (

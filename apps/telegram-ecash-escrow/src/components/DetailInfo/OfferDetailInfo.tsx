@@ -1,9 +1,10 @@
 'use client';
 
+import { SettingContext } from '@/src/store/context/settingProvider';
 import {
-  OfferQueryItem,
   OfferStatus,
   openActionSheet,
+  openModal,
   PostQueryItem,
   TimelineQueryItem,
   useSliceDispatch as useLixiSliceDispatch
@@ -11,7 +12,12 @@ import {
 import styled from '@emotion/styled';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import { Button, IconButton, Typography } from '@mui/material';
+import { useSession } from 'next-auth/react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useContext } from 'react';
+import useAuthorization from '../Auth/use-authorization.hooks';
+import { BuyButtonStyled } from '../OfferItem/OfferItem';
 
 const OfferDetailWrap = styled.div`
   display: flex;
@@ -40,6 +46,7 @@ const OfferDetailWrap = styled.div`
 
   .payment-group-btns {
     display: flex;
+    justify-content: space-between;
     flex-wrap: wrap;
     gap: 10px;
     button {
@@ -51,15 +58,22 @@ const OfferDetailWrap = styled.div`
 
 type OfferItemProps = {
   timelineItem?: TimelineQueryItem;
-  offer?: OfferQueryItem;
+  post?: PostQueryItem;
+  isShowBuyButton?: boolean;
   isItemTimeline?: boolean;
 };
 
-const OfferDetailInfo = ({ timelineItem, offer, isItemTimeline = true }: OfferItemProps) => {
+const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTimeline = true }: OfferItemProps) => {
   const dispatch = useLixiSliceDispatch();
   const router = useRouter();
+  const { status } = useSession();
+  const askAuthorization = useAuthorization();
+
+  const settingContext = useContext(SettingContext);
+  const seedBackupTime = settingContext?.setting?.lastSeedBackupTime ?? '';
+
   const postData = timelineItem?.data as PostQueryItem;
-  const offerData = postData?.postOffer ?? offer;
+  const offerData = postData?.postOffer ?? post?.postOffer;
   const countryName = offerData?.location?.country;
   const stateName = offerData?.location?.adminNameAscii;
   const cityName = offerData?.location?.cityAscii;
@@ -67,6 +81,28 @@ const OfferDetailInfo = ({ timelineItem, offer, isItemTimeline = true }: OfferIt
   const handleClickAction = e => {
     e.stopPropagation();
     dispatch(openActionSheet('OfferActionSheet', { offer: offerData }));
+  };
+
+  const handleBuyClick = e => {
+    e.stopPropagation();
+
+    if (status === 'loading') return;
+
+    if (status === 'unauthenticated') {
+      askAuthorization();
+    } else {
+      //check backup
+      const oneMonthLater = new Date(seedBackupTime);
+      oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
+      const currentDate = new Date();
+      const isGreaterThanOneMonth = currentDate > oneMonthLater;
+
+      if (!seedBackupTime || isGreaterThanOneMonth) {
+        dispatch(openModal('BackupModal', { offerId: offerData.postId }));
+        return;
+      }
+      dispatch(openModal('PlaceAnOrderModal', { post: post }));
+    }
   };
 
   return (
@@ -113,6 +149,12 @@ const OfferDetailInfo = ({ timelineItem, offer, isItemTimeline = true }: OfferIt
               </Button>
             );
           })}
+        {isShowBuyButton && (
+          <BuyButtonStyled variant="contained" onClick={e => handleBuyClick(e)}>
+            Buy
+            <Image width={25} height={25} src="/eCash.svg" alt="" />
+          </BuyButtonStyled>
+        )}
       </div>
     </OfferDetailWrap>
   );

@@ -21,7 +21,6 @@ import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import React, { useContext, useEffect, useState } from 'react';
 import useAuthorization from '../Auth/use-authorization.hooks';
-import PlaceAnOrderModal from '../PlaceAnOrderModal/PlaceAnOrderModal';
 
 const CardWrapper = styled(Card)`
   margin-top: 16px;
@@ -61,21 +60,21 @@ const CardWrapper = styled(Card)`
     padding: 12px 16px;
     align-items: center;
     gap: 10px;
-
-    .place-order-btn {
-      display: flex;
-      gap: 8px;
-      font-weight: 600;
-      margin: 0;
-      background: #0076c4;
-      width: fit-content;
-      filter: drop-shadow(0px 0px 3px #0076c4);
-      color: white;
-      box-shadow: none;
-      border-radius: 12px;
-      font-size: 13px;
-    }
   }
+`;
+
+export const BuyButtonStyled = styled(Button)`
+  display: flex;
+  gap: 8px;
+  font-weight: 600;
+  margin: 0;
+  background: #0076c4;
+  width: fit-content;
+  filter: drop-shadow(0px 0px 3px #0076c4);
+  color: white;
+  box-shadow: none;
+  border-radius: 12px;
+  font-size: 13px;
 `;
 
 const OfferShowWrapItem = styled.div`
@@ -140,7 +139,7 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
         dispatch(openModal('BackupModal', {}));
         return;
       }
-      setOpen(true);
+      dispatch(openModal('PlaceAnOrderModal', { post: post }));
     }
   };
 
@@ -278,14 +277,12 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
               </span>
             )}
           </Typography>
-          <Button className="place-order-btn" color="success" variant="contained" onClick={e => handleBuyClick(e)}>
+          <BuyButtonStyled variant="contained" onClick={e => handleBuyClick(e)}>
             Buy
             <Image width={25} height={25} src="/eCash.svg" alt="" />
-          </Button>
+          </BuyButtonStyled>
         </Typography>
       </CardWrapper>
-
-      <PlaceAnOrderModal isOpen={open} onDissmissModal={value => setOpen(value)} post={post} />
     </React.Fragment>
   );
 }

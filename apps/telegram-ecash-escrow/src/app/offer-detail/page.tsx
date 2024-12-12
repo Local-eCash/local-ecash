@@ -8,10 +8,11 @@ import TickerHeader from '@/src/components/TickerHeader/TickerHeader';
 import {
   EscrowOrderQueryItem,
   EscrowOrderStatus,
-  Offer,
-  offerApi,
-  useInfiniteEscrowOrderByOfferIdQuery
+  getSelectedAccount,
+  useInfiniteEscrowOrderByOfferIdQuery,
+  useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
+import { usePostQuery } from '@bcpros/redux-store/build/main/store/post/posts.api';
 import styled from '@emotion/styled';
 import { Backdrop, Button, CircularProgress, Skeleton, Stack, Typography } from '@mui/material';
 import _ from 'lodash';
@@ -51,15 +52,22 @@ const OfferDetail = () => {
   const token = sessionStorage.getItem('Authorization');
   const search = useSearchParams();
   const id = search!.get('id');
+
+  const selectedAccount = useLixiSliceSelector(getSelectedAccount);
+
   const [orderStatus, setOrderStatus] = useState<EscrowOrderStatus>(EscrowOrderStatus.Pending);
-  const { useOfferQuery } = offerApi;
-  const { isLoading, currentData, isError, isUninitialized } = useOfferQuery({ id: id! }, { skip: !id || !token });
+
+  const { isLoading, currentData, isError, isUninitialized } = usePostQuery({ id: id! }, { skip: !id });
   const {
     data: escrowOrdersData,
     hasNext: hasNextEscrowOrders,
     isFetching: isFetchingEscrowOrders,
     fetchNext: fetchNextEscrowOrders
-  } = useInfiniteEscrowOrderByOfferIdQuery({ offerId: id!, escrowOrderStatus: orderStatus, first: 10 });
+  } = useInfiniteEscrowOrderByOfferIdQuery({
+    offerId: currentData && currentData?.post?.accountId === selectedAccount?.id && id!,
+    escrowOrderStatus: orderStatus,
+    first: 10
+  });
 
   const loadMoreEscrowOrders = () => {
     if (hasNextEscrowOrders && !isFetchingEscrowOrders) {
@@ -70,35 +78,19 @@ const OfferDetail = () => {
   };
 
   if (_.isEmpty(id) || _.isNil(id) || isError) {
-    return <div style={{ color: 'white' }}>Invalid order id</div>;
+    return <div style={{ color: 'white' }}>Invalid offer id</div>;
   }
 
-  const ButtonTimeline = (escrowStatus: EscrowOrderStatus) => {
+  const ListButtonComponent = () => {
+    const isAccountOffer = currentData && currentData?.post?.accountId === selectedAccount?.id;
+    if (!token || !isAccountOffer) {
+      return;
+    }
     return (
-      <Button
-        onClick={() => setOrderStatus(escrowStatus)}
-        className={`btn-timeline ${orderStatus === EscrowOrderStatus.Pending ? 'active' : ''}`}
-        color="info"
-        variant="contained"
-      >
-        {escrowStatus}
-      </Button>
-    );
-  };
-
-  return (
-    <MobileLayout>
-      {(isLoading || isUninitialized) && (
-        <Backdrop sx={theme => ({ color: '#fff', zIndex: theme.zIndex.drawer + 1 })} open={true}>
-          <CircularProgress color="inherit" />
-        </Backdrop>
-      )}
-      <MiniAppBackdrop />
-      <OfferDetailPage>
-        <TickerHeader title="Offer Detail" />
-        {currentData?.offer && <OfferDetailInfo offer={currentData.offer as Offer} isItemTimeline={false} />}
-        <hr />
+      <>
         <div className="list-item">
+          <hr />
+
           <Stack direction="row" gap="20px" justifyContent="center">
             <Button
               onClick={() => setOrderStatus(EscrowOrderStatus.Pending)}
@@ -154,6 +146,28 @@ const OfferDetail = () => {
             <Typography style={{ textAlign: 'center', marginTop: '2rem' }}>It&apos;s so empty here</Typography>
           )}
         </div>
+      </>
+    );
+  };
+
+  return (
+    <MobileLayout>
+      {(isLoading || isUninitialized) && (
+        <Backdrop sx={theme => ({ color: '#fff', zIndex: theme.zIndex.drawer + 1 })} open={true}>
+          <CircularProgress color="inherit" />
+        </Backdrop>
+      )}
+      <MiniAppBackdrop />
+      <OfferDetailPage>
+        <TickerHeader title="Offer Detail" />
+        {currentData?.post?.postOffer && (
+          <OfferDetailInfo
+            post={currentData?.post}
+            isShowBuyButton={currentData && currentData?.post?.accountId === selectedAccount?.id ? false : true}
+            isItemTimeline={false}
+          />
+        )}
+        {ListButtonComponent()}
       </OfferDetailPage>
     </MobileLayout>
   );

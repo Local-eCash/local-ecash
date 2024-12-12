@@ -1,6 +1,7 @@
 'use client';
 
 import { LaunchParams, init, postEvent, retrieveLaunchParams } from '@telegram-apps/sdk-react';
+import { useRouter } from 'next/navigation';
 import { createContext, useEffect, useState } from 'react';
 
 export type TelegramMiniAppValue = {
@@ -14,6 +15,7 @@ const defaultTelegramMiniAppValue: TelegramMiniAppValue = {
 export const TelegramMiniAppContext = createContext<TelegramMiniAppValue>(defaultTelegramMiniAppValue);
 
 export function TelegramMiniAppProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [launchParams, setLaunchParams] = useState<LaunchParams | undefined>(undefined);
 
   useEffect(() => {
@@ -26,6 +28,13 @@ export function TelegramMiniAppProvider({ children }: { children: React.ReactNod
       console.log('not telegram mini app env');
     }
   }, []);
+
+  useEffect(() => {
+    if (launchParams && launchParams.startParam) {
+      const [param1, param2, id] = launchParams.startParam.split('__');
+      router.push(`/${param1}-${param2}?id=${id}`);
+    }
+  }, [launchParams]);
 
   return <TelegramMiniAppContext.Provider value={{ launchParams }}>{children}</TelegramMiniAppContext.Provider>;
 }
