@@ -15,7 +15,7 @@ import SwipeableViews from 'react-swipeable-views';
 
 const MyOfferPage = styled.div`
   min-height: 100vh;
-  padding-bottom: 56px;
+  padding-bottom: 85px;
 
   .MuiTab-root {
     color: white;

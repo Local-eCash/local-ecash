@@ -61,6 +61,17 @@ const StyledDialog = styled(Dialog)`
     padding: 0;
   }
 
+  .MuiDialogActions-root {
+    padding: 0;
+    flex-direction: column;
+    align-items: flex-start;
+
+    .boost-info {
+      margin-top: 10px;
+      margin-left: 0;
+    }
+  }
+
   .create-boost-btn {
     color: #fff;
     text-transform: none;
@@ -147,12 +158,8 @@ const BoostModal: React.FC<BoostModalProps> = ({ amount, post }: BoostModalProps
         <Typography style={{ color: 'rgba(255, 255, 255, 0.6)', marginBottom: '5px' }}>
           *Boosted offers (100 XEC) are notified on Telegram channel and are ranked higher in the P2P Market feed
         </Typography>
-        <Typography>
-          Boosted <span className="bold">{post.boostScore.boostScore / 100}</span> times by you:{' '}
-          <span className="bold">{post.boostScore.boostScore}</span> {COIN.XEC}
-        </Typography>
       </DialogContent>
-      <DialogActions>
+      <DialogActions style={{ flexBasis: 'column', padding: 0 }}>
         <Button
           className="create-boost-btn"
           color="info"
@@ -160,8 +167,12 @@ const BoostModal: React.FC<BoostModalProps> = ({ amount, post }: BoostModalProps
           onClick={() => handleCreateBoost()}
           disabled={loading}
         >
-          Boost
+          100 XEC to boost
         </Button>
+        <Typography className="boost-info">
+          Boosted <span className="bold">{post.boostScore.boostScore / 100}</span> times by you:{' '}
+          <span className="bold">{post.boostScore.boostScore}</span> {COIN.XEC}
+        </Typography>
       </DialogActions>
       <Portal>
         <CustomToast

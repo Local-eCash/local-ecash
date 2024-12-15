@@ -143,7 +143,9 @@ const OfferDetail = () => {
               })}
             </InfiniteScroll>
           ) : (
-            <Typography style={{ textAlign: 'center', marginTop: '2rem' }}>It&apos;s so empty here</Typography>
+            <Typography style={{ textAlign: 'center', marginTop: '2rem' }}>
+              No {orderStatus?.toLowerCase()} orders here
+            </Typography>
           )}
         </div>
       </>

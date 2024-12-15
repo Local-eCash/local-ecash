@@ -1,5 +1,6 @@
 'use client';
 
+import { BackupModalProps } from '@/src/components/Common/BackupModal';
 import Header from '@/src/components/Header/Header';
 import AuthorizationLayout from '@/src/components/layout/AuthorizationLayout';
 import MobileLayout from '@/src/components/layout/MobileLayout';
@@ -26,7 +27,7 @@ const WrapWallet = styled.div`
   background-image: url('/shape-reg.svg');
   background-repeat: no-repeat;
   padding: 1rem;
-  padding-bottom: 56px;
+  padding-bottom: 85px;
   min-height: 100svh;
 
   .shape-reg-footer {
@@ -109,8 +110,12 @@ export default function Wallet() {
     const currentDate = new Date();
     const isGreaterThanOneMonth = currentDate > oneMonthLater;
 
+    const backupModalProps: BackupModalProps = {
+      isFromSetting: true,
+      isFromHome: false
+    };
     if (!seedBackupTime || isGreaterThanOneMonth) {
-      dispatch(openModal('BackupModal', {}));
+      dispatch(openModal('BackupModal', backupModalProps));
       return;
     }
 

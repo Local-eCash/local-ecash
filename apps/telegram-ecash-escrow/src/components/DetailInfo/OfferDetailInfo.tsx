@@ -1,6 +1,7 @@
 'use client';
 
 import { SettingContext } from '@/src/store/context/settingProvider';
+import { formatNumber } from '@/src/store/util';
 import {
   OfferStatus,
   openActionSheet,
@@ -17,6 +18,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useContext } from 'react';
 import useAuthorization from '../Auth/use-authorization.hooks';
+import { BackupModalProps } from '../Common/BackupModal';
 import { BuyButtonStyled } from '../OfferItem/OfferItem';
 
 const OfferDetailWrap = styled.div`
@@ -97,8 +99,12 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
       const currentDate = new Date();
       const isGreaterThanOneMonth = currentDate > oneMonthLater;
 
+      const backupModalProps: BackupModalProps = {
+        isFromHome: false,
+        offerId: offerData?.postId
+      };
       if (!seedBackupTime || isGreaterThanOneMonth) {
-        dispatch(openModal('BackupModal', { offerId: offerData.postId }));
+        dispatch(openModal('BackupModal', backupModalProps));
         return;
       }
       dispatch(openModal('PlaceAnOrderModal', { post: post }));
@@ -118,14 +124,16 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
           </IconButton>
         )}
       </div>
-      <Typography variant="body1">
-        <span className="prefix">Price: </span>
-        Market price +{offerData?.marginPercentage}%
-      </Typography>
+      {offerData?.paymentMethods[0]?.paymentMethod?.id !== 5 && (
+        <Typography variant="body1">
+          <span className="prefix">Price: </span>
+          Market price +{offerData?.marginPercentage}%
+        </Typography>
+      )}
       <Typography variant="body1">
         <span className="prefix">Min-max: </span>
-        {offerData?.orderLimitMin} {offerData?.coinPayment ?? offerData?.localCurrency ?? 'XEC'} -{' '}
-        {offerData?.orderLimitMax} {offerData?.coinPayment ?? offerData?.localCurrency ?? 'XEC'}
+        {formatNumber(offerData?.orderLimitMin)} {offerData?.coinPayment ?? offerData?.localCurrency ?? 'XEC'} - {''}
+        {formatNumber(offerData?.orderLimitMax)} {offerData?.coinPayment ?? offerData?.localCurrency ?? 'XEC'}
       </Typography>
       {(stateName || countryName) && (
         <Typography variant="body2">

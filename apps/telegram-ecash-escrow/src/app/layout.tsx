@@ -31,6 +31,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         <meta name="application-name" content="Local eCash" />
         <meta name="description" content="P2P exchange for eCash" />
+        <title>Local eCash</title>
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="manifest" href="/manifest.json" />
         <meta name="version" content={process.env.NEXT_PUBLIC_APP_VERSION} />
         <meta name="commit-hash" content={process.env.NEXT_PUBLIC_COMMIT_HASH} />
       </head>

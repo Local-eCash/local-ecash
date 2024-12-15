@@ -1,6 +1,7 @@
 'use client';
 
 import { SettingContext } from '@/src/store/context/settingProvider';
+import { formatNumber } from '@/src/store/util';
 import {
   PostQueryItem,
   Role,
@@ -19,8 +20,10 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { Button, Card, CardContent, Collapse, IconButton, Typography } from '@mui/material';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
 import React, { useContext, useEffect, useState } from 'react';
 import useAuthorization from '../Auth/use-authorization.hooks';
+import { BackupModalProps } from '../Common/BackupModal';
 
 const CardWrapper = styled(Card)`
   margin-top: 16px;
@@ -95,10 +98,11 @@ type OfferItemProps = {
 };
 
 export default function OfferItem({ timelineItem }: OfferItemProps) {
+  const searchParams = useSearchParams();
   const dispatch = useLixiSliceDispatch();
   const post = timelineItem?.data as PostQueryItem;
   const offerData = post?.postOffer;
-  const countryName = offerData?.location?.country;
+  const countryName = offerData?.location?.country ?? offerData?.country?.name;
   const stateName = offerData?.location?.adminNameAscii;
   const cityName = offerData?.location?.cityAscii;
   const { status } = useSession();
@@ -113,7 +117,6 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
     { skip: !selectedWalletPath }
   );
 
-  const [open, setOpen] = useState<boolean>(false);
   const [coinCurrency, setCoinCurrency] = useState('XEC');
   const [rateData, setRateData] = useState(null);
   const [amountPer1MXEC, setAmountPer1MXEC] = useState('');
@@ -135,8 +138,12 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
       const currentDate = new Date();
       const isGreaterThanOneMonth = currentDate > oneMonthLater;
 
+      const backupModalProps: BackupModalProps = {
+        isFromHome: true,
+        offerId: post.id
+      };
       if (!seedBackupTime || isGreaterThanOneMonth) {
-        dispatch(openModal('BackupModal', {}));
+        dispatch(openModal('BackupModal', backupModalProps));
         return;
       }
       dispatch(openModal('PlaceAnOrderModal', { post: post }));
@@ -205,6 +212,13 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
     setRateData(rateData?.fiatRates);
   }, [post?.postOffer?.localCurrency, fiatData?.getFiatRate]);
 
+  //open placeAnOrderModal if offerId is in url
+  useEffect(() => {
+    if (searchParams.get('offerId') === post.id) {
+      dispatch(openModal('PlaceAnOrderModal', { post }));
+    }
+  }, []);
+
   const OfferItem = (
     <OfferShowWrapItem>
       <div className="push-offer-wrap">
@@ -225,7 +239,8 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
       <div className="minmax-collapse-wrap">
         <Typography variant="body2">
           <span className="prefix">Min / max: </span>
-          {offerData?.orderLimitMin} {coinCurrency} - {offerData?.orderLimitMax} {coinCurrency}
+          {formatNumber(offerData?.orderLimitMin)} {coinCurrency} - {formatNumber(offerData?.orderLimitMax)}{' '}
+          {coinCurrency}
         </Typography>
         {expanded ? (
           <ExpandLessIcon onClick={handleExpandClick} style={{ cursor: 'pointer' }} />
@@ -269,14 +284,20 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
         </Collapse>
 
         <Typography component={'div'} className="action-section">
-          <Typography variant="body2">
-            <span className="prefix">Price: </span>Market price +{post?.postOffer?.marginPercentage ?? 0}%{' '}
-            {coinCurrency !== 'XEC' && (
-              <span>
-                (~ {amountPer1MXEC} {coinCurrency} / 1M XEC)
-              </span>
-            )}
-          </Typography>
+          {offerData?.paymentMethods[0]?.paymentMethod?.id !== 5 ? (
+            <Typography variant="body2">
+              <span className="prefix">Price: </span>Market price +{post?.postOffer?.marginPercentage ?? 0}%{' '}
+              {coinCurrency !== 'XEC' && (
+                <span>
+                  (~ {amountPer1MXEC} {coinCurrency} / 1M XEC)
+                </span>
+              )}
+            </Typography>
+          ) : (
+            <Typography variant="body2">
+              <span className="prefix">Price: </span>Market price
+            </Typography>
+          )}
           <BuyButtonStyled variant="contained" onClick={e => handleBuyClick(e)}>
             Buy
             <Image width={25} height={25} src="/eCash.svg" alt="" />

@@ -48,3 +48,9 @@ export const estimatedFee = (escrowScriptData: string | Uint8Array) => {
 export const convertXECToSatoshi = (amount: number) => {
   return parseInt((amount * Math.pow(10, coinInfo[COIN.XEC].cashDecimals)).toFixed(0));
 };
+
+export const formatNumber = (number: number) => {
+  if (!number) return '0';
+
+  return number.toLocaleString('en-US');
+};

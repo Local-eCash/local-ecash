@@ -18,7 +18,7 @@ const MyOrderPage = styled.div`
   background-image: url('/bg-dialog.svg');
   background-repeat: no-repeat;
   background-size: cover;
-  padding-bottom: 56px;
+  padding-bottom: 85px;
 
   .MuiTab-root {
     color: white;

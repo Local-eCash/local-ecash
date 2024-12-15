@@ -1,6 +1,5 @@
 'use client';
 import CustomToast from '@/src/components/Toast/CustomToast';
-import AuthorizationLayout from '@/src/components/layout/AuthorizationLayout';
 import MobileLayout from '@/src/components/layout/MobileLayout';
 import { SettingContext } from '@/src/store/context/settingProvider';
 import { UpdateSettingCommand } from '@bcpros/lixi-models';
@@ -12,8 +11,8 @@ import {
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
 import styled from '@emotion/styled';
-import { CheckCircleOutline } from '@mui/icons-material';
-import { Alert, Button, Typography } from '@mui/material';
+import { CheckCircleOutline, ChevronLeft } from '@mui/icons-material';
+import { Alert, Button, IconButton, Typography } from '@mui/material';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useContext, useEffect, useMemo, useState } from 'react';
 import BackupSeed, { BackupWordModel } from './backup-seed';
@@ -22,6 +21,18 @@ const ContainerBackupGame = styled.div`
   padding: 1rem;
   .setting-info {
     margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    .back-btn {
+      padding: 0;
+      border-radius: 12px;
+
+      svg {
+        font-size: 32px;
+      }
+    }
   }
   .setting-content {
     padding: 0 0 1rem;
@@ -77,7 +88,7 @@ export default function Backup() {
         })
       : []
   );
-  const [isPlayGame, setIsPlayGame] = useState<boolean>(searchParams.get('playgame') === 'true');
+  const [isPlayGame, setIsPlayGame] = useState<boolean>(false);
   const [countWord, setCountWord] = useState(0);
   const [libWord, setLibWord] = useState<string[]>([]);
   const [randomListFinal, setRandomListFinal] = useState<string[]>([]);
@@ -102,7 +113,12 @@ export default function Backup() {
     setFinished(true);
     //router after 2s
     setTimeout(() => {
-      router.push(searchParams.get('offerId') ? `offer-detail?id=${searchParams.get('offerId')}` : '/');
+      const isFromSetting = searchParams.get('isFromSetting');
+      const isFromHome = searchParams.get('isFromHome');
+      const offerId = searchParams.get('offerId');
+      isFromSetting
+        ? router.push('/settings')
+        : router.push(isFromHome && offerId ? `/?offerId=${offerId}` : `offer-detail?id=${offerId}`);
     }, 2000);
   };
 
@@ -187,61 +203,72 @@ export default function Backup() {
 
   return (
     <MobileLayout>
-      <AuthorizationLayout>
-        <ContainerBackupGame>
-          <div className="setting-info">
-            <Typography variant="h5">{!isPlayGame ? 'Your recovery phrase' : 'Verify your phrase'}</Typography>
-          </div>
-          <div className="setting-content">
-            <div className="setting-item">
-              <p className="title">
-                {!isPlayGame
-                  ? `Your recovery key is composed of 12 randomly selected words. Please
+      <ContainerBackupGame>
+        <div className="setting-info">
+          <IconButton className="back-btn" onClick={() => router.back()}>
+            <ChevronLeft />
+          </IconButton>
+          <Typography variant="h5">{!isPlayGame ? 'Your recovery phrase' : 'Verify your phrase'}</Typography>
+        </div>
+        <div className="setting-content">
+          <div className="setting-item">
+            <p className="title">
+              {!isPlayGame
+                ? `Your recovery key is composed of 12 randomly selected words. Please
                 carefully write down each word in the order it appears.`
-                  : `Let check your wrote down the phrase correctly. Please select each word in the numbered order.`}
-              </p>
-              {!isPlayGame ? (
-                <Alert icon={<CheckCircleOutline className="ico-alert" fontSize="inherit" />} severity="warning">
-                  Never share your recovery phrase with anyone, store it securely !
-                </Alert>
-              ) : (
-                <WordGuessContainer>
-                  <div className="word-guess-title">{'Word #' + (countWord + 1 > 12 ? 12 : countWord + 1)}</div>
-                  <div className="word-guess-content">
-                    {randomListFinal &&
-                      randomListFinal.map((word, index) => {
-                        return (
-                          <div key={index} className="random-word" onClick={() => checkWord(word)}>
-                            {word}
-                          </div>
-                        );
-                      })}
-                  </div>
-                </WordGuessContainer>
-              )}
-            </div>
-
-            <BackupSeed mnemonicWords={mnemonicWordsConverted} isPlayGame={isPlayGame} />
+                : `Let check your wrote down the phrase correctly. Please select each word in the numbered order.`}
+            </p>
+            {!isPlayGame ? (
+              <Alert icon={<CheckCircleOutline className="ico-alert" fontSize="inherit" />} severity="warning">
+                Never share your recovery phrase with anyone, store it securely !
+              </Alert>
+            ) : (
+              <WordGuessContainer>
+                <div className="word-guess-title">{'Word #' + (countWord + 1 > 12 ? 12 : countWord + 1)}</div>
+                <div className="word-guess-content">
+                  {randomListFinal &&
+                    randomListFinal.map((word, index) => {
+                      return (
+                        <div key={index} className="random-word" onClick={() => checkWord(word)}>
+                          {word}
+                        </div>
+                      );
+                    })}
+                </div>
+              </WordGuessContainer>
+            )}
           </div>
-          {!isPlayGame && (
-            <Button
-              onClick={() => {
-                setIsPlayGame(true);
-              }}
-              variant="contained"
-              fullWidth
-            >
-              Continue
-            </Button>
-          )}
-          <CustomToast
-            isOpen={finished}
-            content="Congratulation!! Please store these seed in a secure place"
-            handleClose={() => setFinished(false)}
-            type="success"
-          />
-        </ContainerBackupGame>
-      </AuthorizationLayout>
+
+          <BackupSeed mnemonicWords={mnemonicWordsConverted} isPlayGame={isPlayGame} />
+        </div>
+        {!isPlayGame ? (
+          <Button
+            onClick={() => {
+              setIsPlayGame(true);
+            }}
+            variant="contained"
+            fullWidth
+          >
+            Continue
+          </Button>
+        ) : (
+          <Button
+            onClick={() => {
+              setIsPlayGame(false);
+            }}
+            variant="contained"
+            fullWidth
+          >
+            Cancel
+          </Button>
+        )}
+        <CustomToast
+          isOpen={finished}
+          content="Congratulation!! Please store these seed in a secure place"
+          handleClose={() => setFinished(false)}
+          type="success"
+        />
+      </ContainerBackupGame>
     </MobileLayout>
   );
 }

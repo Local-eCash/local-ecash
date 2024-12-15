@@ -119,7 +119,9 @@ const OrderDetailInfo = ({ item }: OrderItemProps) => {
 
   //convert to XEC
   useEffect(() => {
-    convertXECToAmount();
+    if (order.paymentMethod.id !== 5) {
+      convertXECToAmount();
+    }
   }, [rateData]);
 
   return (
@@ -140,23 +142,27 @@ const OrderDetailInfo = ({ item }: OrderItemProps) => {
         <span className="prefix">Ordered at: </span>
         {new Date(order.createdAt).toLocaleString('en-US')}
       </Typography>
-      <Typography variant="body1">
-        <span className="prefix">Price: </span>
-        {order.price}
-      </Typography>
+      {order?.paymentMethod?.id !== 5 && (
+        <Typography variant="body1">
+          <span className="prefix">Price: </span>
+          {order.price}
+        </Typography>
+      )}
       <Typography variant="body1">
         <span className="prefix">
           {selectedWalletPath?.hash160 === order?.sellerAccount?.hash160 ? 'Amount sending: ' : 'Amount receiving: '}
         </span>
         {order.amount} {coinInfo[COIN.XEC].ticker}
       </Typography>
-      <Typography variant="body1">
-        <span className="prefix">
-          {selectedWalletPath?.hash160 === order?.sellerAccount?.hash160 ? 'Amount receiving: ' : 'Amount sending: '}{' '}
-        </span>
-        {order.amountCoinOrCurrency} {order?.escrowOffer?.coinPayment ?? order?.escrowOffer?.localCurrency ?? 'XEC'}
-      </Typography>
-      {selectedWalletPath?.hash160 === order?.sellerAccount?.hash160 && (
+      {order.paymentMethod.id !== 5 && (
+        <Typography variant="body1">
+          <span className="prefix">
+            {selectedWalletPath?.hash160 === order?.sellerAccount?.hash160 ? 'Amount receiving: ' : 'Amount sending: '}{' '}
+          </span>
+          {order.amountCoinOrCurrency} {order?.escrowOffer?.coinPayment ?? order?.escrowOffer?.localCurrency ?? 'XEC'}
+        </Typography>
+      )}
+      {selectedWalletPath?.hash160 === order?.sellerAccount?.hash160 && order.paymentMethod.id !== 5 && (
         <Typography variant="body1">
           <span className="prefix">Margin of current price:</span> {marginCurrentPrice.toFixed(2)}%
         </Typography>

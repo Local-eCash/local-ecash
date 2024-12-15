@@ -49,7 +49,7 @@ const WrapHome = styled.div``;
 const HomePage = styled.div`
   position: relative;
   padding: 1rem;
-  padding-bottom: 56px;
+  padding-bottom: 85px;
   min-height: 100svh;
 
   .MuiButton-root {

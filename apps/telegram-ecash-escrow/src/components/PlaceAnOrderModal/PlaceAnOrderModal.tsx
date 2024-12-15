@@ -488,7 +488,11 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
 
   //convert to XEC
   useEffect(() => {
-    convertToAmountXEC();
+    if (post.postOffer.paymentMethods[0]?.paymentMethod?.id !== 5) {
+      convertToAmountXEC();
+    } else {
+      setAmountXEC(Number(amountValue) ?? 0);
+    }
   }, [amountValue]);
 
   //get rate data
@@ -498,7 +502,9 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
   }, [post?.postOffer?.localCurrency, fiatData?.getFiatRate]);
 
   useEffect(() => {
-    trigger('amount'); // Re-run validation for the "amount" field
+    if (amountXEC && amountXEC !== 0) {
+      trigger('amount'); // Re-run validation for the "amount" field
+    }
   }, [amountXEC, trigger]);
 
   return (
@@ -573,14 +579,15 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
                   )}
                 />
                 <Typography component={'div'} className="text-receive-amount">
-                  {amountXEC < 5.46 ? (
-                    'You need to buy amount greater than 5.46 XEC'
-                  ) : (
-                    <div>
-                      You will receive <span className="amount-receive">{amountXEC.toLocaleString('de-DE')}</span> XEC
-                      <div>Price: {textAmountPer1MXEC}</div>
-                    </div>
-                  )}
+                  {amountXEC < 5.46
+                    ? 'You need to buy amount greater than 5.46 XEC'
+                    : post.postOffer.paymentMethods[0]?.paymentMethod?.id !== 5 && (
+                        <div>
+                          You will receive <span className="amount-receive">{amountXEC.toLocaleString('de-DE')}</span>{' '}
+                          {post.postOffer.coinPayment ?? post.postOffer.localCurrency ?? 'XEC'}
+                          <div>Price: {textAmountPer1MXEC}</div>
+                        </div>
+                      )}
                 </Typography>
               </Grid>
               <Grid item xs={12}>

@@ -36,7 +36,7 @@ export const WrapFooter = styled.div`
     padding-bottom: 16px;
     width: 500px;
     @media (max-width: 576px) {
-      padding-bottom: 32px;
+      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
       width: 100%;
       box-shadow: none;
     }

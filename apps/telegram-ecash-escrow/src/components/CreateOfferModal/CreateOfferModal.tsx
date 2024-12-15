@@ -276,7 +276,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       paymentMethodIds: [option],
       coinPayment: data?.coin ? data.coin.split(':')[0] : null,
       localCurrency: data?.currency ? data.currency.split(':')[0] : null,
-      marginPercentage: Number(data.percentage),
+      marginPercentage: Number(data?.percentage ?? 0),
       orderLimitMin: minNum,
       orderLimitMax: maxNum,
       locationId: data?.city?.id ?? data?.country?.id?.toString() ?? null
@@ -405,7 +405,14 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
               <RadioGroup
                 style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', columnGap: '16px' }}
                 value={value}
-                onChange={onChange}
+                onChange={e => {
+                  if (e.target.value === '5') {
+                    setValue('percentage', 0);
+                    setValue('coin', null);
+                    setValue('currency', null);
+                  }
+                  onChange(e);
+                }}
                 onBlur={onBlur}
                 ref={ref}
               >
@@ -729,7 +736,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
             )}
           />
         </Grid>
-        {marginComponent}
+        {option !== 5 && marginComponent}
         <OrderLimitWrap>
           <Typography variant="body2" className="label">
             {`Order limit (${coinCurrency})`}
@@ -903,11 +910,13 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
             <span className="prefix">Headline: </span> {getValues('message')}
           </Typography>
         </Grid>
-        <Grid item xs={12}>
-          <Typography variant="body1">
-            <span className="prefix">Price: </span> {percentageValue}% on top of market price
-          </Typography>
-        </Grid>
+        {option !== 5 && (
+          <Grid item xs={12}>
+            <Typography variant="body1">
+              <span className="prefix">Price: </span> {percentageValue}% on top of market price
+            </Typography>
+          </Grid>
+        )}
         <Grid item xs={12}>
           <Typography variant="body1">
             <span className="prefix">Order limit ({coinCurrency}): </span> {getValues('min')} {coinCurrency} -{' '}

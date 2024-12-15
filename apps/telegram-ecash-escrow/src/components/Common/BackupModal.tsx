@@ -16,7 +16,13 @@ const style = {
   pb: 3
 };
 
-export const BackupModal = ({ offerId }: { offerId: string }) => {
+export type BackupModalProps = {
+  isFromHome?: boolean;
+  isFromSetting?: boolean;
+  offerId?: string;
+};
+
+export const BackupModal = ({ isFromHome = true, isFromSetting = false, offerId }: BackupModalProps) => {
   const dispatch = useLixiSliceDispatch();
   const router = useRouter();
 
@@ -26,7 +32,20 @@ export const BackupModal = ({ offerId }: { offerId: string }) => {
 
   const handleABackup = () => {
     dispatch(closeModal());
-    router.push(`/backup?playgame=true&&offerId=${offerId ?? ''}`);
+    const queryParams = new URLSearchParams();
+
+    if (isFromHome) {
+      queryParams.append('isFromHome', isFromHome ? 'true' : 'false');
+    }
+    if (isFromSetting) {
+      queryParams.append('isFromSetting', isFromSetting ? 'true' : 'false');
+    }
+    if (offerId) {
+      queryParams.append('offerId', offerId);
+    }
+
+    const linkToRoute = `/backup${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    router.push(linkToRoute);
   };
 
   return (
