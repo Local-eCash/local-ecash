@@ -129,7 +129,7 @@ const BoostModal: React.FC<BoostModalProps> = ({ amount, post }: BoostModalProps
       if (totalValidAmount < amount) {
         setNotEnoughMoney(true);
       }
-      const txBuild = withdrawFund(totalValidUtxos, mySk, myPk, GNCHash, amount, undefined, 0);
+      const txBuild = withdrawFund(totalValidUtxos, mySk, myPk, GNCHash, 'P2SH', amount, undefined, 0);
 
       //create boost
       const createBoostInput: CreateBoostInput = {

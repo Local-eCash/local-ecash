@@ -3,7 +3,9 @@ export enum TabType {
   ARCHIVED = 'Archived',
   RESOLVED = 'Resolved',
   BUYER = 'Buyer',
-  SELLER = 'Seller'
+  SELLER = 'Seller',
+  PENDING = 'Pending',
+  ESCROWED = 'Escrowed'
 }
 
 export const LIST_COIN = [

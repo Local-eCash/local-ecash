@@ -537,11 +537,11 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
                   rules={{
                     required: {
                       value: true,
-                      message: 'XEC amount is required!'
+                      message: 'Amount is required!'
                     },
                     pattern: {
                       value: /^-?[0-9]\d*\.?\d*$/,
-                      message: 'XEC amount is invalid!'
+                      message: 'Amount is invalid!'
                     },
                     validate: value => {
                       const numberValue = parseFloat(value);
@@ -584,7 +584,7 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
                     : post.postOffer.paymentMethods[0]?.paymentMethod?.id !== 5 && (
                         <div>
                           You will receive <span className="amount-receive">{amountXEC.toLocaleString('de-DE')}</span>{' '}
-                          {post.postOffer.coinPayment ?? post.postOffer.localCurrency ?? 'XEC'}
+                          XEC
                           <div>Price: {textAmountPer1MXEC}</div>
                         </div>
                       )}

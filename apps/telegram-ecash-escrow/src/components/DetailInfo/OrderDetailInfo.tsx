@@ -2,8 +2,10 @@
 
 import { COIN, coinInfo } from '@bcpros/lixi-models';
 import {
+  DisputeStatus,
   EscrowOrderQueryItem,
   fiatCurrencyApi,
+  getSelectedAccount,
   getSelectedWalletPath,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
@@ -28,17 +30,28 @@ const OrderDetailWrap = styled.div`
     color: #79869b;
   }
 
-  .cash-in-btn {
-    margin-right: 8px;
+  .btn-payment {
     border-radius: 16px;
     font-size: 12px;
     text-transform: none;
   }
 
-  .bank-transfer-btn {
-    border-radius: 16px;
+  .payment-method-wrap {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .btn-order-type {
     font-size: 12px;
+    border-radius: 16px;
     text-transform: none;
+  }
+
+  .order-first-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
 `;
 
@@ -53,6 +66,7 @@ const OrderDetailInfo = ({ item }: OrderItemProps) => {
   const [marginCurrentPrice, setMarginCurrentPrice] = useState(0);
 
   const selectedWalletPath = useLixiSliceSelector(getSelectedWalletPath);
+  const selectedAccount = useLixiSliceSelector(getSelectedAccount);
 
   const { useGetFiatRateQuery } = fiatCurrencyApi;
   const { data: fiatData } = useGetFiatRateQuery();
@@ -126,9 +140,23 @@ const OrderDetailInfo = ({ item }: OrderItemProps) => {
 
   return (
     <OrderDetailWrap onClick={() => router.push(`/order-detail?id=${order.id}`)}>
-      <Typography variant="body1">
-        <span className="prefix">No: </span>
-        {order.id}
+      <Typography className="order-first-line" variant="body1">
+        <div>
+          <span className="prefix">No: </span>
+          {order.id}
+        </div>
+        <div className="order-type">
+          {order.sellerAccount.id === selectedAccount?.id && (
+            <Button className="btn-order-type" size="small" color="info" variant="outlined">
+              Sell Order
+            </Button>
+          )}
+          {order.buyerAccount.id === selectedAccount?.id && (
+            <Button className="btn-order-type" size="small" color="info" variant="outlined">
+              Buy Order
+            </Button>
+          )}
+        </div>
       </Typography>
       <Typography variant="body1">
         <span className="prefix">Offer: </span>
@@ -149,19 +177,20 @@ const OrderDetailInfo = ({ item }: OrderItemProps) => {
         </Typography>
       )}
       <Typography variant="body1">
-        <span className="prefix">
-          {selectedWalletPath?.hash160 === order?.sellerAccount?.hash160 ? 'Amount sending: ' : 'Amount receiving: '}
-        </span>
-        {order.amount} {coinInfo[COIN.XEC].ticker}
+        <span className="prefix">Order amount:</span> {order.amount} {coinInfo[COIN.XEC].ticker}
       </Typography>
       {order.paymentMethod.id !== 5 && (
         <Typography variant="body1">
-          <span className="prefix">
-            {selectedWalletPath?.hash160 === order?.sellerAccount?.hash160 ? 'Amount receiving: ' : 'Amount sending: '}{' '}
-          </span>
-          {order.amountCoinOrCurrency} {order?.escrowOffer?.coinPayment ?? order?.escrowOffer?.localCurrency ?? 'XEC'}
+          <span className="prefix">Payment amount:</span> {order.amountCoinOrCurrency}{' '}
+          {order?.escrowOffer?.coinPayment ?? order?.escrowOffer?.localCurrency ?? 'XEC'}
         </Typography>
       )}
+      <Typography className="payment-method-wrap" variant="body1">
+        <span className="prefix">Payment method:</span>
+        <Button className="btn-payment" size="small" color="success" variant="outlined">
+          {order.paymentMethod.name}
+        </Button>
+      </Typography>
       {selectedWalletPath?.hash160 === order?.sellerAccount?.hash160 && order.paymentMethod.id !== 5 && (
         <Typography variant="body1">
           <span className="prefix">Margin of current price:</span> {marginCurrentPrice.toFixed(2)}%
@@ -173,11 +202,12 @@ const OrderDetailInfo = ({ item }: OrderItemProps) => {
           {order.message}
         </Typography>
       )}
-      <div className="payment-group-btns">
-        <Button className="cash-in-btn" size="small" color="success" variant="outlined">
-          {order.paymentMethod.name}
-        </Button>
-      </div>
+      <Typography variant="body1">
+        <span className="prefix">Status: </span>
+        {order?.dispute && order.dispute?.status === DisputeStatus.Active
+          ? 'Dispute'
+          : order.escrowOrderStatus?.toLowerCase()?.replace(/^./, char => char.toUpperCase())}
+      </Typography>
     </OrderDetailWrap>
   );
 };

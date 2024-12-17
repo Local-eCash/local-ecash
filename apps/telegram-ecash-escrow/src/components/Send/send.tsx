@@ -99,6 +99,7 @@ const SendComponent: React.FC<SendComponentProps> = props => {
       mySk,
       myPk,
       recipientHash,
+      'P2PKH',
       Number(amount),
       GNCAddress,
       calFee1Percent

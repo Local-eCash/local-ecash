@@ -39,18 +39,6 @@ const MyOrderPage = styled.div`
   .MuiBox-root {
     padding: 16px;
   }
-
-  .list-item {
-    div:not(.payment-group-btns) {
-      border-bottom: 2px dashed rgba(255, 255, 255, 0.3);
-      padding-bottom: 16px;
-      margin-bottom: 16px;
-
-      &:last-of-type {
-        border-bottom: 0;
-      }
-    }
-  }
 `;
 
 export default function MyOrder() {
@@ -65,14 +53,26 @@ export default function MyOrder() {
   };
 
   const {
-    data: dataOrderActive,
-    hasNext: hasNextOrderActive,
-    isFetching: isFetchingOrderActive,
-    fetchNext: fetchNextOrderActive
+    data: dataOrderPending,
+    hasNext: hasNextOrderPending,
+    isFetching: isFetchingOrderPending,
+    fetchNext: fetchNextOrderPending
   } = useInfiniteMyEscrowOrderQuery(
     {
       first: 20,
-      escrowOrderStatus: EscrowOrderStatus.Active
+      escrowOrderStatus: EscrowOrderStatus.Pending
+    },
+    false
+  );
+  const {
+    data: dataOrderEscrow,
+    hasNext: hasNextOrderEscrow,
+    isFetching: isFetchingOrderEscrow,
+    fetchNext: fetchNextOrderEscrow
+  } = useInfiniteMyEscrowOrderQuery(
+    {
+      first: 20,
+      escrowOrderStatus: EscrowOrderStatus.Escrow
     },
     false
   );
@@ -83,11 +83,19 @@ export default function MyOrder() {
     fetchNext: fetchNextOrderUnactive
   } = useInfiniteMyEscrowOrderQuery({ escrowOrderStatus: EscrowOrderStatus.Complete, first: 20 }, false);
 
-  const loadMoreItemsOrderActive = () => {
-    if (hasNextOrderActive && !isFetchingOrderActive) {
-      fetchNextOrderActive();
-    } else if (hasNextOrderActive) {
-      fetchNextOrderActive();
+  const loadMoreItemsOrderPending = () => {
+    if (hasNextOrderPending && !isFetchingOrderPending) {
+      fetchNextOrderPending();
+    } else if (hasNextOrderPending) {
+      fetchNextOrderPending();
+    }
+  };
+
+  const loadMoreItemsOrderEscrow = () => {
+    if (hasNextOrderEscrow && !isFetchingOrderEscrow) {
+      fetchNextOrderEscrow();
+    } else if (hasNextOrderEscrow) {
+      fetchNextOrderEscrow();
     }
   };
 
@@ -113,9 +121,14 @@ export default function MyOrder() {
             variant="fullWidth"
           >
             <Tab
-              label={TabType.ACTIVE}
-              id={`full-width-tab-${TabType.ACTIVE}`}
-              aria-controls={`full-width-tabpanel-${TabType.ACTIVE}`}
+              label={TabType.PENDING}
+              id={`full-width-tab-${TabType.PENDING}`}
+              aria-controls={`full-width-tabpanel-${TabType.PENDING}`}
+            />
+            <Tab
+              label={TabType.ESCROWED}
+              id={`full-width-tab-${TabType.ESCROWED}`}
+              aria-controls={`full-width-tabpanel-${TabType.ESCROWED}`}
             />
             <Tab
               label={TabType.ARCHIVED}
@@ -127,11 +140,11 @@ export default function MyOrder() {
           <SwipeableViews index={value} onChangeIndex={handleChangeIndex}>
             <TabPanel value={value} index={0}>
               <div className="list-item">
-                {dataOrderActive.length > 0 ? (
+                {dataOrderPending.length > 0 ? (
                   <InfiniteScroll
-                    dataLength={dataOrderActive.length}
-                    next={loadMoreItemsOrderActive}
-                    hasMore={hasNextOrderActive}
+                    dataLength={dataOrderPending.length}
+                    next={loadMoreItemsOrderPending}
+                    hasMore={hasNextOrderPending}
                     loader={
                       <>
                         <Skeleton variant="text" />
@@ -140,16 +153,40 @@ export default function MyOrder() {
                     }
                     scrollableTarget="scrollableDiv"
                   >
-                    {dataOrderActive.map(item => {
-                      return <OrderDetailInfo item={item.data as EscrowOrderQueryItem} key={item.id} />;
+                    {dataOrderPending.map(item => {
+                      return <OrderDetailInfo item={item as EscrowOrderQueryItem} key={item.id} />;
                     })}
                   </InfiniteScroll>
                 ) : (
-                  <Typography style={{ textAlign: 'center', marginTop: '2rem' }}>No order here</Typography>
+                  <Typography style={{ textAlign: 'center', marginTop: '2rem' }}>No orders here</Typography>
                 )}
               </div>
             </TabPanel>
             <TabPanel value={value} index={1}>
+              <div className="list-item">
+                {dataOrderEscrow.length > 0 ? (
+                  <InfiniteScroll
+                    dataLength={dataOrderEscrow.length}
+                    next={loadMoreItemsOrderEscrow}
+                    hasMore={hasNextOrderEscrow}
+                    loader={
+                      <>
+                        <Skeleton variant="text" />
+                        <Skeleton variant="text" />
+                      </>
+                    }
+                    scrollableTarget="scrollableDiv"
+                  >
+                    {dataOrderEscrow.map(item => {
+                      return <OrderDetailInfo item={item as EscrowOrderQueryItem} key={item.id} />;
+                    })}
+                  </InfiniteScroll>
+                ) : (
+                  <Typography style={{ textAlign: 'center', marginTop: '2rem' }}>No orders here</Typography>
+                )}
+              </div>
+            </TabPanel>
+            <TabPanel value={value} index={2}>
               <div className="list-item">
                 {dataOrderUnactive.length > 0 ? (
                   <InfiniteScroll
@@ -166,17 +203,15 @@ export default function MyOrder() {
                     scrollThreshold={'100px'}
                   >
                     {dataOrderUnactive.map(item => {
-                      return <OrderDetailInfo item={item.data as EscrowOrderQueryItem} key={item.id} />;
+                      return <OrderDetailInfo item={item as EscrowOrderQueryItem} key={item.id} />;
                     })}
                   </InfiniteScroll>
                 ) : (
-                  <Typography style={{ textAlign: 'center', marginTop: '2rem' }}>No order here</Typography>
+                  <Typography style={{ textAlign: 'center', marginTop: '2rem' }}>No orders here</Typography>
                 )}
               </div>
             </TabPanel>
           </SwipeableViews>
-
-          {/* <Fab route="/my-order/new" icon={<AddCircleOutline />} /> */}
         </MyOrderPage>
       </AuthorizationLayout>
     </MobileLayout>

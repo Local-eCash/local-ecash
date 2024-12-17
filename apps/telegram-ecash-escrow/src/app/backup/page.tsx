@@ -11,7 +11,7 @@ import {
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
 import styled from '@emotion/styled';
-import { CheckCircleOutline, ChevronLeft } from '@mui/icons-material';
+import { CheckCircleOutline, Close } from '@mui/icons-material';
 import { Alert, Button, IconButton, Typography } from '@mui/material';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useContext, useEffect, useMemo, useState } from 'react';
@@ -206,7 +206,7 @@ export default function Backup() {
       <ContainerBackupGame>
         <div className="setting-info">
           <IconButton className="back-btn" onClick={() => router.back()}>
-            <ChevronLeft />
+            <Close />
           </IconButton>
           <Typography variant="h5">{!isPlayGame ? 'Your recovery phrase' : 'Verify your phrase'}</Typography>
         </div>
@@ -259,7 +259,7 @@ export default function Backup() {
             variant="contained"
             fullWidth
           >
-            Cancel
+            Back
           </Button>
         )}
         <CustomToast

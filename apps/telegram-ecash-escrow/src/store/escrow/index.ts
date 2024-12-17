@@ -149,14 +149,20 @@ export const withdrawFund = (
   mySk: Uint8Array,
   myPk: Uint8Array,
   withdrawHash: string,
+  withdrawType: 'P2PKH' | 'P2SH',
   sendAmount: number,
   GNCAddress: string,
   donateAmount: number
 ): Uint8Array => {
   const ecc = new Ecc();
   const myP2pkh = Script.p2pkh(shaRmd160(myPk));
-  const withdrawP2pkh = Script.p2pkh(fromHex(withdrawHash));
 
+  let withdrawP2pkhOrP2sh;
+  if (withdrawType === 'P2PKH') {
+    withdrawP2pkhOrP2sh = Script.p2pkh(fromHex(withdrawHash));
+  } else {
+    withdrawP2pkhOrP2sh = Script.p2sh(fromHex(withdrawHash));
+  }
   const sendAmountSats = convertXECToSatoshi(sendAmount);
   const donateAmountSats = convertXECToSatoshi(donateAmount);
 
@@ -192,7 +198,7 @@ export const withdrawFund = (
     ? [
         {
           value: sendAmountSats,
-          script: withdrawP2pkh
+          script: withdrawP2pkhOrP2sh
         },
         {
           value: donateAmountSats,
@@ -203,7 +209,7 @@ export const withdrawFund = (
     : [
         {
           value: sendAmountSats,
-          script: withdrawP2pkh
+          script: withdrawP2pkhOrP2sh
         },
         myP2pkh
       ];

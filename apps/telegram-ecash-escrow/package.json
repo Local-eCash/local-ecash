@@ -11,8 +11,8 @@
   },
   "dependencies": {
     "@bcpros/counter": "workspace:*",
-    "@bcpros/lixi-models": "1.2.39",
-    "@bcpros/redux-store": "1.2.39",
+    "@bcpros/lixi-models": "1.2.40",
+    "@bcpros/redux-store": "1.2.40",
     "@emotion/cache": "^11.11.0",
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.5",
