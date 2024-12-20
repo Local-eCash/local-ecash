@@ -3,6 +3,7 @@
 import { SettingContext } from '@/src/store/context/settingProvider';
 import { formatNumber } from '@/src/store/util';
 import {
+  OfferStatus,
   PostQueryItem,
   Role,
   TimelineQueryItem,
@@ -250,6 +251,8 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
       </div>
     </OfferShowWrapItem>
   );
+
+  if (offerData?.status == OfferStatus.Archive) return <div></div>;
 
   return (
     <React.Fragment>

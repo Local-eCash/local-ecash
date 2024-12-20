@@ -14,7 +14,6 @@ import {
   getPaymenMethods,
   getSelectedWalletPath,
   offerApi,
-  removeAllWallets,
   setNewPostAvailable,
   useInfiniteOfferFilterQuery,
   useInfiniteOffersByScoreQuery,
@@ -23,26 +22,12 @@ import {
 } from '@bcpros/redux-store';
 import styled from '@emotion/styled';
 import CachedRoundedIcon from '@mui/icons-material/CachedRounded';
-import SignalWifiConnectedNoInternet4Icon from '@mui/icons-material/SignalWifiConnectedNoInternet4';
-import {
-  Backdrop,
-  Badge,
-  Box,
-  Button,
-  CircularProgress,
-  Skeleton,
-  Slide,
-  Stack,
-  Typography,
-  useTheme
-} from '@mui/material';
-import { signOut, useSession } from 'next-auth/react';
+import { Badge, Box, CircularProgress, Skeleton, Slide, Typography, useTheme } from '@mui/material';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useContext, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
-import MiniAppBackdrop from '../components/Common/MiniAppBackdrop';
 import MobileLayout from '../components/layout/MobileLayout';
-import { TelegramMiniAppContext } from '../store/telegram-mini-app-provider';
 
 const WrapHome = styled.div``;
 
@@ -102,15 +87,14 @@ export default function Home() {
   const prevRef = useRef(0);
   const theme = useTheme();
   const router = useRouter();
-  const { data: sessionData, status } = useSession();
-  const { launchParams } = useContext(TelegramMiniAppContext);
+  const { data: sessionData } = useSession();
 
   const selectedWalletPath = useLixiSliceSelector(getSelectedWalletPath);
   const offerFilterConfig = useLixiSliceSelector(getOfferFilterConfig);
   const newPostAvailable = useLixiSliceSelector(getNewPostAvailable);
 
-  const [mismatchAccount, setMismatchAccount] = useState(false);
-  const [networkError, setNetworkError] = useState(false);
+  // const [mismatchAccount, setMismatchAccount] = useState(false);
+  // const [networkError, setNetworkError] = useState(false);
   const [visible, setVisible] = useState(true);
 
   const { useUpdateAccountTelegramUsernameMutation, useGetAccountByAddressQuery } = accountsApi;
@@ -210,94 +194,8 @@ export default function Home() {
     dispatch(getCountries());
   }, []);
 
-  useEffect(() => {
-    if (selectedWalletPath && sessionData) {
-      (async () => {
-        try {
-          await axiosClient.get(`/api/accounts/telegram`, {
-            params: {
-              telegramId: sessionData.user.id,
-              publicKey: selectedWalletPath.publicKey
-            }
-          });
-        } catch (e) {
-          if (e.message === 'Network Error') {
-            setNetworkError(true);
-
-            return;
-          }
-
-          setMismatchAccount(true);
-        }
-      })();
-    }
-  }, [selectedWalletPath, sessionData]);
-
-  if (selectedWalletPath === null && sessionData && !launchParams) {
-    return (
-      <Backdrop sx={theme => ({ color: '#fff', zIndex: theme.zIndex.drawer + 1 })} open={true}>
-        <Stack>
-          <Typography variant="h5" align="center">
-            No wallet detected
-          </Typography>
-          <Typography variant="body1" align="center">
-            Please sign out and try again!
-          </Typography>
-          <Button
-            variant="contained"
-            style={{ marginTop: '15px' }}
-            onClick={() => signOut({ redirect: true, callbackUrl: '/' })}
-          >
-            Sign Out
-          </Button>
-        </Stack>
-      </Backdrop>
-    );
-  }
-
-  if (mismatchAccount) {
-    return (
-      <Backdrop sx={theme => ({ color: '#fff', zIndex: theme.zIndex.drawer + 1 })} open={true}>
-        <Stack>
-          <Typography variant="h5" align="center">
-            Mismatch Telegram account with current wallet
-          </Typography>
-          <Typography variant="body1" align="center">
-            Please sign out and try again!
-          </Typography>
-          <Button
-            variant="contained"
-            style={{ marginTop: '15px' }}
-            onClick={() => {
-              dispatch(removeAllWallets());
-              signOut({ redirect: true, callbackUrl: '/' });
-            }}
-          >
-            Sign Out
-          </Button>
-        </Stack>
-      </Backdrop>
-    );
-  }
-
-  if (networkError) {
-    return (
-      <Backdrop
-        sx={theme => ({ color: '#fff', zIndex: theme.zIndex.drawer + 1, backgroundColor: 'black' })}
-        open={true}
-      >
-        <Stack alignItems="center">
-          <SignalWifiConnectedNoInternet4Icon fontSize="large" />
-          <Typography variant="h5">Network Error</Typography>
-          <Typography variant="h5">Please try again later</Typography>
-        </Stack>
-      </Backdrop>
-    );
-  }
-
   return (
     <MobileLayout>
-      <MiniAppBackdrop />
       <WrapHome>
         <Slide direction="down" in={newPostAvailable && visible}>
           <StyledBadge className="badge-new-offer" color="info" onClick={handleRefresh}>

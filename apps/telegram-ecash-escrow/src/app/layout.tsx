@@ -12,6 +12,7 @@ import { AppRouterCacheProvider } from '@mui/material-nextjs/v13-appRouter';
 import { ThemeProvider } from '@mui/material/styles';
 import React from 'react';
 import ActionSheet from '../components/ActionSheet/ActionSheet';
+import MiniAppBackdrop from '../components/Common/MiniAppBackdrop';
 import ModalManager from '../components/ModalManager';
 import ToastNotificationManage from '../components/ToastNotificationManage';
 import { SettingProvider } from '../store/context/settingProvider';
@@ -45,6 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <SettingProvider>
                   <UtxoProvider>
                     <ThemeProvider theme={theme}>
+                      <MiniAppBackdrop />
                       <ModalManager />
                       <ToastNotificationManage />
                       {children}

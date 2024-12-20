@@ -112,10 +112,15 @@ export default function Footer({ hidden = true }: PropsFooter) {
   };
 
   useEffect(() => {
-    accountQueryData &&
-      (accountQueryData?.getAccountByAddress.role === Role.Arbitrator ||
-        accountQueryData?.getAccountByAddress.role === Role.Moderator) &&
+    if (!accountQueryData) return;
+
+    //check if user is moderator or arbitrator
+    if (
+      accountQueryData?.getAccountByAddress.role === Role.Arbitrator ||
+      accountQueryData?.getAccountByAddress.role === Role.Moderator
+    ) {
       setIsArbiMod(true);
+    }
   }, [accountQueryData]);
 
   return (

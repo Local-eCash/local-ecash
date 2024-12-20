@@ -98,34 +98,6 @@ export default function ImportWallet() {
   const [success, setSuccess] = useState<boolean>(false);
   const { getXecWalletPublicKey } = useContext(WalletContextNode);
   const selectedWalletPath = useLixiSliceSelector(getSelectedWalletPath);
-  // const mainButton = useMainButton();
-  // const backButton = useBackButton();
-  // const popUp = usePopup();
-  // const scanner = useQRScanner();
-  // const haptic = useHapticFeedback();
-
-  // useEffect(() => {
-  //   mainButton.enable().show();
-  //   mainButton.setText('Import');
-  //   backButton.show();
-  // }, []);
-
-  // useEffect(() => {
-  //   mainButton.on('click', onMainButtonClick);
-  //   backButton.on('click', onBackButtonClick);
-  // }, [mainButton, backButton]);
-
-  // const onMainButtonClick = () => {
-  // importWallet();
-  // };
-
-  // const onBackButtonClick = () => {
-  // backButton.hide();
-  // mainButton.hide();
-  // mainButton.off('click', onMainButtonClick);
-  // backButton.off('click', onBackButtonClick);
-  // navigate({ to: '/wallet' });
-  // };
 
   const scanQRCode = () => {
     // haptic.notificationOccurred('warning');
@@ -141,9 +113,10 @@ export default function ImportWallet() {
 
   const importWallet = async (data: { recoveryPhrase: string }) => {
     const { recoveryPhrase } = data;
+    const trimRecoveryPhrase = recoveryPhrase?.trim();
     setLoading(true);
     try {
-      const publicKey = await getXecWalletPublicKey(recoveryPhrase);
+      const publicKey = await getXecWalletPublicKey(trimRecoveryPhrase);
 
       await axiosClient.get(`/api/accounts/telegram`, {
         params: {
@@ -153,7 +126,7 @@ export default function ImportWallet() {
       });
 
       const dataImportAccount: ImportAccountType = {
-        mnemonic: recoveryPhrase,
+        mnemonic: trimRecoveryPhrase,
         coin: COIN.XEC
       };
       dispatch(importAccount(dataImportAccount));

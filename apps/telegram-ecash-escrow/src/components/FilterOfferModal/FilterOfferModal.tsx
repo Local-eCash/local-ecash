@@ -262,7 +262,7 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
         cityName: null,
         fiatCurrency: null
       };
-    } else if (paymentMethodSelected.length === 1 && paymentMethodSelected[0] === 3)
+    } else if (paymentMethodSelected.length === 1 && paymentMethodSelected[0] !== 1)
       offerFilterInput = {
         ...offerFilterInput,
         countryName: null,
@@ -536,8 +536,8 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
                   })}
                 </div>
               </div>
-              {/* cash or bank */}
-              {(selectedOptionPaymentFiatCurrency.includes(1) || selectedOptionPaymentFiatCurrency.includes(2)) && (
+              {/* cash */}
+              {selectedOptionPaymentFiatCurrency.includes(1) && (
                 <div className="filter-item">
                   <Typography style={{ marginBottom: '15px' }} variant="body2">
                     Location
@@ -591,48 +591,47 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
                         )}
                       />
                     </Grid>
-                    {selectedOptionPaymentFiatCurrency.includes(1) && (
-                      <Grid item xs={6}>
-                        <Controller
-                          name="state"
-                          control={control}
-                          render={({ field: { onChange, value, onBlur, ref } }) => (
-                            <FormControl fullWidth>
-                              <TextField
-                                label="State"
-                                variant="outlined"
-                                fullWidth
-                                onChange={onChange}
-                                onBlur={onBlur}
-                                value={value?.adminNameAscii ?? ''}
-                                inputRef={ref}
-                                onClick={() => setOpenStateList(true)}
-                                disabled={!getValues('country')}
-                                InputProps={{
-                                  endAdornment: getValues('state') && (
-                                    <InputAdornment position="end">
-                                      <IconButton
-                                        style={{ padding: 0, width: '13px' }}
-                                        onClick={e => {
-                                          e.stopPropagation();
-                                          setValue('state', null);
-                                          setValue('city', null);
-                                        }}
-                                      >
-                                        <Close />
-                                      </IconButton>
-                                    </InputAdornment>
-                                  ),
-                                  readOnly: true
-                                }}
-                              />
-                            </FormControl>
-                          )}
-                        />
-                      </Grid>
-                    )}
+
+                    <Grid item xs={6}>
+                      <Controller
+                        name="state"
+                        control={control}
+                        render={({ field: { onChange, value, onBlur, ref } }) => (
+                          <FormControl fullWidth>
+                            <TextField
+                              label="State"
+                              variant="outlined"
+                              fullWidth
+                              onChange={onChange}
+                              onBlur={onBlur}
+                              value={value?.adminNameAscii ?? ''}
+                              inputRef={ref}
+                              onClick={() => setOpenStateList(true)}
+                              disabled={!getValues('country')}
+                              InputProps={{
+                                endAdornment: getValues('state') && (
+                                  <InputAdornment position="end">
+                                    <IconButton
+                                      style={{ padding: 0, width: '13px' }}
+                                      onClick={e => {
+                                        e.stopPropagation();
+                                        setValue('state', null);
+                                        setValue('city', null);
+                                      }}
+                                    >
+                                      <Close />
+                                    </IconButton>
+                                  </InputAdornment>
+                                ),
+                                readOnly: true
+                              }}
+                            />
+                          </FormControl>
+                        )}
+                      />
+                    </Grid>
                   </div>
-                  {selectedOptionPaymentFiatCurrency.includes(1) && getValues('country') && getValues('state') && (
+                  {getValues('country') && getValues('state') && (
                     <Grid item xs={12}>
                       <Controller
                         name="city"

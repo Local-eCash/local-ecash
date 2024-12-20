@@ -1,6 +1,5 @@
 'use client';
 
-import MiniAppBackdrop from '@/src/components/Common/MiniAppBackdrop';
 import OfferDetailInfo from '@/src/components/DetailInfo/OfferDetailInfo';
 import OrderDetailInfo from '@/src/components/DetailInfo/OrderDetailInfo';
 import MobileLayout from '@/src/components/layout/MobileLayout';
@@ -86,11 +85,11 @@ const OfferDetail = () => {
     if (!token || !isAccountOffer) {
       return;
     }
+
     return (
       <>
         <div className="list-item">
           <hr />
-
           <Stack direction="row" gap="20px" justifyContent="center">
             <Button
               onClick={() => setOrderStatus(EscrowOrderStatus.Pending)}
@@ -159,7 +158,6 @@ const OfferDetail = () => {
           <CircularProgress color="inherit" />
         </Backdrop>
       )}
-      <MiniAppBackdrop />
       <OfferDetailPage>
         <TickerHeader title="Offer Detail" />
         {currentData?.post?.postOffer && (

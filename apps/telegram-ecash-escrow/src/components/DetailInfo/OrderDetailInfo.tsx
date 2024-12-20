@@ -52,6 +52,20 @@ const OrderDetailWrap = styled.div`
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 5px;
+
+    .wrap-order-id {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .order-id {
+      display: inline-block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   }
 `;
 
@@ -94,7 +108,7 @@ const OrderDetailInfo = ({ item }: OrderItemProps) => {
 
   const convertXECToAmount = async () => {
     if (!rateData) return 0;
-    let amountXEC = 1000000;
+    const amountXEC = 1000000;
     let amountCoinOrCurrency = 0;
     //if payment is crypto, we convert from coin => USD
     if (order?.escrowOffer?.coinPayment) {
@@ -112,7 +126,7 @@ const OrderDetailInfo = ({ item }: OrderItemProps) => {
       amountCoinOrCurrency = amountXEC * latestRateXec?.rate;
     }
 
-    const compactNumber = order.price.match(/[\d.]+[BMK]?/);
+    const compactNumber = order?.price.match(/[\d.]+[BMK]?/);
     const revertPriceOrder = revertCompactNumber(compactNumber[0]);
 
     //to calculate margin: (b - a) / a * 100
@@ -133,65 +147,65 @@ const OrderDetailInfo = ({ item }: OrderItemProps) => {
 
   //convert to XEC
   useEffect(() => {
-    if (order.paymentMethod.id !== 5) {
+    if (order?.paymentMethod.id !== 5) {
       convertXECToAmount();
     }
   }, [rateData]);
 
   return (
     <OrderDetailWrap onClick={() => router.push(`/order-detail?id=${order.id}`)}>
-      <Typography className="order-first-line" variant="body1">
-        <div>
+      <Typography className="order-first-line" variant="body1" component="div">
+        <div className="wrap-order-id">
           <span className="prefix">No: </span>
-          {order.id}
+          <span className="order-id">{order.id}</span>
         </div>
         <div className="order-type">
-          {order.sellerAccount.id === selectedAccount?.id && (
+          {order?.sellerAccount.id === selectedAccount?.id && (
             <Button className="btn-order-type" size="small" color="info" variant="outlined">
-              Sell Order
+              Sell
             </Button>
           )}
-          {order.buyerAccount.id === selectedAccount?.id && (
+          {order?.buyerAccount.id === selectedAccount?.id && (
             <Button className="btn-order-type" size="small" color="info" variant="outlined">
-              Buy Order
+              Buy
             </Button>
           )}
         </div>
       </Typography>
       <Typography variant="body1">
         <span className="prefix">Offer: </span>
-        {order.escrowOffer.message}
+        {order?.escrowOffer.message}
       </Typography>
       <Typography variant="body1">
         <span className="prefix">Ordered by: </span>
-        {order.buyerAccount.telegramUsername}
+        {order?.buyerAccount.telegramUsername}
       </Typography>
       <Typography variant="body1">
         <span className="prefix">Ordered at: </span>
-        {new Date(order.createdAt).toLocaleString('en-US')}
+        {new Date(order?.createdAt).toLocaleString('en-US')}
       </Typography>
       {order?.paymentMethod?.id !== 5 && (
         <Typography variant="body1">
           <span className="prefix">Price: </span>
-          {order.price}
+          {order?.price}
         </Typography>
       )}
       <Typography variant="body1">
-        <span className="prefix">Order amount:</span> {order.amount} {coinInfo[COIN.XEC].ticker}
+        <span className="prefix">Order amount:</span> {order?.amount} {coinInfo[COIN.XEC].ticker}
       </Typography>
-      {order.paymentMethod.id !== 5 && (
+      {order?.paymentMethod.id !== 5 && (
         <Typography variant="body1">
-          <span className="prefix">Payment amount:</span> {order.amountCoinOrCurrency}{' '}
+          <span className="prefix">Payment amount:</span> {order?.amountCoinOrCurrency}{' '}
           {order?.escrowOffer?.coinPayment ?? order?.escrowOffer?.localCurrency ?? 'XEC'}
         </Typography>
       )}
       <Typography className="payment-method-wrap" variant="body1">
         <span className="prefix">Payment method:</span>
         <Button className="btn-payment" size="small" color="success" variant="outlined">
-          {order.paymentMethod.name}
+          {order?.paymentMethod.name}
         </Button>
       </Typography>
-      {selectedWalletPath?.hash160 === order?.sellerAccount?.hash160 && order.paymentMethod.id !== 5 && (
+      {selectedWalletPath?.hash160 === order?.sellerAccount?.hash160 && order?.paymentMethod.id !== 5 && (
         <Typography variant="body1">
           <span className="prefix">Margin of current price:</span> {marginCurrentPrice.toFixed(2)}%
         </Typography>
@@ -199,14 +213,14 @@ const OrderDetailInfo = ({ item }: OrderItemProps) => {
       {order?.message && (
         <Typography variant="body1">
           <span className="prefix">Message: </span>
-          {order.message}
+          {order?.message}
         </Typography>
       )}
       <Typography variant="body1">
         <span className="prefix">Status: </span>
-        {order?.dispute && order.dispute?.status === DisputeStatus.Active
+        {order?.dispute && order?.dispute?.status === DisputeStatus.Active
           ? 'Dispute'
-          : order.escrowOrderStatus?.toLowerCase()?.replace(/^./, char => char.toUpperCase())}
+          : order?.escrowOrderStatus?.toLowerCase()?.replace(/^./, char => char.toUpperCase())}
       </Typography>
     </OrderDetailWrap>
   );

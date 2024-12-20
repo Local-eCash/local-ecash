@@ -1,7 +1,7 @@
 'use client';
 
-import ConfirmCancelModal from '@/src/components/Cancel/ConfirmCancelModal';
-import MiniAppBackdrop from '@/src/components/Common/MiniAppBackdrop';
+import ConfirmCancelModal from '@/src/components/Action/ConfirmCancelModal';
+import ConfirmReleaseModal from '@/src/components/Action/ConfirmReleaseModal';
 import OrderDetailInfo from '@/src/components/DetailInfo/OrderDetailInfo';
 import MobileLayout from '@/src/components/layout/MobileLayout';
 import QRCode from '@/src/components/QRcode/QRcode';
@@ -17,7 +17,6 @@ import {
   escrowOrderApi,
   EscrowOrderStatus,
   getSelectedWalletPath,
-  isValidCoinAddress,
   openModal,
   parseCashAddressToPrefix,
   SocketContext,
@@ -31,25 +30,13 @@ import CheckIcon from '@mui/icons-material/Check';
 import ClearIcon from '@mui/icons-material/Clear';
 import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
-import {
-  Backdrop,
-  Button,
-  CircularProgress,
-  FormControl,
-  FormControlLabel,
-  Radio,
-  RadioGroup,
-  Stack,
-  TextField,
-  Typography
-} from '@mui/material';
+import { Backdrop, Button, CircularProgress, Stack, Typography } from '@mui/material';
 import { fromHex, Script, shaRmd160, Tx } from 'ecash-lib';
 import cashaddr from 'ecashaddrjs';
 import _ from 'lodash';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import React, { useContext, useEffect, useMemo, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
 
 const OrderDetailPage = styled.div`
   min-height: 100vh;
@@ -105,6 +92,8 @@ const OrderDetail = () => {
   const [loading, setLoading] = useState(false);
   const [notEnoughFund, setNotEnoughFund] = useState(false);
   const [openCancelModal, setOpenCancelModal] = useState(false);
+  const [openReleaseModal, setOpenReleaseModal] = useState(false);
+  const [addressToRelease, setAddressToRelease] = useState('');
 
   const { useEscrowOrderQuery, useUpdateEscrowOrderStatusMutation } = escrowOrderApi;
   const { isLoading, currentData, isError, isSuccess, isUninitialized } = useEscrowOrderQuery(
@@ -112,28 +101,6 @@ const OrderDetail = () => {
     { skip: !id || !token }
   );
   const [updateOrderTrigger] = useUpdateEscrowOrderStatusMutation();
-
-  const [optionDonate, setOptionDonate] = useState(1);
-  const OptionDonate = [
-    {
-      label: 'Donate dispute fees to keep this service running',
-      value: 1
-    },
-    {
-      label: 'I want to withdraw dispute fees to my wallet',
-      value: 2
-    }
-  ];
-
-  const {
-    handleSubmit,
-    control,
-    formState: { errors }
-  } = useForm({
-    defaultValues: {
-      address: ''
-    }
-  });
 
   useEffect(() => {
     currentData?.escrowOrder.escrowOrderStatus !== EscrowOrderStatus.Complete &&
@@ -232,11 +199,10 @@ const OrderDetail = () => {
     setLoading(false);
   };
 
-  const handleRelease = data => {
-    const { address } = data;
+  const handleRelease = () => {
     const GNCAddress = process.env.NEXT_PUBLIC_ADDRESS_GNC;
 
-    const changeAddress = _.isEmpty(address) || _.isNil(address) ? GNCAddress : address;
+    const changeAddress = _.isEmpty(addressToRelease) || _.isNil(addressToRelease) ? GNCAddress : addressToRelease;
     const isGNCAddress = changeAddress === GNCAddress;
     handleSellerReleaseEscrow(EscrowOrderStatus.Complete, changeAddress, isGNCAddress);
   };
@@ -507,68 +473,14 @@ const OrderDetail = () => {
       }
 
       return isSeller ? (
-        <ActionStatusRelease>
-          <Typography variant="body1">
-            Dispute fees: {calDisputeFee} {COIN.XEC}
-          </Typography>
-          <RadioGroup className="" name="" defaultValue={1}>
-            {OptionDonate.map(item => {
-              return (
-                <FormControlLabel
-                  onClick={() => {
-                    setOptionDonate(item.value);
-                  }}
-                  key={item.value}
-                  value={item.value}
-                  control={<Radio />}
-                  label={item.label}
-                />
-              );
-            })}
-          </RadioGroup>
-          {optionDonate === 2 && (
-            <Controller
-              name="address"
-              control={control}
-              rules={{
-                required: {
-                  value: true,
-                  message: 'Address is required!'
-                },
-                validate: {
-                  addressValid: addr => {
-                    if (!isValidCoinAddress(COIN.XEC, addr)) return 'Invalid address!';
-                  }
-                }
-              }}
-              render={({ field: { onChange, onBlur, value, name, ref } }) => (
-                <FormControl fullWidth={true}>
-                  <TextField
-                    className="form-input"
-                    onChange={onChange}
-                    onBlur={onBlur}
-                    value={value}
-                    name={name}
-                    inputRef={ref}
-                    id="address"
-                    label="Your address"
-                    error={errors.address && true}
-                    helperText={errors.address && (errors.address?.message as string)}
-                    variant="outlined"
-                  />
-                </FormControl>
-              )}
-            />
-          )}
-          <div className="group-button-wrap">
-            <Button color="warning" variant="contained" disabled={loading} onClick={() => handleCreateDispute()}>
-              Dispute
-            </Button>
-            <Button color="success" variant="contained" onClick={handleSubmit(handleRelease)} disabled={loading}>
-              Release
-            </Button>
-          </div>
-        </ActionStatusRelease>
+        <div className="group-button-wrap">
+          <Button color="warning" variant="contained" disabled={loading} onClick={() => handleCreateDispute()}>
+            Dispute
+          </Button>
+          <Button color="success" variant="contained" onClick={() => setOpenReleaseModal(true)} disabled={loading}>
+            Release
+          </Button>
+        </div>
       ) : (
         <div>
           {telegramButton(true, 'Chat with seller for payment details')}
@@ -598,9 +510,15 @@ const OrderDetail = () => {
       selectedWalletPath?.hash160 === currentData?.escrowOrder.moderatorAccount.hash160;
 
     //remove bottom button when buyer in status escrow
-    if (!isSeller && currentData?.escrowOrder?.escrowOrderStatus === EscrowOrderStatus.Escrow && !alwaysShow) {
+    if (
+      !isSeller &&
+      currentData?.escrowOrder?.escrowOrderStatus === EscrowOrderStatus.Escrow &&
+      !alwaysShow &&
+      !currentData?.escrowOrder?.dispute
+    ) {
       return;
     }
+
     return (
       !isArbiOrMod && (
         <React.Fragment>
@@ -688,7 +606,6 @@ const OrderDetail = () => {
           <CircularProgress color="inherit" />
         </Backdrop>
       )}
-      <MiniAppBackdrop />
       <OrderDetailPage>
         <TickerHeader title="Order Detail" />
         {currentData?.escrowOrder && (
@@ -706,6 +623,14 @@ const OrderDetail = () => {
           isOpen={openCancelModal}
           returnAction={() => handleBuyerReturnEscrow(EscrowOrderStatus.Cancel)}
           onDissmissModal={value => setOpenCancelModal(value)}
+        />
+
+        <ConfirmReleaseModal
+          isOpen={openReleaseModal}
+          disputeFee={calDisputeFee}
+          returnAction={() => handleRelease()}
+          onDissmissModal={value => setOpenReleaseModal(value)}
+          setAddressToRelease={value => setAddressToRelease(value)}
         />
 
         <Stack zIndex={999}>

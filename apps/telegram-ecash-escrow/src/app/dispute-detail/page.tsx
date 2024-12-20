@@ -1,5 +1,4 @@
 'use client';
-import MiniAppBackdrop from '@/src/components/Common/MiniAppBackdrop';
 import MobileLayout from '@/src/components/layout/MobileLayout';
 import { TabPanel } from '@/src/components/Tab/Tab';
 import TickerHeader from '@/src/components/TickerHeader/TickerHeader';
@@ -329,6 +328,8 @@ export default function DisputeDetail() {
         await updateOrderTrigger({ input: { orderId: id, status, txid } })
           .unwrap()
           .then(() => {
+            dispatch(disputeApi.api.util.resetApiState());
+
             switch (status) {
               case EscrowOrderStatus.Complete:
                 setReleaseByArb(true);
@@ -384,21 +385,20 @@ export default function DisputeDetail() {
     escrowOrder?.escrowOrderStatus !== EscrowOrderStatus.Complete &&
       isEscrowOrderSuccess &&
       socket &&
-      dispatch(userSubcribeEscrowOrderChannel(escrowOrder.id));
+      dispatch(userSubcribeEscrowOrderChannel(escrowOrder?.id));
   }, [socket, isEscrowOrderSuccess]);
 
   if (
+    isEscrowOrderSuccess &&
     escrowOrder?.arbitratorAccount.hash160 !== selectedWalletPath?.hash160 &&
     escrowOrder?.moderatorAccount.hash160 !== selectedWalletPath?.hash160
   ) {
-    return <div>Not allowed to view this dispute</div>;
+    return <div style={{ color: 'white' }}>Not allowed to view this dispute</div>;
   }
 
   if (_.isEmpty(id) || _.isNil(id) || isError) {
-    return <div>Invalid dispute id</div>;
+    return <div style={{ color: 'white' }}>Invalid dispute id</div>;
   }
-
-  if (isLoadingDispute) return <div>Loading...</div>;
 
   return (
     <MobileLayout>
@@ -407,19 +407,18 @@ export default function DisputeDetail() {
           <CircularProgress color="inherit" />
         </Backdrop>
       )}
-      <MiniAppBackdrop />
       <TickerHeader title="Dispute detail" />
       {disputeQueryData?.dispute && (
         <ResolveDisputeWrap>
           <DisputeDetailInfoWrap>
             <Typography variant="body1">
               <span className="prefix">Dispute by: </span>
-              {disputeQueryData?.dispute.createdBy === escrowOrder.sellerAccount.publicKey ? 'Seller' : 'Buyer'}
+              {disputeQueryData?.dispute.createdBy === escrowOrder?.sellerAccount.publicKey ? 'Seller' : 'Buyer'}
             </Typography>
             {disputeQueryData?.dispute?.reason && (
               <Typography variant="body1">
                 <span className="prefix">Reason: </span>
-                {disputeQueryData.dispute.reason}
+                {disputeQueryData?.dispute.reason}
               </Typography>
             )}
             <Typography variant="body1">
@@ -432,11 +431,11 @@ export default function DisputeDetail() {
             </Typography>
             <Typography variant="body1">
               <span className="prefix">Seller: </span>
-              {escrowOrder.sellerAccount.telegramUsername}
+              {escrowOrder?.sellerAccount.telegramUsername}
             </Typography>
             <Typography variant="body1">
               <span className="prefix">Buyer: </span>
-              {escrowOrder.buyerAccount.telegramUsername}
+              {escrowOrder?.buyerAccount.telegramUsername}
             </Typography>
             <Typography>
               <span className="prefix">Escrow Address: </span>
@@ -447,24 +446,24 @@ export default function DisputeDetail() {
                   maxWidth: '100%',
                   display: 'inline-block'
                 }}
-                href={`${coinInfo[COIN.XEC].blockExplorerUrl}/address/${escrowOrder.escrowAddress}`}
+                href={`${coinInfo[COIN.XEC].blockExplorerUrl}/address/${escrowOrder?.escrowAddress}`}
                 target="_blank"
               >
-                <span>{escrowOrder.escrowAddress}</span>
+                <span>{escrowOrder?.escrowAddress}</span>
               </a>
             </Typography>
             <Typography variant="body1" className="amount-escrowed">
               <span className="prefix">Escrowed amount: </span>
-              {escrowOrder.amount} {COIN.XEC}
+              {escrowOrder?.amount} {COIN.XEC}
             </Typography>
             <Typography variant="body1" className="amount-seller">
               <span className="prefix">Dispute fee by seller: </span>
-              {calDisputeFee(escrowOrder.amount)} {COIN.XEC}
+              {calDisputeFee(escrowOrder?.amount)} {COIN.XEC}
             </Typography>
             {escrowOrder?.buyerDepositTx && (
               <Typography variant="body1" className="amount-buyer">
                 <span className="prefix">Dispute fee by buyer: </span>
-                {calDisputeFee(escrowOrder.amount)} {COIN.XEC}
+                {calDisputeFee(escrowOrder?.amount)} {COIN.XEC}
               </Typography>
             )}
           </DisputeDetailInfoWrap>
@@ -474,7 +473,7 @@ export default function DisputeDetail() {
               color="info"
               variant="contained"
               onClick={() =>
-                handleTelegramClick(escrowOrder.sellerAccount.telegramUsername, escrowOrder.sellerAccount.publicKey)
+                handleTelegramClick(escrowOrder?.sellerAccount.telegramUsername, escrowOrder?.sellerAccount.publicKey)
               }
               disabled={isLoading || isFetching}
             >
@@ -486,7 +485,7 @@ export default function DisputeDetail() {
               color="info"
               variant="contained"
               onClick={() =>
-                handleTelegramClick(escrowOrder.buyerAccount.telegramUsername, escrowOrder.buyerAccount.publicKey)
+                handleTelegramClick(escrowOrder?.buyerAccount.telegramUsername, escrowOrder?.buyerAccount.publicKey)
               }
               disabled={isLoading || isFetching}
             >

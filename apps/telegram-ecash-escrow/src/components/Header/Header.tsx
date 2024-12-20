@@ -58,6 +58,24 @@ const PopoverStyled = styled.div`
   }
 `;
 
+const StyledAvatar = styled.div`
+  width: 1.55em; /* Adjust size as needed */
+  height: 1.55em;
+  border-radius: 50%;
+  overflow: hidden;
+  display: inline-block;
+  border: 2px solid #0076c4; /* Optional: Add a border */
+  background-image: url('./eCash.svg'); /* Optional: Placeholder image */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  img {
+    width: 100%;
+    object-fit: cover;
+  }
+`;
+
 export default function Header() {
   const router = useRouter();
   const { data, status } = useSession();
@@ -120,7 +138,15 @@ export default function Header() {
       </div>
       <div className="wallet-minimals">
         <IconButton onClick={e => handlePopoverOpen(e)}>
-          <AccountCircleRoundedIcon fontSize="large" />
+          {data && data.user.image ? (
+            <StyledAvatar>
+              <picture>
+                <img src={data.user.image} alt="" />
+              </picture>
+            </StyledAvatar>
+          ) : (
+            <AccountCircleRoundedIcon fontSize="large" />
+          )}
         </IconButton>
         <Popover
           id="mouse-over-popover"
