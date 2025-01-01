@@ -9,18 +9,18 @@
 'use client';
 
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v13-appRouter';
-import { ThemeProvider } from '@mui/material/styles';
 import React from 'react';
 import ActionSheet from '../components/ActionSheet/ActionSheet';
 import MiniAppBackdrop from '../components/Common/MiniAppBackdrop';
+import Footer from '../components/Footer/Footer';
 import ModalManager from '../components/ModalManager';
 import ToastNotificationManage from '../components/ToastNotificationManage';
+import { AppThemeProvider } from '../store/context/appThemeProvider';
 import { SettingProvider } from '../store/context/settingProvider';
 import { UtxoProvider } from '../store/context/utxoProvider';
 import ReduxProvider from '../store/provider';
 import { TelegramAuthProvider } from '../store/telegram-auth-provider';
 import { TelegramMiniAppProvider } from '../store/telegram-mini-app-provider';
-import theme from '../theme/theme';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -45,13 +45,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <AppRouterCacheProvider>
                 <SettingProvider>
                   <UtxoProvider>
-                    <ThemeProvider theme={theme}>
+                    <AppThemeProvider>
                       <MiniAppBackdrop />
                       <ModalManager />
                       <ToastNotificationManage />
                       {children}
                       <ActionSheet />
-                    </ThemeProvider>
+                      <Footer />
+                    </AppThemeProvider>
                   </UtxoProvider>
                 </SettingProvider>
               </AppRouterCacheProvider>

@@ -14,7 +14,8 @@ import {
   useSliceDispatch as useLixiSliceDispatch,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
-import styled from '@emotion/styled';
+import { styled } from '@mui/material/styles';
+
 import {
   Button,
   Dialog,
@@ -32,56 +33,56 @@ import cashaddr from 'ecashaddrjs';
 import React, { useContext, useState } from 'react';
 import CustomToast from '../Toast/CustomToast';
 
-const StyledDialog = styled(Dialog)`
-  .MuiPaper-root {
-    background-image: url('/bg-dialog.svg');
-    background-repeat: no-repeat;
-    background-size: cover;
-    width: 500px;
-    box-sizing: border-box;
-    padding: 16px;
-    margin: 0;
-    @media (max-width: 576px) {
-      width: 100%;
+const StyledDialog = styled(Dialog)(({ theme }) => ({
+  '.MuiPaper-root': {
+    background: theme.palette.background.default,
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: 'cover',
+    width: '500px',
+    boxSizing: 'border-box',
+    padding: '16px',
+    margin: '0',
+    [theme.breakpoints.down('sm')]: {
+      width: '100%'
     }
-  }
+  },
 
-  .MuiDialogTitle-root {
-    padding: 0 16px;
-    padding-top: 16px;
-    font-size: 26px;
-    text-align: center;
-  }
+  '.MuiDialogTitle-root': {
+    padding: '0 16px',
+    paddingTop: '16px',
+    fontSize: '26px',
+    textAlign: 'center'
+  },
 
-  .MuiFormControl-root {
-    margin-top: 5px;
-  }
+  '.MuiFormControl-root': {
+    marginTop: '5px'
+  },
 
-  .MuiDialogContent-root {
-    padding: 0;
-  }
+  '.MuiDialogContent-root': {
+    padding: '0'
+  },
 
-  .MuiDialogActions-root {
-    padding: 0;
-    flex-direction: column;
-    align-items: flex-start;
+  '.MuiDialogActions-root': {
+    padding: '0',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
 
-    .boost-info {
-      margin-top: 10px;
-      margin-left: 0;
+    '.boost-info': {
+      marginTop: '10px',
+      marginLeft: '0'
     }
-  }
+  },
 
-  .create-boost-btn {
-    color: #fff;
-    text-transform: none;
-    width: 100%;
-  }
+  '.create-boost-btn': {
+    color: theme.palette.common.white,
+    textTransform: 'none',
+    width: '100%'
+  },
 
-  .bold {
-    font-weight: bold;
+  '.bold': {
+    fontWeight: theme.typography.fontWeightBold
   }
-`;
+}));
 
 interface BoostModalProps {
   amount: number;
@@ -155,7 +156,7 @@ const BoostModal: React.FC<BoostModalProps> = ({ amount, post }: BoostModalProps
     <StyledDialog open={true} onClose={() => handleCloseModal()} TransitionComponent={Transition}>
       <DialogTitle>Boost your offer</DialogTitle>
       <DialogContent>
-        <Typography style={{ color: 'rgba(255, 255, 255, 0.6)', marginBottom: '5px' }}>
+        <Typography variant="subtitle1" style={{ marginBottom: '5px' }}>
           *Boosted offers (100 XEC) are notified on Telegram channel and are ranked higher in the P2P Market feed
         </Typography>
       </DialogContent>

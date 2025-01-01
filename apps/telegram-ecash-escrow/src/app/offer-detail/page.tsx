@@ -12,41 +12,41 @@ import {
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
 import { usePostQuery } from '@bcpros/redux-store/build/main/store/post/posts.api';
-import styled from '@emotion/styled';
-import { Backdrop, Button, CircularProgress, Skeleton, Stack, Typography } from '@mui/material';
+import { Button, CircularProgress, Skeleton, Stack, Typography } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import _ from 'lodash';
 import { useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
 
-const OfferDetailPage = styled.div`
-  min-height: 100vh;
-  background-image: url('/bg-dialog.svg');
-  background-repeat: no-repeat;
-  background-size: cover;
+const OfferDetailPage = styled('div')(({ theme }) => ({
+  minHeight: '100vh',
+  background: theme.palette.background.default,
+  backgroundRepeat: 'no-repeat',
+  backgroundSize: 'cover',
 
-  .list-item {
-    div:not(.payment-group-btns) {
-      border-bottom: 2px dashed rgba(255, 255, 255, 0.3);
-      padding-bottom: 16px;
-      margin: 10px 5px;
+  '.list-item': {
+    '.group-btn-order': {
+      borderBottom: `2px dashed ${theme.custom.borderColor}`,
+      paddingBottom: '16px',
+      margin: '10px 5px'
+    },
 
-      &:last-of-type {
-        border-bottom: 0;
-      }
-    }
+    '.infinite-scroll-component': {
+      padding: '16px'
+    },
 
-    .btn-timeline {
-      color: white !important;
-      text-transform: math-auto;
-      border-color: rgba(255, 255, 255, 0.2);
-    }
-    .active {
-      border: 1px solid rgba(255, 255, 255, 1);
+    '.btn-timeline': {
+      color: `${theme.palette.common.white} !important`,
+      textTransform: 'none',
+      borderColor: 'rgba(255, 255, 255, 0.2)'
+    },
+
+    '.active': {
+      border: '1px solid rgba(255, 255, 255, 1)'
     }
   }
-`;
-
+}));
 const OfferDetail = () => {
   const token = sessionStorage.getItem('Authorization');
   const search = useSearchParams();
@@ -56,7 +56,7 @@ const OfferDetail = () => {
 
   const [orderStatus, setOrderStatus] = useState<EscrowOrderStatus>(EscrowOrderStatus.Pending);
 
-  const { isLoading, currentData, isError, isUninitialized } = usePostQuery({ id: id! }, { skip: !id });
+  const { currentData, isError } = usePostQuery({ id: id! }, { skip: !id });
   const {
     data: escrowOrdersData,
     hasNext: hasNextEscrowOrders,
@@ -90,7 +90,7 @@ const OfferDetail = () => {
       <>
         <div className="list-item">
           <hr />
-          <Stack direction="row" gap="20px" justifyContent="center">
+          <Stack className="group-btn-order" direction="row" gap="20px" justifyContent="center">
             <Button
               onClick={() => setOrderStatus(EscrowOrderStatus.Pending)}
               className={`btn-timeline ${orderStatus === EscrowOrderStatus.Pending ? 'active' : ''}`}
@@ -153,21 +153,22 @@ const OfferDetail = () => {
 
   return (
     <MobileLayout>
-      {(isLoading || isUninitialized) && (
-        <Backdrop sx={theme => ({ color: '#fff', zIndex: theme.zIndex.drawer + 1 })} open={true}>
-          <CircularProgress color="inherit" />
-        </Backdrop>
-      )}
       <OfferDetailPage>
         <TickerHeader title="Offer Detail" />
-        {currentData?.post?.postOffer && (
-          <OfferDetailInfo
-            post={currentData?.post}
-            isShowBuyButton={currentData && currentData?.post?.accountId === selectedAccount?.id ? false : true}
-            isItemTimeline={false}
-          />
+        {currentData?.post?.postOffer ? (
+          <React.Fragment>
+            <OfferDetailInfo
+              post={currentData?.post}
+              isShowBuyButton={currentData && currentData?.post?.accountId === selectedAccount?.id ? false : true}
+              isItemTimeline={false}
+            />
+            {ListButtonComponent()}
+          </React.Fragment>
+        ) : (
+          <div style={{ display: 'flex', justifyContent: 'center', height: '100vh' }}>
+            <CircularProgress style={{ color: 'white', margin: 'auto' }} />
+          </div>
         )}
-        {ListButtonComponent()}
       </OfferDetailPage>
     </MobileLayout>
   );

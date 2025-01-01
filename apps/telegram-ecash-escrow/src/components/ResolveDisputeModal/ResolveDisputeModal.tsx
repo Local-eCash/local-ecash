@@ -1,6 +1,5 @@
 'use client';
 
-import styled from '@emotion/styled';
 import { ChevronLeft } from '@mui/icons-material';
 import {
   Button,
@@ -15,6 +14,7 @@ import {
   useMediaQuery,
   useTheme
 } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { TransitionProps } from '@mui/material/transitions';
 import Image from 'next/image';
 import React, { useState } from 'react';
@@ -26,142 +26,143 @@ interface PlaceAnOrderModalProps {
   onConfirmClick?: () => void;
 }
 
-const StyledDialog = styled(Dialog)`
-  .MuiPaper-root {
-    background-image: url('/bg-dialog.svg');
-    background-repeat: no-repeat;
-    background-size: cover;
-  }
+const StyledDialog = styled(Dialog)(({ theme }) => ({
+  '.MuiPaper-root': {
+    background: theme.palette.background.default,
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: 'cover'
+  },
 
-  .MuiIconButton-root {
-    width: fit-content;
-    svg {
-      font-size: 32px;
+  '.MuiIconButton-root': {
+    width: 'fit-content',
+    svg: {
+      fontSize: 32
+    }
+  },
+
+  '.MuiDialogTitle-root': {
+    padding: theme.spacing(0, 2), // Horizontal padding using theme
+    paddingTop: theme.spacing(2), // Top padding using theme
+    fontSize: 26,
+    textAlign: 'center'
+  },
+
+  '.MuiDialogContent-root': {
+    padding: 0
+  },
+
+  '.MuiDialogActions-root': {
+    flexDirection: 'column',
+    alignItems: 'normal',
+
+    '.resolve-btn': {
+      textTransform: 'none',
+      color: 'inherit',
+      margin: 0,
+      '!important': 'true' // Avoid using '!important' if possible
+    }
+  },
+
+  '.back-btn': {
+    padding: 0,
+    position: 'absolute',
+    left: theme.spacing(1), // Spacing based on theme
+    top: theme.spacing(2), // Spacing based on theme
+    borderRadius: 12,
+
+    svg: {
+      fontSize: 32
     }
   }
+}));
 
-  .MuiDialogTitle-root {
-    padding: 0 16px;
-    padding-top: 16px;
-    font-size: 26px;
-    text-align: center;
-  }
+// StyledReleaseDialog using MUI theme
+const StyledReleaseDialog = styled(Dialog)(({ theme }) => ({
+  '.MuiPaper-root': {
+    background: theme.palette.background.default,
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: 'cover'
+  },
 
-  .MuiDialogContent-root {
-    padding: 0;
-  }
+  '.MuiIconButton-root': {
+    width: 'fit-content',
+    svg: {
+      fontSize: 32
+    }
+  },
 
-  .MuiDialogActions-root {
-    flex-direction: column;
-    align-items: normal;
+  '.MuiDialogTitle-root': {
+    padding: theme.spacing(0, 2),
+    paddingTop: theme.spacing(2),
+    fontSize: 26,
+    textAlign: 'center'
+  },
 
-    .resolve-btn {
-      text-transform: none;
-      color: inherit;
-      margin: 0 !important;
+  '.MuiDialogContent-root': {
+    padding: 0
+  },
+
+  '.back-btn': {
+    padding: 0,
+    position: 'absolute',
+    left: theme.spacing(1),
+    top: theme.spacing(2),
+    borderRadius: 12,
+
+    svg: {
+      fontSize: 32
     }
   }
+}));
 
-  .back-btn {
-    padding: 0;
-    position: absolute;
-    left: 8px;
-    top: 20px;
-    // border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 12px;
+// ResolveDisputeWrap using MUI theme
+const ResolveDisputeWrap = styled('div')(({ theme }) => ({
+  padding: theme.spacing(2),
 
-    svg {
-      font-size: 32px;
+  '.group-btn-chat': {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: theme.spacing(1),
+    borderTop: `1px dashed ${theme.palette.grey[500]}`,
+    paddingTop: theme.spacing(1),
+    marginTop: theme.spacing(2),
+
+    '.chat-btn': {
+      width: 'fit-content',
+      justifyContent: 'flex-start',
+      textTransform: 'none',
+      gap: theme.spacing(1),
+      padding: theme.spacing(1, 0),
+      fontWeight: 600
     }
   }
-`;
+}));
 
-const StyledReleaseDialog = styled(Dialog)`
-  .MuiPaper-root {
-    background-image: url('/bg-dialog.svg');
-    background-repeat: no-repeat;
-    background-size: cover;
-  }
+// ReleaseDisputeWrap using MUI theme
+const ReleaseDisputeWrap = styled('div')(({ theme }) => ({
+  padding: theme.spacing(2),
 
-  .MuiIconButton-root {
-    width: fit-content;
-    svg {
-      font-size: 32px;
+  '.seller-release, .buyer-release': {
+    textAlign: 'center',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: theme.spacing(2),
+    marginBottom: theme.spacing(4),
+
+    button: {
+      color: 'white',
+      textTransform: 'none'
+    },
+
+    '.disclaim-buyer': {
+      color: '#29b6f6'
+    },
+
+    '.disclaim-seller': {
+      color: '#f44336'
     }
   }
-
-  .MuiDialogTitle-root {
-    padding: 0 16px;
-    padding-top: 16px;
-    font-size: 26px;
-    text-align: center;
-  }
-
-  .MuiDialogContent-root {
-    padding: 0;
-  }
-
-  .back-btn {
-    padding: 0;
-    position: absolute;
-    left: 8px;
-    top: 20px;
-    // border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 12px;
-
-    svg {
-      font-size: 32px;
-    }
-  }
-`;
-
-const ResolveDisputeWrap = styled.div`
-  padding: 16px;
-
-  .group-btn-chat {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-    border-top: 1px dashed gray;
-    padding-top: 8px;
-    margin-top: 16px;
-
-    .chat-btn {
-      width: fit-content;
-      justify-content: flex-start;
-      text-transform: none;
-      gap: 8px;
-      padding: 8px 0;
-      font-weight: 600;
-    }
-  }
-`;
-
-const ReleaseDisputeWrap = styled.div`
-  padding: 16px;
-
-  .seller-release,
-  .buyer-release {
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    margin-bottom: 32px;
-
-    button {
-      color: white;
-      text-transform: none;
-    }
-
-    .disclaim-buyer {
-      color: #29b6f6;
-    }
-
-    .disclaim-seller {
-      color: #f44336;
-    }
-  }
-`;
+}));
 
 const Transition = React.forwardRef(function Transition(
   props: TransitionProps & {

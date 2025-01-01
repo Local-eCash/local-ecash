@@ -1,6 +1,6 @@
 'use client';
 
-import { LIST_COIN } from '@/src/store/constants';
+import { COIN_OTHERS, LIST_COIN } from '@/src/store/constants';
 import { LIST_CURRENCIES_USED } from '@bcpros/lixi-models';
 import {
   Location,
@@ -13,7 +13,6 @@ import {
   useSliceDispatch as useLixiSliceDispatch,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
-import styled from '@emotion/styled';
 import { Close, CloseOutlined } from '@mui/icons-material';
 import {
   Button,
@@ -34,6 +33,7 @@ import {
   useMediaQuery,
   useTheme
 } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { TransitionProps } from '@mui/material/transitions';
 import React, { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -46,110 +46,114 @@ interface FilterOfferModalProps {
   onConfirmClick?: () => void;
 }
 
-const StyledDialog = styled(Dialog)`
-  .MuiPaper-root {
-    background-image: url('/bg-dialog.svg');
-    background-repeat: no-repeat;
-    background-size: cover;
-    width: 500px;
-    height: 100vh;
-    max-height: 100%;
-    margin: 0;
-    @media (max-width: 576px) {
-      width: 100%;
+const StyledDialog = styled(Dialog)(({ theme }) => ({
+  '.MuiPaper-root': {
+    background: theme.palette.background.default,
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: 'cover',
+    width: '500px',
+    height: '100vh',
+    maxHeight: '100%',
+    margin: 0,
+    [theme.breakpoints.down('sm')]: {
+      width: '100%'
+    }
+  },
+
+  '.MuiIconButton-root': {
+    width: 'fit-content',
+    svg: {
+      fontSize: '32px'
+    }
+  },
+
+  '.MuiDialogTitle-root': {
+    padding: '0 16px',
+    paddingTop: '16px',
+    fontSize: '26px'
+  },
+
+  '.MuiDialogContent-root': {
+    padding: 0
+  },
+
+  '.MuiDialogActions-root': {
+    justifyContent: 'space-evenly',
+    padding: '16px',
+    paddingBottom: '32px',
+
+    button: {
+      textTransform: 'none',
+      width: '100%',
+
+      '&.confirm-btn': {
+        color: 'white'
+      }
+    }
+  },
+
+  button: {
+    color: theme.palette.text.secondary,
+    borderColor: theme.custom.borderColor1
+  },
+
+  '.close-btn': {
+    padding: '6px',
+    position: 'absolute',
+    right: '16px',
+    top: '16px',
+    border: '1px solid rgba(255, 255, 255, 0.3)',
+    borderRadius: '12px',
+
+    svg: {
+      fontSize: '24px'
     }
   }
+}));
 
-  .MuiIconButton-root {
-    width: fit-content;
-    svg {
-      font-size: 32px;
+export const FormControlWithNativeSelect = styled(FormControl)(({ theme }) => ({
+  width: '100%',
+
+  '.MuiFormLabel-root': {
+    transform: 'translate(0, 16px)',
+
+    '&[data-shrink="true"]': {
+      display: 'none'
     }
   }
+}));
 
-  .MuiDialogTitle-root {
-    padding: 0 16px;
-    padding-top: 16px;
-    font-size: 26px;
-  }
+const FilterWrap = styled('div')(({ theme }) => ({
+  '.filter-item': {
+    borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+    padding: '20px 16px',
 
-  .MuiDialogContent-root {
-    padding: 0;
-  }
+    '&:last-of-type': {
+      borderBottom: 0
+    },
 
-  .MuiDialogActions-root {
-    justify-content: space-evenly;
-    padding: 16px;
-    padding-bottom: 32px;
+    '.content': {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(2, 1fr)',
+      gap: '8px'
+    },
 
-    button {
-      text-transform: math-auto;
-      width: 100%;
+    'p:not(.Mui-error)': {
+      color: '#79869b'
+    },
 
-      &.confirm-btn {
-        color: white;
+    button: {
+      textTransform: 'none',
+      fontSize: '14px',
+      padding: '8px',
+
+      '&.active': {
+        fontWeight: 'bold',
+        border: `${theme.palette.mode === 'dark' ? '1px' : '2px'} solid rgb(41, 142, 23)`
       }
     }
   }
-
-  .close-btn {
-    padding: 6px;
-    position: absolute;
-    right: 16px;
-    top: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 12px;
-
-    svg {
-      font-size: 24px;
-    }
-  }
-`;
-
-export const FormControlWithNativeSelect = styled(FormControl)`
-  width: 100%;
-
-  .MuiFormLabel-root {
-    transform: translate(0, 16px);
-
-    &[data-shrink='true'] {
-      display: none;
-    }
-  }
-`;
-
-const FilterWrap = styled.div`
-  .filter-item {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 20px 16px;
-
-    &:last-of-type {
-      border-bottom: 0;
-    }
-
-    .content {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-    }
-
-    p:not(.Mui-error) {
-      color: #79869b;
-    }
-
-    button {
-      text-transform: math-auto;
-      border-color: rgba(255, 255, 255, 0.2);
-      font-size: 14px;
-      padding: 8px;
-
-      &.active {
-        font-weight: bold;
-        border-color: rgb(41, 142, 23);
-      }
-    }
-  }
-`;
+}));
 
 const Transition = React.forwardRef(function Transition(
   props: TransitionProps & {
@@ -444,6 +448,9 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
                               </option>
                             );
                           })}
+                          <option key="Others" value={COIN_OTHERS}>
+                            {COIN_OTHERS}
+                          </option>
                         </NativeSelect>
                         {errors && errors?.coin && (
                           <FormHelperText error={true}>{errors.coin.message as string}</FormHelperText>

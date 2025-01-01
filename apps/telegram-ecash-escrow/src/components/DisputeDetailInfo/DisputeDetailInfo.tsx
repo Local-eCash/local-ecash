@@ -1,6 +1,6 @@
 'use client';
 
-import { DisputeQueryItem, TimelineQueryItem } from '@bcpros/redux-store';
+import { DisputeQueryItem, EscrowOrderStatus, TimelineQueryItem } from '@bcpros/redux-store';
 import styled from '@emotion/styled';
 import { Typography } from '@mui/material';
 import { useRouter } from 'next/navigation';
@@ -72,7 +72,7 @@ const DisputeDetailInfo = ({ timelineItem }: DisputeItemProps) => {
         </Typography>
       )}
       <Typography variant="body1">
-        <span className="prefix">Posted: </span> {new Date(disputeData.createdAt).toLocaleString('en-US')}
+        <span className="prefix">Posted: </span> {new Date(disputeData.createdAt).toLocaleString('vi-VN')}
       </Typography>
       <Typography variant="body1" className="amount-escrowed">
         {orderOfDispute.amount} XEC escrowed!
@@ -83,6 +83,12 @@ const DisputeDetailInfo = ({ timelineItem }: DisputeItemProps) => {
       <Typography variant="body1">
         <span className="prefix">Buyer: </span> {orderOfDispute.buyerAccount.telegramUsername}
       </Typography>
+      {(orderOfDispute.status === EscrowOrderStatus.Complete || orderOfDispute.status === EscrowOrderStatus.Cancel) && (
+        <Typography variant="body1">
+          <span className="prefix">Result: </span>
+          {orderOfDispute.status === EscrowOrderStatus.Complete ? 'Forwarded to buyer' : 'Returned to seller'}
+        </Typography>
+      )}
     </DisputeDetailInfoWrap>
   );
 };

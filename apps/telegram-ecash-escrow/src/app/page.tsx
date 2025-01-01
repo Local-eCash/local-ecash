@@ -1,6 +1,5 @@
 'use client';
 
-import Footer from '@/src/components/Footer/Footer';
 import Header from '@/src/components/Header/Header';
 import OfferItem from '@/src/components/OfferItem/OfferItem';
 import TopSection from '@/src/components/TopSection/TopSection';
@@ -25,7 +24,7 @@ import CachedRoundedIcon from '@mui/icons-material/CachedRounded';
 import { Badge, Box, CircularProgress, Skeleton, Slide, Typography, useTheme } from '@mui/material';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import MobileLayout from '../components/layout/MobileLayout';
 
@@ -84,7 +83,6 @@ const StyledBadge = styled(Badge)`
 `;
 
 export default function Home() {
-  const prevRef = useRef(0);
   const theme = useTheme();
   const router = useRouter();
   const { data: sessionData } = useSession();
@@ -140,21 +138,6 @@ export default function Home() {
     dispatch(setNewPostAvailable(false));
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
   };
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const handleScroll = () => {
-        const currentScrollPos = window.scrollY;
-        setVisible(prevRef.current > currentScrollPos || currentScrollPos < 20);
-        prevRef.current = currentScrollPos;
-      };
-      window.addEventListener('scroll', handleScroll);
-
-      return () => {
-        window.removeEventListener('scroll', handleScroll);
-      };
-    }
-  }, []);
 
   useEffect(() => {
     sessionData &&
@@ -268,7 +251,6 @@ export default function Home() {
             </div>
           </Section>
         </HomePage>
-        <Footer hidden={visible} />
       </WrapHome>
     </MobileLayout>
   );

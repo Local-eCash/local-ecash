@@ -10,17 +10,20 @@ import {
 import { Box, List, ListItem, ListItemButton, ListItemText, SwipeableDrawer, styled } from '@mui/material';
 import { useState } from 'react';
 
-const ListStyled = styled(List)`
-  background-color: #121212;
-  padding: 32px 16px;
-  padding-top: 16px;
+const ListStyled = styled(List)(({ theme }) => ({
+  backgroundColor: theme.custom.bgItem2,
+  padding: '32px 16px',
+  paddingTop: '16px',
+  li: {
+    backgroundColor: '#494949',
+    borderRadius: '10px',
+    marginTop: '7px'
+  },
 
-  li {
-    background-color: #494949;
-    border-radius: 10px;
-    margin-top: 7px;
+  '.MuiTypography-root': {
+    color: '#fff'
   }
-`;
+}));
 
 interface OfferActionSheetProps {
   offer: OfferQueryItem;

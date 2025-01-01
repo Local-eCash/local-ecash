@@ -6,7 +6,6 @@ import {
   useSliceDispatch as useLixiSliceDispatch,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
-import styled from '@emotion/styled';
 import { LocationOn } from '@mui/icons-material';
 import {
   Box,
@@ -19,32 +18,34 @@ import {
   IconButton,
   TextField
 } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
-const NewOfferWrap = styled.div`
-  min-height: 100vh;
-  background-image: url('/bg-dialog.svg');
-  background-repeat: no-repeat;
-  background-size: cover;
-  padding-bottom: 85px;
+const NewOfferWrap = styled('div')(({ theme }) => ({
+  minHeight: '100vh',
+  background: theme.palette.background.default,
+  backgroundRepeat: 'no-repeat',
+  backgroundSize: 'cover',
+  paddingBottom: '85px',
 
-  .offer-content {
-    padding: 16px;
-    .form-input {
-      width: 100%;
+  '.offer-content': {
+    padding: '16px',
+
+    '.form-input': {
+      width: '100%'
     }
-  }
+  },
 
-  .create-offer-btn {
-    width: 100%;
-    text-transform: none;
-    color: white;
-    font-weight: 600;
-    font-size: 16px;
-    margin-top: 16px;
+  '.create-offer-btn': {
+    width: '100%',
+    textTransform: 'none',
+    color: theme.palette.common.white,
+    fontWeight: 600,
+    fontSize: '16px',
+    marginTop: '16px'
   }
-`;
+}));
 
 export default function NewOffer() {
   const {

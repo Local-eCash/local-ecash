@@ -1,31 +1,31 @@
 'use client';
 
 import { getOfferFilterConfig, useSliceSelector as useLixiSliceSelector } from '@bcpros/redux-store';
-import styled from '@emotion/styled';
 import { FilterAltOutlined } from '@mui/icons-material';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import { IconButton, Typography } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import React, { useState } from 'react';
 import FilterOfferModal from '../FilterOfferModal/FilterOfferModal';
 
-const TopSectionWrap = styled.div`
-  padding: 12px 8px;
-  border: 1px solid #f1f1f147;
-  border-radius: 16px;
-  margin-bottom: 16px;
+const TopSectionWrap = styled('div')(({ theme }) => ({
+  padding: theme.spacing(1.5, 1), // Adjusted padding using theme
+  border: `1px solid ${theme.palette.grey[300]}`, // Use theme color for the border
+  borderRadius: 16,
+  marginBottom: theme.spacing(2), // Margin bottom using theme
 
-  .location-wrap {
-    display: grid;
-    grid-template-columns: 1fr max-content;
-    gap: 16px;
+  '.location-wrap': {
+    display: 'grid',
+    gridTemplateColumns: '1fr max-content',
+    gap: theme.spacing(2), // Gap between columns using theme
 
-    div {
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    div: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: theme.spacing(1) // Gap between items using theme
     }
   }
-`;
+}));
 
 const TopSection: React.FC = () => {
   const [open, setOpen] = useState<boolean>(false);
@@ -47,8 +47,12 @@ const TopSection: React.FC = () => {
                 : 'All the world'}
             </Typography>
           </div>
-          <div onClick={() => setOpen(true)}>
-            {(coin || fiatCurrency) && <Typography>• {coin ?? fiatCurrency} </Typography>}
+          <div onClick={() => setOpen(true)} style={{ display: 'flex', alignItems: 'end', gap: '2px' }}>
+            {coin || fiatCurrency ? (
+              <Typography fontWeight="bold"> {coin ?? fiatCurrency} </Typography>
+            ) : (
+              <Typography fontWeight="bold">Filter</Typography>
+            )}
             <IconButton>
               <FilterAltOutlined />
             </IconButton>

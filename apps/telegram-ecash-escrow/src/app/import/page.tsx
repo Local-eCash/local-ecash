@@ -1,17 +1,16 @@
 'use client';
-import MobileLayout from '@/src/components/layout/MobileLayout';
 import CustomToast from '@/src/components/Toast/CustomToast';
+import MobileLayout from '@/src/components/layout/MobileLayout';
 import { AccountType, COIN, GenerateAccountType, ImportAccountType } from '@bcpros/lixi-models';
 import {
+  WalletContextNode,
   axiosClient,
   generateAccount,
   getSelectedWalletPath,
   importAccount,
   useSliceDispatch as useLixiSliceDispatch,
-  useSliceSelector as useLixiSliceSelector,
-  WalletContextNode
+  useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
-import styled from '@emotion/styled';
 import QrCodeScannerOutlinedIcon from '@mui/icons-material/QrCodeScannerOutlined';
 import {
   Backdrop,
@@ -23,64 +22,66 @@ import {
   TextField,
   Typography
 } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useContext, useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
-const ContainerImportWallet = styled.div`
-  padding: 1rem;
-  .header-receive {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
+const ContainerImportWallet = styled('div')(({ theme }) => ({
+  padding: '1rem',
+  '.header-receive': {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    '.title-icon': {
+      marginBottom: '16px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
 
-    .title-icon {
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-  }
-  .coin-address {
-    .address-string {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0.5rem;
-      background: #5476eb42;
-      color: #5476eb;
-      width: fit-content;
-      margin: auto;
-      border-radius: 1rem;
-      gap: 4px;
-      svg {
-        font-size: 14px;
-      }
-      span {
-        font-size: 12px;
+      svg: {
+        color: theme.custom.colorItem
       }
     }
+  },
+  '.coin-address': {
+    '.address-string': {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '0.5rem',
+      background: '#5476eb42',
+      color: '#5476eb',
+      width: 'fit-content',
+      margin: 'auto',
+      borderRadius: '1rem',
+      gap: '4px',
+      svg: {
+        fontSize: '21px',
+        color: '#000'
+      },
+      span: {
+        fontSize: '12px'
+      }
+    }
+  },
+
+  '.receive-form': {
+    padding: '1rem 0',
+    '.title': {
+      marginBottom: '10px'
+    },
+    '.btn-import, .btn-create': {
+      fontWeight: 'bold',
+      width: '100%',
+      marginTop: '16px'
+    },
+    '.btn-create': {
+      marginTop: '4px'
+    }
   }
-  .receive-form {
-    padding: 1rem 0;
-
-    .title {
-      margin-bottom: 10px;
-    }
-
-    .btn-import,
-    .btn-create {
-      font-weight: bold;
-      width: 100%;
-      margin-top: 16px;
-    }
-
-    .btn-create {
-      margin-top: 4px;
-    }
-  }
-`;
+}));
 
 export default function ImportWallet() {
   const search = useSearchParams();

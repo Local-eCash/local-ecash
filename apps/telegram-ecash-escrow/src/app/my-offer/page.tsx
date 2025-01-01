@@ -5,43 +5,62 @@ import TickerHeader from '@/src/components/TickerHeader/TickerHeader';
 import AuthorizationLayout from '@/src/components/layout/AuthorizationLayout';
 import MobileLayout from '@/src/components/layout/MobileLayout';
 import { TabType } from '@/src/store/constants';
-import { OfferStatus, useInfiniteMyOffersQuery } from '@bcpros/redux-store';
-import styled from '@emotion/styled';
+import {
+  OfferStatus,
+  openModal,
+  useInfiniteMyOffersQuery,
+  useSliceDispatch as useLixiSliceDispatch
+} from '@bcpros/redux-store';
 import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
-import { Skeleton, Tab, Tabs, Typography } from '@mui/material';
+import { Button, CircularProgress, Skeleton, Tab, Tabs, Typography } from '@mui/material';
+import { styled } from '@mui/material/styles';
+import { useSession } from 'next-auth/react';
 import React, { useState } from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import SwipeableViews from 'react-swipeable-views';
 
-const MyOfferPage = styled.div`
-  min-height: 100vh;
-  padding-bottom: 85px;
+const MyOfferPage = styled('div')(({ theme }) => ({
+  minHeight: '100vh',
+  paddingBottom: '85px',
+  '.MuiTab-root': {
+    color: theme.custom.colorItem,
+    textTransform: 'none',
+    fontWeight: 600,
+    fontSize: '16px',
+    '&.Mui-selected': {
+      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+      backdropFilter: 'blur(8px)'
+    }
+  },
 
-  .MuiTab-root {
-    color: white;
-    text-transform: none;
-    font-weight: 600;
-    font-size: 16px;
+  '.MuiTabs-indicator': {
+    backgroundColor: '#0076c4'
+  },
 
-    &.Mui-selected {
-      background-color: rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(8px);
+  '.MuiBox-root': {
+    padding: '16px'
+  },
+
+  '.MuiCircularProgress-root': {
+    display: 'block',
+    margin: '0 auto'
+  },
+
+  '.end-message': {
+    textAlign: 'center',
+    marginTop: '1rem',
+    button: {
+      width: '100%',
+      marginTop: '1rem',
+      textTransform: 'none'
     }
   }
-
-  .MuiTabs-indicator {
-    background-color: #0076c4;
-  }
-
-  .MuiBox-root {
-    padding: 16px;
-  }
-  }
-`;
+}));
 
 export default function MyOffer() {
+  const dispatch = useLixiSliceDispatch();
+  const { data } = useSession();
   const [value, setValue] = useState(0);
-  const [open, setOpen] = useState<boolean>(false);
   const handleChange = (event: React.SyntheticEvent, newValue: number) => {
     setValue(newValue);
   };
@@ -54,6 +73,7 @@ export default function MyOffer() {
     data: dataOfferActive,
     hasNext: hasNextOfferActive,
     isFetching: isFetchingOfferActive,
+    isLoading: isLoadingOfferActive,
     fetchNext: fetchNextOfferActive
   } = useInfiniteMyOffersQuery({
     first: 20,
@@ -72,6 +92,7 @@ export default function MyOffer() {
     data: dataOfferArchive,
     hasNext: hasNextOfferArchive,
     isFetching: isFetchingOfferArchive,
+    isLoading: isLoadingOfferArchive,
     fetchNext: fetchNextOfferArchive
   } = useInfiniteMyOffersQuery({
     first: 20,
@@ -83,6 +104,14 @@ export default function MyOffer() {
       fetchNextOfferArchive();
     } else if (hasNextOfferArchive) {
       fetchNextOfferArchive();
+    }
+  };
+
+  const handleOpenCreateOffer = () => {
+    if (data?.user?.name.startsWith('@')) {
+      dispatch(openModal('CreateOfferModal', {}));
+    } else {
+      dispatch(openModal('RequiredUsernameModal', {}));
     }
   };
 
@@ -117,51 +146,78 @@ export default function MyOffer() {
           <SwipeableViews index={value} onChangeIndex={handleChangeIndex}>
             <TabPanel value={value} index={0}>
               <div className="list-item">
-                {dataOfferActive.length > 0 ? (
-                  <InfiniteScroll
-                    dataLength={dataOfferActive.length}
-                    next={loadMoreItemsOfferActive}
-                    hasMore={hasNextOfferActive}
-                    loader={
-                      <>
-                        <Skeleton variant="text" />
-                        <Skeleton variant="text" />
-                      </>
-                    }
-                    scrollableTarget="scrollableDiv"
-                    scrollThreshold={'100px'}
-                  >
-                    {dataOfferActive.map(item => {
-                      return <OfferDetailInfo timelineItem={item} key={item.id} />;
-                    })}
-                  </InfiniteScroll>
+                {isLoadingOfferActive ? (
+                  <CircularProgress />
                 ) : (
-                  <Typography style={{ textAlign: 'center', marginTop: '2rem' }}>No offer here</Typography>
+                  dataOfferActive && (
+                    <InfiniteScroll
+                      dataLength={dataOfferActive.length}
+                      next={loadMoreItemsOfferActive}
+                      hasMore={hasNextOfferActive}
+                      endMessage={
+                        // Need to improve! (just for pilot this time)
+                        // Issue: All custom useInfinite hooks have a mismatch between loading state and data.
+                        // When loading state is false, data should have but it not available shortly afterward,
+                        // leading to a delay in synchronization.
+                        dataOfferActive.length === 0 && dataOfferArchive.length === 0 ? (
+                          <Typography className="end-message" component={'div'}>
+                            <Typography> You haven't created any offer yet</Typography>
+                            <Button variant="contained" onClick={() => handleOpenCreateOffer()}>
+                              Create my first offer
+                            </Button>
+                          </Typography>
+                        ) : (
+                          <Typography style={{ textAlign: 'center', marginTop: '2rem' }}>
+                            No active offer here
+                          </Typography>
+                        )
+                      }
+                      loader={
+                        <>
+                          <Skeleton variant="text" />
+                          <Skeleton variant="text" />
+                        </>
+                      }
+                      scrollableTarget="scrollableDiv"
+                      scrollThreshold={'100px'}
+                    >
+                      {dataOfferActive.map(item => {
+                        return <OfferDetailInfo timelineItem={item} key={item.id} />;
+                      })}
+                    </InfiniteScroll>
+                  )
                 )}
               </div>
             </TabPanel>
             <TabPanel value={value} index={1}>
               <div className="list-item">
-                {dataOfferArchive.length > 0 ? (
-                  <InfiniteScroll
-                    dataLength={dataOfferArchive.length}
-                    next={loadMoreItemsOfferArchive}
-                    hasMore={hasNextOfferArchive}
-                    loader={
-                      <>
-                        <Skeleton variant="text" />
-                        <Skeleton variant="text" />
-                      </>
-                    }
-                    scrollableTarget="scrollableDiv"
-                    scrollThreshold={'100px'}
-                  >
-                    {dataOfferArchive.map(item => {
-                      return <OfferDetailInfo timelineItem={item} key={item.id} />;
-                    })}
-                  </InfiniteScroll>
+                {isLoadingOfferArchive ? (
+                  <CircularProgress />
                 ) : (
-                  <Typography style={{ textAlign: 'center', marginTop: '2rem' }}>No offer archive</Typography>
+                  dataOfferArchive && (
+                    <InfiniteScroll
+                      dataLength={dataOfferArchive.length}
+                      next={loadMoreItemsOfferArchive}
+                      hasMore={hasNextOfferArchive}
+                      endMessage={
+                        <Typography style={{ textAlign: 'center', marginTop: '2rem' }}>
+                          No archived offer here
+                        </Typography>
+                      }
+                      loader={
+                        <>
+                          <Skeleton variant="text" />
+                          <Skeleton variant="text" />
+                        </>
+                      }
+                      scrollableTarget="scrollableDiv"
+                      scrollThreshold={'100px'}
+                    >
+                      {dataOfferArchive.map(item => {
+                        return <OfferDetailInfo timelineItem={item} key={item.id} />;
+                      })}
+                    </InfiniteScroll>
+                  )
                 )}
               </div>
             </TabPanel>

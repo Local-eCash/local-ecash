@@ -1,5 +1,6 @@
 'use client';
 
+import { COIN_OTHERS } from '@/src/store/constants';
 import { UtxoContext } from '@/src/store/context/utxoProvider';
 import { buyerDepositFee, Escrow, splitUtxos } from '@/src/store/escrow';
 import { convertXECToSatoshi, estimatedFee } from '@/src/store/util';
@@ -18,9 +19,9 @@ import {
   UtxoInNodeInput,
   WalletContextNode
 } from '@bcpros/redux-store';
-import styled from '@emotion/styled';
 import { ChevronLeft } from '@mui/icons-material';
 import {
+  Box,
   Button,
   Checkbox,
   Dialog,
@@ -30,6 +31,7 @@ import {
   FormControlLabel,
   Grid,
   IconButton,
+  Modal,
   Radio,
   RadioGroup,
   Slide,
@@ -38,6 +40,7 @@ import {
   useMediaQuery,
   useTheme
 } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { TransitionProps } from '@mui/material/transitions';
 import { fromHex, Script, shaRmd160 } from 'ecash-lib';
 import _ from 'lodash';
@@ -53,175 +56,190 @@ interface PlaceAnOrderModalProps {
   post: any;
 }
 
-const StyledDialog = styled(Dialog)`
-  .MuiPaper-root {
-    background-image: url('/bg-dialog.svg');
-    background-repeat: no-repeat;
-    background-size: cover;
-    width: 500px;
-    height: 100vh;
-    max-height: 100%;
-    margin: 0;
-    @media (max-width: 576px) {
-      width: 100%;
+const StyledDialog = styled(Dialog)(({ theme }) => ({
+  '.MuiPaper-root': {
+    background: theme.palette.background.default,
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: 'cover',
+    width: 500,
+    height: '100vh',
+    maxHeight: '100%',
+    margin: 0,
+    [theme.breakpoints.down('sm')]: {
+      width: '100%' // Media query for small screens
     }
-  }
+  },
 
-  .MuiIconButton-root {
-    width: fit-content;
-    svg {
-      font-size: 32px;
+  '.MuiIconButton-root': {
+    width: 'fit-content',
+    svg: {
+      fontSize: 32
     }
-  }
+  },
 
-  .MuiDialogTitle-root {
-    padding: 0 16px;
-    padding-top: 16px;
-    font-size: 26px;
-    text-align: center;
-  }
+  '.MuiDialogTitle-root': {
+    padding: '16px',
+    fontSize: 26,
+    textAlign: 'center'
+  },
 
-  .MuiDialogContent-root {
-    padding: 0;
-  }
+  '.MuiDialogContent-root': {
+    padding: 0
+  },
 
-  .MuiDialogActions-root {
-    justify-content: space-evenly;
-    padding: 16px;
-    padding-bottom: 32px;
-
-    button {
-      text-transform: math-auto;
-      width: 100%;
-
-      &.confirm-btn {
-        color: white;
+  '.MuiDialogActions-root': {
+    justifyContent: 'space-evenly',
+    padding: '16px',
+    paddingBottom: '32px',
+    button: {
+      textTransform: 'math-auto',
+      width: '100%',
+      '&.confirm-btn': {
+        color: theme.palette.common.white // Use theme color
       }
     }
-  }
+  },
 
-  .back-btn {
-    padding: 0;
-    position: absolute;
-    left: 8px;
-    top: 20px;
-    // border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 12px;
+  '.back-btn': {
+    padding: 0,
+    position: 'absolute',
+    left: 8,
+    top: 20,
+    borderRadius: 12,
+    svg: {
+      fontSize: 32
+    }
+  },
 
-    svg {
-      font-size: 32px;
+  '.offer-info': {
+    color: 'rgba(255, 255, 255, 0.6)',
+    padding: 16,
+    '&:before': {
+      position: 'absolute',
+      content: "''",
+      width: 4,
+      height: 33,
+      background: '#2bb6f6',
+      borderTopRightRadius: 16,
+      borderBottomRightRadius: 16,
+      filter: 'drop-shadow(0 0 3px #2bb6f6)'
+    },
+    span: {
+      fontSize: '12px !important',
+      marginLeft: 16
     }
   }
+}));
 
-  .offer-info {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.6);
-    padding: 16px;
+const PlaceAnOrderWrap = styled('div')(({ theme }) => ({
+  padding: 16,
 
-    &:before {
-      position: absolute;
-      content: '';
-      width: 4px;
-      height: 33px;
-      background: #2bb6f6;
-      border-top-right-radius: 16px;
-      border-bottom-right-radius: 16px;
-      filter: drop-shadow(0 0 3px #2bb6f6);
+  '.form-input': {
+    width: '100%'
+  },
+
+  '.payment-method-wrap': {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    margin: '16px 0',
+    '.MuiFormControlLabel-root': {
+      '.MuiTypography-root': {
+        fontSize: 14
+      }
+    },
+
+    '.label-coinOthers': {
+      height: 30
     }
+  },
 
-    span {
-      margin-left: 16px;
+  '.disclaim-wrap': {
+    '.lable': {
+      textAlign: 'center',
+      borderBottom: `1px solid rgba(255, 255, 255, 0.2)`,
+      paddingBottom: 12,
+      marginBottom: 16,
+      color: 'rgba(255, 255, 255, 0.5)'
+    },
+
+    '.title': {
+      fontSize: 13
+    },
+
+    '.MuiFormControlLabel-label': {
+      fontSize: 14
+    }
+  },
+
+  '.deposit-wrap': {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    marginTop: 16,
+    '.deposit-info': {
+      alignSelf: 'center',
+      p: {
+        '&::first-of-type': {
+          marginBottom: 6
+        },
+        '&.deposit-status': {
+          color: '#66bb6a'
+        }
+      }
+    },
+
+    '.address-code': {
+      '.qr-code': {
+        padding: 0,
+        svg: {
+          width: '100%',
+          height: '100%'
+        }
+      }
+    },
+
+    '.address-string': {
+      borderRadius: 12,
+      border: `1px solid rgba(255, 255, 255, 0.2)`,
+      padding: '2px 12px',
+      textAlign: 'center',
+      gridColumnStart: 1,
+      gridColumnEnd: 4,
+      button: {
+        svg: {
+          fontSize: 21
+        }
+      }
+    }
+  },
+
+  '.text-receive-amount': {
+    marginTop: 10,
+    '.amount-receive': {
+      fontWeight: 'bold'
     }
   }
-`;
+}));
 
-const PlaceAnOrderWrap = styled.div`
-  padding: 16px;
+const StyledBox = styled(Box)`
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  border: 2px solid #000;
+  text-align: center;
 
-  .form-input {
+  .group-button-wrap {
     width: 100%;
-  }
-
-  .payment-method-wrap {
-    display: flex;
-    flex-direction: row;
-    gap: 16px;
-    justify-content: space-between;
-    margin: 16px 0;
-
-    .MuiFormControlLabel-root {
-      .MuiTypography-root {
-        font-size: 14px;
-      }
-    }
-  }
-
-  .disclaim-wrap {
-    .lable {
-      text-align: center;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-      padding-bottom: 12px;
-      margin-bottom: 16px;
-      color: rgba(255, 255, 255, 0.5);
-    }
-
-    .title {
-      font-size: 13px;
-    }
-
-    .MuiFormControlLabel-label {
-      font-size: 14px;
-    }
-  }
-
-  .deposit-wrap {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    margin-top: 16px;
+    gap: 16px;
+    padding-bottom: 16px;
 
-    .deposit-info {
-      align-self: center;
-
-      p {
-        &::first-of-type {
-          margin-bottom: 6px;
-        }
-
-        &.deposit-status {
-          color: #66bb6a;
-        }
-      }
-    }
-
-    .address-code {
-      .qr-code {
-        padding: 0;
-        svg {
-          width: 100%;
-          height: 100%;
-        }
-      }
-    }
-
-    .address-string {
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      padding: 2px 12px;
-      text-align: center;
-      grid-column-start: 1;
-      grid-column-end: 4;
-
-      button {
-        svg {
-          font-size: 21px;
-        }
-      }
-    }
-  }
-  .text-receive-amount {
-    margin-top: 10px;
-    .amount-receive {
-      font-weight: bold;
+    button {
+      text-transform: none;
+      color: white;
     }
   }
 `;
@@ -254,6 +272,7 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
   const [textAmountPer1MXEC, setTextAmountPer1MXEC] = useState('');
   const [escrowScript, setEscrowScript] = useState<Escrow>(null);
   const [nonce, setNonce] = useState<string>(null);
+  const [confirm, setConfirm] = useState(false);
   const selectedWalletPath = useLixiSliceSelector(getSelectedWalletPath);
 
   const { useCreateEscrowOrderMutation, useGetModeratorAccountQuery, useGetRandomArbitratorAccountQuery } =
@@ -262,11 +281,11 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
 
   const { currentData: moderatorCurrentData, isError: moderatorIsError } = useGetModeratorAccountQuery(
     {},
-    { skip: !data }
+    { skip: !data, refetchOnMountOrArgChange: true }
   );
   const { currentData: arbitratorCurrentData, isError: arbitratorIsError } = useGetRandomArbitratorAccountQuery(
     {},
-    { skip: !data }
+    { skip: !data, refetchOnMountOrArgChange: true }
   );
 
   const { useGetFiatRateQuery } = fiatCurrencyApi;
@@ -275,7 +294,7 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
   const {
     handleSubmit,
     formState: { errors },
-    setError: setErrorForm,
+    // setError: setErrorForm,
     clearErrors,
     control,
     trigger,
@@ -383,7 +402,7 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
       dispatch(
         showToast('success', {
           message: 'Success',
-          description: 'Create order successfully!'
+          description: 'Order created successfully!'
         })
       );
       handleCloseModal();
@@ -411,13 +430,13 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
     const totalBalanceFormat = totalValidAmount.toLocaleString('de-DE');
 
     return (
-      <div style={{ color: 'white' }}>
-        <p>
+      <div>
+        <Typography component="p" variant="body1">
           Your wallet: {totalBalanceFormat} {COIN.XEC}
-        </p>
-        <p>
-          Dispute fee (1%): {fee1Percent.toLocaleString('de-DE')} {COIN.XEC}
-        </p>
+        </Typography>
+        <Typography component="p" variant="body1">
+          Security deposit (1%): {fee1Percent.toLocaleString('de-DE')} {COIN.XEC}
+        </Typography>
       </div>
     );
   };
@@ -426,7 +445,7 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
     if (!rateData) return 0;
     let amountXEC = 0;
     let amountCoinOrCurrency = 0;
-    let textAmountPer1MXEC = 1000000;
+    const textAmountPer1MXEC = 1000000;
     //if payment is crypto, we convert from coin => USD => XEC
     if (post?.postOffer?.coinPayment) {
       const coinPayment = post.postOffer.coinPayment.toLowerCase();
@@ -476,6 +495,10 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
     dispatch(closeModal());
   };
 
+  const showMargin = () => {
+    return post.postOffer.paymentMethods[0]?.paymentMethod?.id !== 5 && !post.postOffer.coinOthers;
+  };
+
   //cal escrow script
   useEffect(() => {
     calEscrowScript();
@@ -488,7 +511,7 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
 
   //convert to XEC
   useEffect(() => {
-    if (post.postOffer.paymentMethods[0]?.paymentMethod?.id !== 5) {
+    if (showMargin()) {
       convertToAmountXEC();
     } else {
       setAmountXEC(Number(amountValue) ?? 0);
@@ -522,9 +545,9 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
         </IconButton>
         <DialogTitle>Place an order</DialogTitle>
         <Typography className="offer-info" variant="body2">
-          <span>{`Offer Id: ${post.id}`}</span>
+          <Typography component="span" variant="body1">{`Offer Id: ${post.id}`}</Typography>
           <br />
-          <span>{`By: ${post.account.telegramUsername} • posted on: ${new Date(post.createdAt).toLocaleString()}`}</span>
+          <Typography component="span">{`By: ${post.account.telegramUsername} • posted on: ${new Date(post.createdAt).toLocaleString('vi-VN')}`}</Typography>
         </Typography>
         <DialogContent>
           <PlaceAnOrderWrap>
@@ -551,6 +574,7 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
                       if (numberValue < minValue || numberValue > maxValue)
                         return `Amount must between ${minValue}-${maxValue}`;
                       if (amountXEC < 5.46) return `You need to buy amount greater than 5.46 XEC`;
+
                       return true;
                     }
                   }}
@@ -571,7 +595,11 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
                       InputProps={{
                         endAdornment: (
                           <Typography variant="subtitle1">
-                            {post.postOffer.coinPayment ?? post.postOffer.localCurrency ?? 'XEC'}
+                            {post.postOffer.localCurrency ??
+                              (post.postOffer.coinPayment?.includes(COIN_OTHERS)
+                                ? 'XEC'
+                                : post.postOffer.coinPayment) ??
+                              'XEC'}
                           </Typography>
                         )
                       }}
@@ -581,7 +609,7 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
                 <Typography component={'div'} className="text-receive-amount">
                   {amountXEC < 5.46
                     ? 'You need to buy amount greater than 5.46 XEC'
-                    : post.postOffer.paymentMethods[0]?.paymentMethod?.id !== 5 && (
+                    : showMargin() && (
                         <div>
                           You will receive <span className="amount-receive">{amountXEC.toLocaleString('de-DE')}</span>{' '}
                           XEC
@@ -612,6 +640,9 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
                       label="Message"
                       variant="outlined"
                       error={errors.message ? true : false}
+                      multiline={true}
+                      maxRows={2}
+                      placeholder="Private message to the seller. E.g. I want to buy XEC via bank transfer."
                       helperText={
                         errors.message
                           ? (errors.message?.message as string)
@@ -634,14 +665,19 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
                   />
                 );
               })}
+              {post.postOffer?.coinOthers && (
+                <Button size="small" color="success" variant="contained" className="label-coinOthers">
+                  {post.postOffer.coinOthers}
+                </Button>
+              )}
               {errors.paymentMethod && (
                 <Typography color="error">{errors?.paymentMethod?.message as string}</Typography>
               )}
             </RadioGroup>
             <div className="disclaim-wrap">
               <Typography className="title" variant="body2">
-                * Deposit a dispute fee to have a higher chance of being accepted. Dispute fees will be returned if
-                there is no dispute.
+                * Deposit a security deposit to have a higher chance of being accepted. The security deposit will be
+                returned if there is no dispute.
               </Typography>
               <Controller
                 name="isDepositFee"
@@ -650,7 +686,7 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
                 render={({ field: { onChange, onBlur, value, ref } }) => (
                   <FormControlLabel
                     control={<Checkbox onChange={onChange} onBlur={onBlur} checked={value} inputRef={ref} />}
-                    label={`I want to deposit dispute fees (1%): ${calDisputeFee} XEC`}
+                    label={`I want to deposit security deposit (1%): ${calDisputeFee} XEC`}
                   />
                 )}
               />
@@ -674,7 +710,13 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
             className="confirm-btn"
             color="info"
             variant="contained"
-            onClick={handleSubmit(handleCreateEscrowOrder)}
+            onClick={() => {
+              if (post?.account?.telegramUsername.startsWith('@')) {
+                handleSubmit(handleCreateEscrowOrder)(); //need parenthesis to call handleSubmit
+              } else {
+                setConfirm(true);
+              }
+            }}
             autoFocus
             disabled={(isBuyerDeposit && !checkBuyerEnoughFund()) || loading}
           >
@@ -696,6 +738,30 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
         type="error"
         autoHideDuration={3500}
       />
+
+      <Modal
+        open={confirm}
+        onClose={() => setConfirm(false)}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+      >
+        <StyledBox sx={{ bgcolor: 'background.paper', boxShadow: 24, p: 4 }}>
+          <h4 id="modal-modal-title" style={{ color: 'white', marginTop: '0' }}>
+            The seller does not have a Telegram username so it will be difficult to communicate.
+            <br />
+            <br />
+            Are you sure you want to continue?
+          </h4>
+          <div className="group-button-wrap">
+            <Button variant="contained" fullWidth onClick={() => setConfirm(false)}>
+              Cancel
+            </Button>
+            <Button variant="contained" fullWidth color="warning" onClick={handleSubmit(handleCreateEscrowOrder)}>
+              Continue
+            </Button>
+          </div>
+        </StyledBox>
+      </Modal>
     </React.Fragment>
   );
 };

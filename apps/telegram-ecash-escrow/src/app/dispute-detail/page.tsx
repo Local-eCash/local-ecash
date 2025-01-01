@@ -25,10 +25,10 @@ import {
   userSubcribeEscrowOrderChannel,
   WalletContextNode
 } from '@bcpros/redux-store';
-import styled from '@emotion/styled';
-import { ChevronLeft } from '@mui/icons-material';
+import { ChevronLeft, InfoOutlined } from '@mui/icons-material';
 import {
-  Backdrop,
+  Alert,
+  AlertTitle,
   Button,
   CircularProgress,
   Dialog,
@@ -44,136 +44,139 @@ import {
   useMediaQuery,
   useTheme
 } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { TransitionProps } from '@mui/material/transitions';
 import { fromHex, Script, shaRmd160 } from 'ecash-lib';
 import _ from 'lodash';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import React, { useContext, useEffect, useState } from 'react';
 import SwipeableViews from 'react-swipeable-views';
 
-const DisputeDetailInfoWrap = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+const DisputeDetailInfoWrap = styled('div')(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '8px',
 
-  .prefix {
-    font-size: 14px;
-    color: #79869b;
+  '.prefix': {
+    fontSize: '14px',
+    color: '#79869b'
+  },
+
+  '.amount-escrowed': {
+    color: '#66bb6a'
+  },
+
+  '.amount-seller': {
+    color: '#29b6f6'
+  },
+
+  '.amount-buyer': {
+    color: '#f44336'
   }
+}));
 
-  .amount-escrowed {
-    color: #66bb6a;
+const ResolveDisputeWrap = styled('div')(({ theme }) => ({
+  padding: '16px',
+
+  '.group-btn-chat': {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: '8px',
+    borderTop: '1px dashed gray',
+    paddingTop: '8px',
+    marginTop: '16px',
+
+    '.chat-btn': {
+      width: 'fit-content',
+      justifyContent: 'flex-start',
+      textTransform: 'none',
+      gap: '8px',
+      padding: '10px',
+      color: '#fff',
+      fontWeight: 600
+    }
+  },
+
+  '.resolve-btn': {
+    marginTop: '15px',
+    color: '#fff',
+    fontWeight: 600
   }
+}));
 
-  .amount-seller {
-    color: #29b6f6;
-  }
+const StyledReleaseDialog = styled(Dialog)(({ theme }) => ({
+  '.MuiPaper-root': {
+    background: theme.palette.background.default,
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: 'cover',
+    width: '500px',
+    height: '100vh',
+    maxHeight: '100%',
+    margin: 0,
 
-  .amount-buyer {
-    color: #f44336;
-  }
-`;
+    [theme.breakpoints.down('sm')]: {
+      width: '100%'
+    }
+  },
 
-const ResolveDisputeWrap = styled.div`
-  padding: 16px;
+  '.MuiIconButton-root': {
+    width: 'fit-content',
 
-  .group-btn-chat {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-    border-top: 1px dashed gray;
-    padding-top: 8px;
-    margin-top: 16px;
+    svg: {
+      fontSize: '32px'
+    }
+  },
 
-    .chat-btn {
-      width: fit-content;
-      justify-content: flex-start;
-      text-transform: none;
-      gap: 8px;
-      padding: 10px;
-      color: #fff;
-      font-weight: 600;
+  '.MuiDialogTitle-root': {
+    padding: '0 16px',
+    paddingTop: '16px',
+    fontSize: '26px',
+    textAlign: 'center'
+  },
+
+  '.MuiDialogContent-root': {
+    padding: 0
+  },
+
+  '.back-btn': {
+    padding: 0,
+    position: 'absolute',
+    left: '8px',
+    top: '20px',
+    borderRadius: '12px',
+
+    svg: {
+      fontSize: '32px'
     }
   }
+}));
 
-  .resolve-btn {
-    margin-top: 15px;
-    color: #fff;
-    font-weight: 600;
-  }
-`;
+const ReleaseDisputeWrap = styled('div')(({ theme }) => ({
+  padding: '16px',
 
-const StyledReleaseDialog = styled(Dialog)`
-  .MuiPaper-root {
-    background-image: url('/bg-dialog.svg');
-    background-repeat: no-repeat;
-    background-size: cover;
-    width: 500px;
-    height: 100vh;
-    max-height: 100%;
-    margin: 0;
-    @media (max-width: 576px) {
-      width: 100%;
+  '.seller-release, .buyer-release': {
+    textAlign: 'center',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+    marginBottom: '32px',
+
+    button: {
+      color: 'white',
+      textTransform: 'none'
+    },
+
+    '.disclaim-buyer': {
+      color: '#f57c00'
+    },
+
+    '.disclaim-seller': {
+      color: '#29b6f6'
     }
   }
-
-  .MuiIconButton-root {
-    width: fit-content;
-    svg {
-      font-size: 32px;
-    }
-  }
-
-  .MuiDialogTitle-root {
-    padding: 0 16px;
-    padding-top: 16px;
-    font-size: 26px;
-    text-align: center;
-  }
-
-  .MuiDialogContent-root {
-    padding: 0;
-  }
-
-  .back-btn {
-    padding: 0;
-    position: absolute;
-    left: 8px;
-    top: 20px;
-    border-radius: 12px;
-
-    svg {
-      font-size: 32px;
-    }
-  }
-`;
-
-const ReleaseDisputeWrap = styled.div`
-  padding: 16px;
-
-  .seller-release,
-  .buyer-release {
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    margin-bottom: 32px;
-
-    button {
-      color: white;
-      text-transform: none;
-    }
-
-    .disclaim-buyer {
-      color: #f57c00;
-    }
-
-    .disclaim-seller {
-      color: #29b6f6;
-    }
-  }
-`;
+}));
 
 const Transition = React.forwardRef(function Transition(
   props: TransitionProps & {
@@ -210,12 +213,7 @@ export default function DisputeDetail() {
   const { useDisputeQuery } = disputeApi;
   const { useEscrowOrderQuery, useUpdateEscrowOrderStatusMutation, useLazyArbiRequestTelegramChatQuery } =
     escrowOrderApi;
-  const {
-    isLoading: isLoadingDispute,
-    currentData: disputeQueryData,
-    isUninitialized: isUninitializedDispute,
-    isError
-  } = useDisputeQuery({ id: id! }, { skip: !id || !token });
+  const { currentData: disputeQueryData, isError } = useDisputeQuery({ id: id! }, { skip: !id || !token });
   const { currentData: escrowOrderQueryData, isSuccess: isEscrowOrderSuccess } = useEscrowOrderQuery(
     { id: disputeQueryData?.dispute.escrowOrder.id },
     { skip: !disputeQueryData?.dispute.escrowOrder.id }
@@ -402,13 +400,8 @@ export default function DisputeDetail() {
 
   return (
     <MobileLayout>
-      {(isLoadingDispute || isUninitializedDispute) && (
-        <Backdrop sx={theme => ({ color: '#fff', zIndex: theme.zIndex.drawer + 1 })} open={true}>
-          <CircularProgress color="inherit" />
-        </Backdrop>
-      )}
       <TickerHeader title="Dispute detail" />
-      {disputeQueryData?.dispute && (
+      {disputeQueryData?.dispute ? (
         <ResolveDisputeWrap>
           <DisputeDetailInfoWrap>
             <Typography variant="body1">
@@ -427,7 +420,7 @@ export default function DisputeDetail() {
             </Typography>
             <Typography variant="body1">
               <span className="prefix">Created At: </span>
-              {new Date(escrowOrder?.createdAt).toLocaleString('en-US')}
+              {new Date(escrowOrder?.createdAt).toLocaleString('vi-VN')}
             </Typography>
             <Typography variant="body1">
               <span className="prefix">Seller: </span>
@@ -457,16 +450,52 @@ export default function DisputeDetail() {
               {escrowOrder?.amount} {COIN.XEC}
             </Typography>
             <Typography variant="body1" className="amount-seller">
-              <span className="prefix">Dispute fee by seller: </span>
+              <span className="prefix">Security fee by seller: </span>
               {calDisputeFee(escrowOrder?.amount)} {COIN.XEC}
             </Typography>
             {escrowOrder?.buyerDepositTx && (
               <Typography variant="body1" className="amount-buyer">
-                <span className="prefix">Dispute fee by buyer: </span>
+                <span className="prefix">Security fee by buyer: </span>
                 {calDisputeFee(escrowOrder?.amount)} {COIN.XEC}
               </Typography>
             )}
           </DisputeDetailInfoWrap>
+          {escrowOrder?.dispute.status === DisputeStatus.Resolved ? (
+            <Alert icon={<InfoOutlined fontSize="inherit" />} severity="info" sx={{ borderRadius: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <AlertTitle>
+                  <b>Resolved at: {new Date(escrowOrder?.updatedAt).toLocaleString('vi-VN')}</b>
+                </AlertTitle>
+                <b style={{ fontSize: '15px' }}>
+                  {escrowOrder?.escrowOrderStatus === EscrowOrderStatus.Complete
+                    ? 'The fund have been forwarded to the buyer. '
+                    : 'The fund have been returned to the seller. '}
+                </b>
+                <br />
+                <Link
+                  target="_blank"
+                  rel="noopener"
+                  href={
+                    escrowOrder?.releaseTxid
+                      ? `${coinInfo[COIN.XEC].blockExplorerUrl}/tx/${escrowOrder?.releaseTxid}`
+                      : `${coinInfo[COIN.XEC].blockExplorerUrl}/tx/${escrowOrder?.returnTxid}`
+                  }
+                >
+                  <b>View Transaction</b>
+                </Link>
+              </div>
+            </Alert>
+          ) : (
+            <Button
+              className="resolve-btn"
+              color="primary"
+              variant="contained"
+              fullWidth
+              onClick={() => setOpenReleaseModal(true)}
+            >
+              Resolve
+            </Button>
+          )}
           <div className="group-btn-chat">
             <Button
               className="chat-btn"
@@ -493,17 +522,11 @@ export default function DisputeDetail() {
               <Image width={32} height={32} alt="" src={'/ico-telegram.svg'} />
             </Button>
           </div>
-          <Button
-            className="resolve-btn"
-            color="primary"
-            variant="contained"
-            fullWidth
-            onClick={() => setOpenReleaseModal(true)}
-            disabled={escrowOrder?.dispute.status === DisputeStatus.Resolved}
-          >
-            {escrowOrder?.dispute.status === DisputeStatus.Resolved ? 'The dispute has been resolved' : 'Resolve'}
-          </Button>
         </ResolveDisputeWrap>
+      ) : (
+        <div style={{ display: 'flex', justifyContent: 'center', height: '100vh' }}>
+          <CircularProgress style={{ color: 'white', margin: 'auto' }} />
+        </div>
       )}
 
       <StyledReleaseDialog
@@ -561,7 +584,7 @@ export default function DisputeDetail() {
                     Release to Buyer
                   </Button>
                   <Typography className="disclaim-buyer" textAlign="center" variant="body2">
-                    *You will collect {calDisputeFee(escrowOrder?.amount)} {COIN.XEC} (dispute fees) from seller
+                    *You will collect {calDisputeFee(escrowOrder?.amount)} {COIN.XEC} (security fee) from seller
                   </Typography>
                 </div>
               </TabPanel>
@@ -589,7 +612,7 @@ export default function DisputeDetail() {
                     Return to Seller
                   </Button>
                   <Typography className="disclaim-seller" textAlign="center" variant="body2">
-                    *You will collect {calDisputeFee(escrowOrder?.amount)} {COIN.XEC} (dispute fees) from{' '}
+                    *You will collect {calDisputeFee(escrowOrder?.amount)} {COIN.XEC} (security fee) from{' '}
                     {escrowOrder?.buyerDepositTx ? 'buyer' : 'seller'}
                   </Typography>
                 </div>

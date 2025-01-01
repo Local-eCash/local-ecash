@@ -9,8 +9,8 @@ import {
   useSliceDispatch as useLixiSliceDispatch,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
-import styled from '@emotion/styled';
 import { Box, Skeleton, Typography } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { LoginButton, TelegramAuthData } from '@telegram-auth/react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -24,48 +24,12 @@ function LoadingPlaceholder() {
   );
 }
 
-const ContainerHome = styled.div`
-  display: grid;
-  grid-template-rows: 85% 15%;
-  padding: 1rem;
-  height: 100vh;
-  text-align: center;
-`;
-
-const FeatureEducation = styled.div`
-  img {
-    max-width: 100%;
-  }
-  .feature-title {
-    font-weight: 600;
-    align-items: center;
-    text-align: center;
-    line-height: 34px;
-  }
-  .feature-subtitle {
-    font-size: 16px;
-    text-align: center;
-    color: #9aa5ac;
-    font-weight: 300;
-    padding-top: 15px;
-    line-height: 28px;
-  }
-`;
-
-const FunctionalBar = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  row-gap: 0.5rem;
-`;
-
-const WrapLoginPage = styled.div`
-  background-color: rgba(255, 255, 255, 0.08);
-  margin-top: 40%;
-  padding: 20px;
-  border-radius: 25px;
-`;
+const WrapLoginPage = styled('div')(({ theme }) => ({
+  backgroundColor: theme.custom.bgItem3,
+  marginTop: '40%',
+  padding: '20px',
+  borderRadius: '25px'
+}));
 
 export default function Login() {
   const router = useRouter();
@@ -121,8 +85,12 @@ export default function Login() {
   return (
     <MobileLayout>
       <WrapLoginPage>
-        <Typography variant="h5">Welcome to Local eCash</Typography>
-        <h2 style={{ color: 'white' }}>Please login to continue</h2>
+        <Typography variant="h4" fontWeight="bold">
+          Welcome to Local eCash
+        </Typography>
+        <Typography style={{ color: 'white', marginTop: 10, marginBottom: 10 }} variant="h5">
+          Please login to continue
+        </Typography>
         <LoginButton
           botUsername={process.env.NEXT_PUBLIC_BOT_USERNAME!}
           onAuthCallback={async (data: TelegramAuthData) => {

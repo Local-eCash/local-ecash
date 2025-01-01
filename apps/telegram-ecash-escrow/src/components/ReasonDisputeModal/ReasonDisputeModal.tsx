@@ -9,7 +9,6 @@ import {
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
 import { useCreateDisputeMutation } from '@bcpros/redux-store/build/main/store/escrow/dispute/dispute.api';
-import styled from '@emotion/styled';
 import { ChevronLeft } from '@mui/icons-material';
 import {
   Button,
@@ -26,57 +25,57 @@ import {
   useMediaQuery,
   useTheme
 } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { TransitionProps } from '@mui/material/transitions';
 import React, { useContext, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import CustomToast from '../Toast/CustomToast';
 
-const StyledDialog = styled(Dialog)`
-  .MuiPaper-root {
-    background-image: url('/bg-dialog.svg');
-    background-repeat: no-repeat;
-    background-size: cover;
-    width: 500px;
-    box-sizing: border-box;
-    padding: 16px;
-    margin: 0;
-    @media (max-width: 576px) {
-      width: 100%;
+const StyledDialog = styled(Dialog)(({ theme }) => ({
+  '.MuiPaper-root': {
+    background: theme.palette.background.default,
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: 'cover',
+    width: 500,
+    boxSizing: 'border-box',
+    padding: theme.spacing(2), // Use theme spacing
+    margin: 0,
+    [theme.breakpoints.down('sm')]: {
+      width: '100%' // Media query for small screens
+    }
+  },
+
+  '.MuiDialogTitle-root': {
+    padding: theme.spacing(0, 2), // Horizontal padding
+    paddingTop: theme.spacing(2), // Top padding
+    fontSize: 26,
+    textAlign: 'center'
+  },
+
+  '.MuiFormControl-root': {
+    marginTop: theme.spacing(0.5) // Use theme spacing for margin
+  },
+
+  '.MuiDialogContent-root': {
+    padding: 0
+  },
+
+  '.create-dispute-btn': {
+    width: '100%',
+    color: theme.palette.common.white // Use theme color
+  },
+
+  '.back-btn': {
+    padding: 0,
+    position: 'absolute',
+    left: theme.spacing(1), // Use theme spacing
+    top: theme.spacing(2), // Use theme spacing
+    borderRadius: 12,
+    svg: {
+      fontSize: 32
     }
   }
-
-  .MuiDialogTitle-root {
-    padding: 0 16px;
-    padding-top: 16px;
-    font-size: 26px;
-    text-align: center;
-  }
-
-  .MuiFormControl-root {
-    margin-top: 5px;
-  }
-
-  .MuiDialogContent-root {
-    padding: 0;
-  }
-
-  .create-dispute-btn {
-    width: 100%;
-    color: #fff;
-  }
-
-  .back-btn {
-    padding: 0;
-    position: absolute;
-    left: 8px;
-    top: 20px;
-    border-radius: 12px;
-
-    svg {
-      font-size: 32px;
-    }
-  }
-`;
+}));
 
 interface ReasonDisputeModalProps {
   id: string;

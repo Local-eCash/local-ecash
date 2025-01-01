@@ -6,49 +6,58 @@ import AuthorizationLayout from '@/src/components/layout/AuthorizationLayout';
 import MobileLayout from '@/src/components/layout/MobileLayout';
 import { TabType } from '@/src/store/constants';
 import { EscrowOrderQueryItem, EscrowOrderStatus, useInfiniteMyEscrowOrderQuery } from '@bcpros/redux-store';
-import styled from '@emotion/styled';
 import InventoryOutlinedIcon from '@mui/icons-material/InventoryOutlined';
-import { Skeleton, Tab, Tabs, Typography } from '@mui/material';
+import { Box, CircularProgress, Skeleton, Tab, Tabs, Typography } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import React, { useState } from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import SwipeableViews from 'react-swipeable-views';
 
-const MyOrderPage = styled.div`
-  min-height: 100vh;
-  background-image: url('/bg-dialog.svg');
-  background-repeat: no-repeat;
-  background-size: cover;
-  padding-bottom: 85px;
+const MyOrderPage = styled('div')(({ theme }) => ({
+  minHeight: '100vh',
+  background: theme.palette.background.default,
+  backgroundRepeat: 'no-repeat',
+  backgroundSize: 'cover',
+  paddingBottom: '85px',
 
-  .MuiTab-root {
-    color: white;
-    text-transform: none;
-    font-weight: 600;
-    font-size: 16px;
+  '.MuiTab-root': {
+    color: theme.custom.colorItem,
+    textTransform: 'none',
+    fontWeight: 600,
+    fontSize: '16px',
 
-    &.Mui-selected {
-      background-color: rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(8px);
+    '&.Mui-selected': {
+      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+      backdropFilter: 'blur(8px)'
     }
-  }
+  },
 
-  .MuiTabs-indicator {
-    background-color: #0076c4;
-  }
+  '.MuiTabs-indicator': {
+    backgroundColor: theme.palette.primary.main || '#0076c4'
+  },
 
-  .MuiBox-root {
-    padding: 16px;
+  '.MuiBox-root': {
+    padding: '16px'
+  },
+
+  '.MuiCircularProgress-root': {
+    display: 'block',
+    margin: '0 auto'
   }
-`;
+}));
 
 export default function MyOrder() {
-  const [value, setValue] = useState(0);
+  const [value, setValue] = useState(Number(sessionStorage.getItem('my-order-tab')) || 0);
 
   const handleChange = (event: React.SyntheticEvent, newValue: number) => {
+    //store current index to local storage
+    sessionStorage.setItem('my-order-tab', newValue.toString());
     setValue(newValue);
   };
 
   const handleChangeIndex = (index: number) => {
+    //store current index to local storage
+    sessionStorage.setItem('my-order-tab', index.toString());
     setValue(index);
   };
 
@@ -56,6 +65,7 @@ export default function MyOrder() {
     data: dataOrderPending,
     hasNext: hasNextOrderPending,
     isFetching: isFetchingOrderPending,
+    isLoading: isLoadingOrderPending,
     fetchNext: fetchNextOrderPending
   } = useInfiniteMyEscrowOrderQuery(
     {
@@ -64,10 +74,12 @@ export default function MyOrder() {
     },
     false
   );
+
   const {
     data: dataOrderEscrow,
     hasNext: hasNextOrderEscrow,
     isFetching: isFetchingOrderEscrow,
+    isLoading: isLoadingOrderEscrow,
     fetchNext: fetchNextOrderEscrow
   } = useInfiniteMyEscrowOrderQuery(
     {
@@ -80,6 +92,7 @@ export default function MyOrder() {
     data: dataOrderUnactive,
     hasNext: hasNextOrderUnactive,
     isFetching: isFetchingOrderUnactive,
+    isLoading: isLoadingOrderUnactive,
     fetchNext: fetchNextOrderUnactive
   } = useInfiniteMyEscrowOrderQuery({ escrowOrderStatus: EscrowOrderStatus.Complete, first: 20 }, false);
 
@@ -136,78 +149,95 @@ export default function MyOrder() {
               aria-controls={`full-width-tabpanel-${TabType.ARCHIVED}`}
             />
           </Tabs>
-
           <SwipeableViews index={value} onChangeIndex={handleChangeIndex}>
             <TabPanel value={value} index={0}>
               <div className="list-item">
-                {dataOrderPending.length > 0 ? (
-                  <InfiniteScroll
-                    dataLength={dataOrderPending.length}
-                    next={loadMoreItemsOrderPending}
-                    hasMore={hasNextOrderPending}
-                    loader={
-                      <>
-                        <Skeleton variant="text" />
-                        <Skeleton variant="text" />
-                      </>
-                    }
-                    scrollableTarget="scrollableDiv"
-                  >
-                    {dataOrderPending.map(item => {
-                      return <OrderDetailInfo item={item as EscrowOrderQueryItem} key={item.id} />;
-                    })}
-                  </InfiniteScroll>
+                {!isFetchingOrderPending ? (
+                  dataOrderPending.length > 0 ? (
+                    <InfiniteScroll
+                      dataLength={dataOrderPending.length}
+                      next={loadMoreItemsOrderPending}
+                      hasMore={hasNextOrderPending}
+                      loader={
+                        <>
+                          <Skeleton variant="text" />
+                          <Skeleton variant="text" />
+                        </>
+                      }
+                      scrollableTarget="scrollableDiv"
+                    >
+                      {dataOrderPending.map(item => {
+                        return <OrderDetailInfo item={item as EscrowOrderQueryItem} key={item.id} />;
+                      })}
+                    </InfiniteScroll>
+                  ) : (
+                    <Typography style={{ textAlign: 'center', marginTop: '2rem' }}>No orders here</Typography>
+                  )
                 ) : (
-                  <Typography style={{ textAlign: 'center', marginTop: '2rem' }}>No orders here</Typography>
+                  <Box sx={{ height: '50vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <CircularProgress color="primary" />
+                  </Box>
                 )}
               </div>
             </TabPanel>
             <TabPanel value={value} index={1}>
               <div className="list-item">
-                {dataOrderEscrow.length > 0 ? (
-                  <InfiniteScroll
-                    dataLength={dataOrderEscrow.length}
-                    next={loadMoreItemsOrderEscrow}
-                    hasMore={hasNextOrderEscrow}
-                    loader={
-                      <>
-                        <Skeleton variant="text" />
-                        <Skeleton variant="text" />
-                      </>
-                    }
-                    scrollableTarget="scrollableDiv"
-                  >
-                    {dataOrderEscrow.map(item => {
-                      return <OrderDetailInfo item={item as EscrowOrderQueryItem} key={item.id} />;
-                    })}
-                  </InfiniteScroll>
+                {!isFetchingOrderEscrow ? (
+                  dataOrderEscrow.length > 0 ? (
+                    <InfiniteScroll
+                      dataLength={dataOrderEscrow.length}
+                      next={loadMoreItemsOrderEscrow}
+                      hasMore={hasNextOrderEscrow}
+                      loader={
+                        <>
+                          <Skeleton variant="text" />
+                          <Skeleton variant="text" />
+                        </>
+                      }
+                      scrollableTarget="scrollableDiv"
+                    >
+                      {dataOrderEscrow.map(item => {
+                        return <OrderDetailInfo item={item as EscrowOrderQueryItem} key={item.id} />;
+                      })}
+                    </InfiniteScroll>
+                  ) : (
+                    <Typography style={{ textAlign: 'center', marginTop: '2rem' }}>No orders here</Typography>
+                  )
                 ) : (
-                  <Typography style={{ textAlign: 'center', marginTop: '2rem' }}>No orders here</Typography>
+                  <Box sx={{ height: '50vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <CircularProgress color="primary" />
+                  </Box>
                 )}
               </div>
             </TabPanel>
             <TabPanel value={value} index={2}>
               <div className="list-item">
-                {dataOrderUnactive.length > 0 ? (
-                  <InfiniteScroll
-                    dataLength={dataOrderUnactive.length}
-                    next={loadMoreItemsOrderUnactive}
-                    hasMore={hasNextOrderUnactive}
-                    loader={
-                      <>
-                        <Skeleton variant="text" />
-                        <Skeleton variant="text" />
-                      </>
-                    }
-                    scrollableTarget="scrollableDiv"
-                    scrollThreshold={'100px'}
-                  >
-                    {dataOrderUnactive.map(item => {
-                      return <OrderDetailInfo item={item as EscrowOrderQueryItem} key={item.id} />;
-                    })}
-                  </InfiniteScroll>
+                {!isFetchingOrderUnactive ? (
+                  dataOrderUnactive.length > 0 ? (
+                    <InfiniteScroll
+                      dataLength={dataOrderUnactive.length}
+                      next={loadMoreItemsOrderUnactive}
+                      hasMore={hasNextOrderUnactive}
+                      loader={
+                        <>
+                          <Skeleton variant="text" />
+                          <Skeleton variant="text" />
+                        </>
+                      }
+                      scrollableTarget="scrollableDiv"
+                      scrollThreshold={'100px'}
+                    >
+                      {dataOrderUnactive.map(item => {
+                        return <OrderDetailInfo item={item as EscrowOrderQueryItem} key={item.id} />;
+                      })}
+                    </InfiniteScroll>
+                  ) : (
+                    <Typography style={{ textAlign: 'center', marginTop: '2rem' }}>No orders here</Typography>
+                  )
                 ) : (
-                  <Typography style={{ textAlign: 'center', marginTop: '2rem' }}>No orders here</Typography>
+                  <Box sx={{ height: '50vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <CircularProgress color="primary" />
+                  </Box>
                 )}
               </div>
             </TabPanel>

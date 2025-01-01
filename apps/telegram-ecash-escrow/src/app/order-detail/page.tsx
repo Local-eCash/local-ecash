@@ -25,12 +25,12 @@ import {
   userSubcribeEscrowOrderChannel,
   WalletContextNode
 } from '@bcpros/redux-store';
-import styled from '@emotion/styled';
 import CheckIcon from '@mui/icons-material/Check';
 import ClearIcon from '@mui/icons-material/Clear';
 import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
-import { Backdrop, Button, CircularProgress, Stack, Typography } from '@mui/material';
+import { Button, CircularProgress, Stack, Typography } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { fromHex, Script, shaRmd160, Tx } from 'ecash-lib';
 import cashaddr from 'ecashaddrjs';
 import _ from 'lodash';
@@ -38,39 +38,43 @@ import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 
-const OrderDetailPage = styled.div`
-  min-height: 100vh;
-  background-image: url('/bg-dialog.svg');
-  background-repeat: no-repeat;
-  background-size: cover;
-`;
+const OrderDetailPage = styled('div')(({ theme }) => ({
+  minHeight: '100vh',
+  background: theme.palette.background.default,
+  backgroundRepeat: 'no-repeat',
+  backgroundSize: 'cover',
 
-const OrderDetailContent = styled.div`
-  padding: 0 16px;
+  '.icon-rule': {
+    color: theme.custom.colorItem
+  }
+}));
 
-  .group-button-wrap {
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    padding-bottom: 16px;
+const OrderDetailContent = styled('div')(({ theme }) => ({
+  padding: '0 16px',
 
-    button {
-      text-transform: none;
-      color: white;
+  '.group-button-wrap': {
+    width: '100%',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: '16px',
+    borderBottom: `1px solid rgba(255, 255, 255, 0.2)`,
+    paddingBottom: '16px',
+
+    button: {
+      textTransform: 'none',
+      color: theme.palette.common.white
     }
   }
-`;
+}));
 
-const ActionStatusRelease = styled.div`
-  .MuiFormGroup-root {
-    margin-bottom: 5px;
+const ActionStatusRelease = styled('div')(() => ({
+  '.MuiFormGroup-root': {
+    marginBottom: '5px'
+  },
+  '.MuiFormControl-root': {
+    marginBottom: '5px'
   }
-  .MuiFormControl-root {
-    margin-bottom: 5px;
-  }
-`;
+}));
 
 const OrderDetail = () => {
   const dispatch = useLixiSliceDispatch();
@@ -93,13 +97,11 @@ const OrderDetail = () => {
   const [notEnoughFund, setNotEnoughFund] = useState(false);
   const [openCancelModal, setOpenCancelModal] = useState(false);
   const [openReleaseModal, setOpenReleaseModal] = useState(false);
-  const [addressToRelease, setAddressToRelease] = useState('');
+  const [alreadyRelease, setAlreadyRelease] = useState(false);
+  const [alreadyCancel, setAlreadyCancel] = useState(false);
 
   const { useEscrowOrderQuery, useUpdateEscrowOrderStatusMutation } = escrowOrderApi;
-  const { isLoading, currentData, isError, isSuccess, isUninitialized } = useEscrowOrderQuery(
-    { id: id! },
-    { skip: !id || !token }
-  );
+  const { currentData, isError, isSuccess } = useEscrowOrderQuery({ id: id! }, { skip: !id || !token });
   const [updateOrderTrigger] = useUpdateEscrowOrderStatusMutation();
 
   useEffect(() => {
@@ -199,7 +201,7 @@ const OrderDetail = () => {
     setLoading(false);
   };
 
-  const handleRelease = () => {
+  const handleRelease = addressToRelease => {
     const GNCAddress = process.env.NEXT_PUBLIC_ADDRESS_GNC;
 
     const changeAddress = _.isEmpty(addressToRelease) || _.isNil(addressToRelease) ? GNCAddress : addressToRelease;
@@ -209,6 +211,13 @@ const OrderDetail = () => {
 
   const handleSellerReleaseEscrow = async (status: EscrowOrderStatus, changeAddress: string, isGNCAddress: boolean) => {
     setLoading(true);
+
+    if (currentData?.escrowOrder.escrowOrderStatus === EscrowOrderStatus.Complete) {
+      setAlreadyRelease(true);
+      setOpenReleaseModal(false);
+
+      return;
+    }
 
     try {
       const { amount } = currentData?.escrowOrder;
@@ -255,6 +264,13 @@ const OrderDetail = () => {
 
   const handleBuyerReturnEscrow = async (status: EscrowOrderStatus) => {
     setLoading(true);
+
+    if (currentData?.escrowOrder.escrowOrderStatus === EscrowOrderStatus.Cancel) {
+      setAlreadyCancel(true);
+      setOpenCancelModal(false);
+
+      return;
+    }
 
     try {
       const { amount } = currentData?.escrowOrder;
@@ -336,7 +352,7 @@ const OrderDetail = () => {
     if (currentData?.escrowOrder.escrowOrderStatus === EscrowOrderStatus.Pending) {
       return isSeller ? (
         <Typography variant="body1" color="#FFBF00" align="center" component={'div'}>
-          {checkSellerEnoughFund() ? (
+          {checkSellerEnoughFund() && !notEnoughFund ? (
             <div>
               Please escrow the order
               {InfoEscrow()}
@@ -357,11 +373,11 @@ const OrderDetail = () => {
           <Stack direction="row" spacing={2} justifyContent="center" margin="20px">
             <Image width={50} height={50} src="/safebox-open.svg" alt="" />
             <Stack direction="row" spacing={0} justifyContent="center" color="white" alignItems="center">
-              <HorizontalRuleIcon />
-              <HorizontalRuleIcon />
+              <HorizontalRuleIcon className="icon-rule" />
+              <HorizontalRuleIcon className="icon-rule" />
               <ClearIcon color="error" />
-              <HorizontalRuleIcon />
-              <TrendingFlatIcon />
+              <HorizontalRuleIcon className="icon-rule" />
+              <TrendingFlatIcon className="icon-rule" />
             </Stack>
             <Image width={50} height={50} src="/safebox-close.svg" alt="" />
           </Stack>
@@ -574,26 +590,30 @@ const OrderDetail = () => {
     return (
       <div style={{ color: 'white' }}>
         {currentData?.escrowOrder.buyerDepositTx && (
-          <p style={{ fontWeight: 'bold' }}>
+          <Typography style={{ fontWeight: 'bold' }}>
             *Buyer deposited the fee ({calDisputeFee} {COIN.XEC})
-          </p>
+          </Typography>
         )}
-        <p>
+        <Typography>
           Your wallet: {totalBalanceFormat} {COIN.XEC}
-        </p>
-        <p>
-          Dispute fee (1%): {fee1Percent.toLocaleString('de-DE')} {COIN.XEC}
-        </p>
-        <p>
+        </Typography>
+        <Typography>
+          Security deposit (1%): {fee1Percent.toLocaleString('de-DE')} {COIN.XEC}
+        </Typography>
+        <Typography>
           Withdraw fee: {estimatedFee(currentData?.escrowOrder.escrowScript).toLocaleString('de-DE')} {COIN.XEC}
-        </p>
-        <p style={{ fontWeight: 'bold' }}>
+        </Typography>
+        <Typography style={{ fontWeight: 'bold' }}>
           Total: {totalAmountWithDepositAndEscrowFee().toLocaleString('de-DE')} {COIN.XEC}
           <span style={{ fontSize: '14px', color: 'gray' }}> (Excluding miner&apos;s fees)</span>
-        </p>
+        </Typography>
       </div>
     );
   };
+
+  useEffect(() => {
+    checkSellerEnoughFund && setNotEnoughFund(false);
+  }, [totalValidAmount]);
 
   if (_.isEmpty(id) || _.isNil(id) || isError) {
     return <div style={{ color: 'white' }}>Invalid order id</div>;
@@ -601,14 +621,9 @@ const OrderDetail = () => {
 
   return (
     <MobileLayout>
-      {(isLoading || isUninitialized) && (
-        <Backdrop sx={theme => ({ color: '#fff', zIndex: theme.zIndex.drawer + 1 })} open={true}>
-          <CircularProgress color="inherit" />
-        </Backdrop>
-      )}
       <OrderDetailPage>
         <TickerHeader title="Order Detail" />
-        {currentData?.escrowOrder && (
+        {currentData?.escrowOrder ? (
           <OrderDetailContent>
             <OrderDetailInfo item={currentData?.escrowOrder} />
             <br />
@@ -617,6 +632,10 @@ const OrderDetail = () => {
             {escrowActionButtons()}
             {telegramButton()}
           </OrderDetailContent>
+        ) : (
+          <div style={{ display: 'flex', justifyContent: 'center', height: '100vh' }}>
+            <CircularProgress style={{ color: 'white', margin: 'auto' }} />
+          </div>
         )}
 
         <ConfirmCancelModal
@@ -628,23 +647,14 @@ const OrderDetail = () => {
         <ConfirmReleaseModal
           isOpen={openReleaseModal}
           disputeFee={calDisputeFee}
-          returnAction={() => handleRelease()}
+          returnAction={value => handleRelease(value)}
           onDissmissModal={value => setOpenReleaseModal(value)}
-          setAddressToRelease={value => setAddressToRelease(value)}
         />
 
         <Stack zIndex={999}>
           <CustomToast
             isOpen={error}
             content="  Order's status update failed"
-            handleClose={() => setError(false)}
-            type="error"
-            autoHideDuration={3500}
-          />
-
-          <CustomToast
-            isOpen={notEnoughFund}
-            content="Not enough fee!"
             handleClose={() => setError(false)}
             type="error"
             autoHideDuration={3500}
@@ -678,6 +688,24 @@ const OrderDetail = () => {
             autoHideDuration={3500}
             isLink={true}
             linkDescription={`${coinInfo[COIN.XEC].blockExplorerUrl}/tx/${currentData?.escrowOrder.returnTxid}`}
+          />
+
+          <CustomToast
+            isOpen={alreadyRelease}
+            content="Order has already been released. Click here to see transaction!"
+            handleClose={() => setAlreadyRelease(false)}
+            type="warning"
+            autoHideDuration={3500}
+            isLink={true}
+            linkDescription={`${coinInfo[COIN.XEC].blockExplorerUrl}/tx/${currentData?.escrowOrder.releaseTxid}`}
+          />
+
+          <CustomToast
+            isOpen={alreadyCancel}
+            content="Order has already been canceled!"
+            handleClose={() => setAlreadyCancel(false)}
+            type="warning"
+            autoHideDuration={3500}
           />
         </Stack>
       </OrderDetailPage>

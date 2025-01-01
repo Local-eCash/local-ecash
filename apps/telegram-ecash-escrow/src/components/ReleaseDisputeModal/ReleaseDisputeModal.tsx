@@ -1,6 +1,5 @@
 'use client';
 
-import styled from '@emotion/styled';
 import { ChevronLeft } from '@mui/icons-material';
 import {
   Button,
@@ -13,6 +12,7 @@ import {
   useMediaQuery,
   useTheme
 } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { TransitionProps } from '@mui/material/transitions';
 import Image from 'next/image';
 import React from 'react';
@@ -24,77 +24,78 @@ interface ReleaseDisputeModalProps {
   onConfirmClick?: () => void;
 }
 
-const StyledDialog = styled(Dialog)`
-  .MuiPaper-root {
-    background-image: url('/bg-dialog.svg');
-    background-repeat: no-repeat;
-    background-size: cover;
-  }
+const StyledDialog = styled(Dialog)(({ theme }) => ({
+  '.MuiPaper-root': {
+    background: theme.palette.background.default,
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: 'cover'
+  },
 
-  .MuiIconButton-root {
-    width: fit-content;
-    svg {
-      font-size: 32px;
+  '.MuiIconButton-root': {
+    width: 'fit-content',
+    svg: {
+      fontSize: 32
+    }
+  },
+
+  '.MuiDialogTitle-root': {
+    padding: theme.spacing(0, 2), // Horizontal padding using theme spacing
+    paddingTop: theme.spacing(2), // Top padding using theme spacing
+    fontSize: 26,
+    textAlign: 'center'
+  },
+
+  '.MuiDialogContent-root': {
+    padding: 0
+  },
+
+  '.MuiDialogActions-root': {
+    flexDirection: 'column',
+    alignItems: 'normal',
+
+    '.resolve-btn': {
+      textTransform: 'none',
+      color: 'inherit',
+      margin: 0,
+      '!important': 'true' // You can use CSS `!important` if needed, but it's better to avoid it if possible
+    }
+  },
+
+  '.back-btn': {
+    padding: 0,
+    position: 'absolute',
+    left: theme.spacing(1), // Position using theme spacing
+    top: theme.spacing(2), // Position using theme spacing
+    borderRadius: 12,
+
+    svg: {
+      fontSize: 32
     }
   }
+}));
 
-  .MuiDialogTitle-root {
-    padding: 0 16px;
-    padding-top: 16px;
-    font-size: 26px;
-    text-align: center;
-  }
+// ReleaseDisputeWrap with theme usage
+const ReleaseDisputeWrap = styled('div')(({ theme }) => ({
+  padding: theme.spacing(2), // Padding using theme spacing
 
-  .MuiDialogContent-root {
-    padding: 0;
-  }
+  '.group-btn-chat': {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: theme.spacing(1), // Gap using theme spacing
+    borderTop: `1px dashed ${theme.palette.grey[500]}`, // Use theme colors for borders
+    paddingTop: theme.spacing(1),
+    marginTop: theme.spacing(2),
 
-  .MuiDialogActions-root {
-    flex-direction: column;
-    align-items: normal;
-
-    .resolve-btn {
-      text-transform: none;
-      color: inherit;
-      margin: 0 !important;
+    '.chat-btn': {
+      width: 'fit-content',
+      justifyContent: 'flex-start',
+      textTransform: 'none',
+      gap: theme.spacing(1),
+      padding: theme.spacing(1, 0), // Padding using theme spacing
+      fontWeight: 600
     }
   }
-
-  .back-btn {
-    padding: 0;
-    position: absolute;
-    left: 8px;
-    top: 20px;
-    // border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 12px;
-
-    svg {
-      font-size: 32px;
-    }
-  }
-`;
-
-const ReleaseDisputeWrap = styled.div`
-  padding: 16px;
-
-  .group-btn-chat {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-    border-top: 1px dashed gray;
-    padding-top: 8px;
-    margin-top: 16px;
-
-    .chat-btn {
-      width: fit-content;
-      justify-content: flex-start;
-      text-transform: none;
-      gap: 8px;
-      padding: 8px 0;
-      font-weight: 600;
-    }
-  }
-`;
+}));
 
 const Transition = React.forwardRef(function Transition(
   props: TransitionProps & {

@@ -8,6 +8,8 @@ export enum TabType {
   ESCROWED = 'Escrowed'
 }
 
+export const COIN_OTHERS = 'Others';
+
 export const LIST_COIN = [
   {
     id: 1,
@@ -34,12 +36,6 @@ export const LIST_COIN = [
     fixAmount: 100
   },
   {
-    id: 5,
-    name: 'Lotus',
-    ticker: 'XPI',
-    fixAmount: 1000000
-  },
-  {
     id: 6,
     name: 'DogeCoin',
     ticker: 'DOGE',
@@ -58,3 +54,9 @@ export const LIST_COIN = [
     fixAmount: 100
   }
 ];
+
+export const THEMES_TYPE = {
+  LIGHT: 'light',
+  DARK: 'dark',
+  SYSTEM: 'system'
+};

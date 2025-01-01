@@ -10,65 +10,65 @@ import {
   useSliceDispatch as useLixiSliceDispatch,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
-import styled from '@emotion/styled';
 import { CheckCircleOutline, Close } from '@mui/icons-material';
 import { Alert, Button, IconButton, Typography } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useContext, useEffect, useMemo, useState } from 'react';
 import BackupSeed, { BackupWordModel } from './backup-seed';
 
-const ContainerBackupGame = styled.div`
-  padding: 1rem;
-  .setting-info {
-    margin-top: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+const ContainerBackupGame = styled('div')(({ theme }) => ({
+  padding: '1rem',
+  '.setting-info': {
+    marginTop: '1rem',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px'
+  },
+  '.back-btn': {
+    padding: '0',
+    borderRadius: '12px',
+    svg: {
+      fontSize: '32px'
+    }
+  },
 
-    .back-btn {
-      padding: 0;
-      border-radius: 12px;
-
-      svg {
-        font-size: 32px;
+  '.setting-content': {
+    padding: '0 0 1rem',
+    '.setting-item': {
+      marginBottom: '1rem',
+      '.title': {
+        // color: theme.custom.colorItem,
+        paddingBottom: '1rem',
+        fontSize: '14px',
+        color: theme.typography.subtitle2
+      },
+      '.ico-alert': {
+        alignSelf: 'center !important'
       }
     }
   }
-  .setting-content {
-    padding: 0 0 1rem;
-    .setting-item {
-      margin-bottom: 1rem;
-      .title {
-        padding-bottom: 1rem;
-        font-size: 14px;
-        color: #edeff099;
-      }
-      .ico-alert {
-        align-self: center !important;
-      }
-    }
-  }
-`;
+}));
 
-const WordGuessContainer = styled.div`
-  padding: 1rem;
-  background: #2c2c2c;
-  font-size: 14px;
-  border-radius: 10px;
-  color: #fff;
-  .word-guess-content {
-    display: flex;
-    gap: 1rem;
-    margin-top: 1rem;
-    .random-word {
-      padding: 0.5rem 1rem;
-      border: 1px solid gray;
-      background: #161b22;
-      border-radius: 8px;
-      font-size: 14px;
+const WordGuessContainer = styled('div')(({ theme }) => ({
+  padding: '1rem',
+  background: theme.custom.bgItem5,
+  fontSize: '14px',
+  borderRadius: '10px',
+  color: theme.custom.colorItem,
+  '.word-guess-content': {
+    display: 'flex',
+    gap: '1rem',
+    MarginTop: '1rem',
+    '.random-word': {
+      padding: '0.5rem 1rem',
+      border: '1px solid gray',
+      background: theme.custom.bgItem3,
+      borderRadius: '8px',
+      fontSize: '14px'
     }
   }
-`;
+}));
 
 export default function Backup() {
   const settingContext = useContext(SettingContext);
@@ -212,15 +212,17 @@ export default function Backup() {
         </div>
         <div className="setting-content">
           <div className="setting-item">
-            <p className="title">
+            <Typography className="title">
               {!isPlayGame
                 ? `Your recovery key is composed of 12 randomly selected words. Please
                 carefully write down each word in the order it appears.`
                 : `Let check your wrote down the phrase correctly. Please select each word in the numbered order.`}
-            </p>
+            </Typography>
             {!isPlayGame ? (
               <Alert icon={<CheckCircleOutline className="ico-alert" fontSize="inherit" />} severity="warning">
-                Never share your recovery phrase with anyone, store it securely !
+                <Typography variant="subtitle2">
+                  Never share your recovery phrase with anyone, store it securely !
+                </Typography>
               </Alert>
             ) : (
               <WordGuessContainer>

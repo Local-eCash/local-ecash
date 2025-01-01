@@ -2,6 +2,7 @@ import { getCurrentThemes, getModals, useSliceSelector as useLixiSliceSelector }
 import { AuthorizationModal } from './Auth/AuthorizationModal';
 import BoostModal from './BoostModal/BoostModal';
 import { BackupModal } from './Common/BackupModal';
+import { RequiredUsernameModal } from './Common/RequiredUsernameModal';
 import CreateOfferModal from './CreateOfferModal/CreateOfferModal';
 import PlaceAnOrderModal from './PlaceAnOrderModal/PlaceAnOrderModal';
 import { QRcodeModal } from './QRcode/QRcodeModal';
@@ -14,7 +15,8 @@ const modalComponentLookupTable = {
   BoostModal,
   CreateOfferModal,
   BackupModal,
-  PlaceAnOrderModal
+  PlaceAnOrderModal,
+  RequiredUsernameModal
 };
 
 const ModalManager = () => {

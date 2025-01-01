@@ -8,7 +8,6 @@
  */
 'use client';
 
-import Footer from '@/src/components/Footer/Footer';
 import { Button, Typography } from '@mui/material';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -32,8 +31,6 @@ export default function AuthorizationLayout({ children }: { children: React.Reac
           </div>
         </React.Fragment>
       )}
-
-      <Footer />
     </React.Fragment>
   );
 }

@@ -1,35 +1,35 @@
-import styled from '@emotion/styled';
+import { styled } from '@mui/material/styles';
 
-const WordAlignment = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  column-gap: 1rem;
-  row-gap: 1rem;
-  .word {
-    padding: 0.5rem;
-    border-radius: 8px;
-    .word-number {
-      color: gray;
-      font-size: 12px;
-    }
-    .word-letter {
-      font-size: 14px;
-      color: #fff;
-    }
-    &.wrong {
-      background: red !important;
-    }
-    &.right {
-      background: #2c2c2c !important;
-    }
-    &.blur {
-      filter: blur(3px);
-    }
-    &.not-blur {
-      filter: blur(0);
+const WordAlignment = styled('div')(({ theme }) => ({
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr 1fr',
+  columnGap: '1rem',
+  rowGap: '1rem',
+  '.word': {
+    padding: '0.5rem',
+    borderRadius: '8px',
+    '.word-number': {
+      color: 'gray',
+      fontSize: '12px'
+    },
+    '.word-letter': {
+      fontSize: '14px',
+      color: theme.custom.colorItem
+    },
+    '&.wrong': {
+      background: 'red !important'
+    },
+    '&.right': {
+      background: `${theme.custom.bgItem5} !important`
+    },
+    '&.blur': {
+      filter: 'blur(3px)'
+    },
+    '&.not-blur': {
+      filter: 'blur(0)'
     }
   }
-`;
+}));
 
 export type BackupWordModel = {
   word: string;

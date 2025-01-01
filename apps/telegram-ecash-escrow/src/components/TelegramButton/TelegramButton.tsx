@@ -27,16 +27,24 @@ const TelegramButton: React.FC<TelegramButtonProps> = ({ escrowOrderId, username
   const { useLazyUserRequestTelegramChatQuery } = escrowOrderApi;
   const [trigger, { isFetching, isLoading }] = useLazyUserRequestTelegramChatQuery();
   const [request, setRequest] = useState(false);
+  const [tooManyRequest, setTooManyRequest] = useState(false);
   const [fail, setFail] = useState(false);
 
   const handleTelegramClick = async () => {
-    if (username && username.includes('@')) {
+    if (username && username.startsWith('@')) {
       const url = `https://t.me/${username.substring(1)}`;
       window.open(url, '_blank');
     } else {
       await trigger({ id: escrowOrderId })
+        .unwrap()
         .then(() => setRequest(true))
-        .catch(() => setFail(true));
+        .catch(e => {
+          if (e.message.includes('Too many requests')) {
+            setTooManyRequest(true);
+          } else {
+            setFail(true);
+          }
+        });
     }
   };
 
@@ -61,6 +69,12 @@ const TelegramButton: React.FC<TelegramButtonProps> = ({ escrowOrderId, username
       <Snackbar open={fail} autoHideDuration={3500} onClose={() => setFail(false)}>
         <Alert severity="error" variant="filled" sx={{ width: '100%' }}>
           Failed to request chat...
+        </Alert>
+      </Snackbar>
+
+      <Snackbar open={tooManyRequest} autoHideDuration={3500} onClose={() => setTooManyRequest(false)}>
+        <Alert severity="error" variant="filled" sx={{ width: '100%' }}>
+          Slow down! You have sent too many requests recently. Please wait an hour and try again.
         </Alert>
       </Snackbar>
     </React.Fragment>

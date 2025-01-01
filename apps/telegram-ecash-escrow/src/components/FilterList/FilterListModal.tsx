@@ -1,6 +1,5 @@
 'use client';
 
-import styled from '@emotion/styled';
 import { ChevronLeft } from '@mui/icons-material';
 import {
   Box,
@@ -13,6 +12,7 @@ import {
   useMediaQuery,
   useTheme
 } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { TransitionProps } from '@mui/material/transitions';
 import React, { useState } from 'react';
 
@@ -23,38 +23,42 @@ interface FilterListModalProps {
   setSelectedItem?: (value: any) => void;
 }
 
-const StyledDialog = styled(Dialog)`
-  .MuiPaper-root {
-    background-image: url('/bg-dialog.svg');
-    background-repeat: no-repeat;
-    background-size: cover;
-    width: 500px;
-    height: 100vh;
-    max-height: 100%;
-    margin: 0;
-    @media (max-width: 576px) {
-      width: 100%;
+const StyledDialog = styled(Dialog)(({ theme }) => ({
+  '.MuiPaper-root': {
+    background: theme.palette.background.default,
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: 'cover',
+    width: '500px',
+    height: '100vh',
+    maxHeight: '100%',
+    margin: 0,
+    [theme.breakpoints.down('sm')]: {
+      width: '100%'
     }
-  }
+  },
 
-  .MuiIconButton-root {
-    width: fit-content;
-    svg {
-      font-size: 32px;
+  '.MuiIconButton-root': {
+    width: 'fit-content',
+    svg: {
+      fontSize: '32px'
     }
-  }
+  },
 
-  .MuiDialogTitle-root {
-    padding: 0 16px;
-    padding-top: 16px;
-    font-size: 26px;
-    text-align: center;
-  }
+  '.MuiDialogTitle-root': {
+    padding: '0 16px',
+    paddingTop: '16px',
+    fontSize: '26px',
+    textAlign: 'center'
+  },
 
-  .MuiDialogContent-root {
-    padding: 0;
+  '.MuiDialogContent-root': {
+    padding: 0
+  },
+
+  button: {
+    color: theme.palette.text.secondary
   }
-`;
+}));
 
 const Transition = React.forwardRef(function Transition(
   props: TransitionProps & {
@@ -106,7 +110,7 @@ const FilterListModal: React.FC<FilterListModalProps> = props => {
                   onClick={() => handleSelect(option)}
                   fullWidth
                   variant="text"
-                  style={{ textTransform: 'capitalize', color: '#fff', fontSize: '1.1rem' }}
+                  style={{ textTransform: 'capitalize', fontSize: '1.1rem' }}
                   sx={{ justifyContent: 'flex-start', textAlign: 'left' }}
                 >
                   {option?.name}
@@ -115,7 +119,7 @@ const FilterListModal: React.FC<FilterListModalProps> = props => {
               {filteredOptions.length === 0 && (
                 <Button
                   variant="text"
-                  style={{ textTransform: 'capitalize', color: '#fff', fontSize: '1.1rem' }}
+                  style={{ textTransform: 'capitalize', fontSize: '1.1rem' }}
                   sx={{ justifyContent: 'flex-start', textAlign: 'left' }}
                 >
                   Nothing here

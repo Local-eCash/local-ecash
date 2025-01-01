@@ -1,5 +1,5 @@
 import { closeModal, useSliceDispatch as useLixiSliceDispatch } from '@bcpros/redux-store';
-import { Box, Button, Modal } from '@mui/material';
+import { Box, Button, Modal, Typography } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { AuthorizationOptions } from './Authorization.interface';
 
@@ -51,7 +51,6 @@ const style = {
   transform: 'translate(-50%, -50%)',
   width: 400,
   bgcolor: 'background.paper',
-  border: '2px solid #000',
   boxShadow: 24,
   pt: 2,
   px: 4,
@@ -80,7 +79,7 @@ export const AuthorizationModal = ({ classStyle }: AuthorizationModalProps) => {
       aria-describedby="child-modal-description"
     >
       <Box sx={{ ...style, width: 300 }}>
-        <h2 style={{ color: 'white' }}>Log in to continue using app</h2>
+        <Typography variant="h6">Log in to continue using app</Typography>
         <Button onClick={() => handleLogIn()}>Log In</Button>
       </Box>
     </Modal>

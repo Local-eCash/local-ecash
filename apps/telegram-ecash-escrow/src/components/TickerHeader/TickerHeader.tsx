@@ -1,46 +1,45 @@
 'use client';
 
 import { openModal, useSliceDispatch as useLixiSliceDispatch } from '@bcpros/redux-store';
-import styled from '@emotion/styled';
 import { ChevronLeft } from '@mui/icons-material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import { IconButton, Typography } from '@mui/material';
+import { styled } from '@mui/material/styles';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import React from 'react';
 
-const Header = styled.div`
-  position: relative;
-  padding: 16px 8px;
+const Header = styled('div')(({ theme }) => ({
+  position: 'relative',
+  padding: '16px 8px',
+  button: {
+    position: 'absolute',
+    padding: 0,
+    svg: {
+      fontSize: '32px'
+    }
+  },
 
-  button {
-    position: absolute;
-    padding: 0;
+  '.icon-header': {
+    position: 'relative',
+    '.MuiSvgIcon-root': {
+      color: theme.custom.colorItem
+    }
+  },
 
-    svg {
-      font-size: 32px;
+  h4: {
+    fontSize: '26px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '15px',
+    '.MuiSvgIcon-root': {
+      cursor: 'pointer',
+      fontSize: '30px',
+      color: '#3383ff'
     }
   }
-
-  .icon-header {
-    position: relative;
-    .MuiSvgIcon-root {
-      color: #fff;
-    }
-  }
-
-  h4 {
-    font-size: 26px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 15px;
-    .MuiSvgIcon-root {
-      cursor: pointer;
-      font-size: 30px;
-      color: #3383ff;
-    }
-  }
-`;
+}));
 
 interface TickerHeaderProps {
   title: string;
@@ -57,9 +56,14 @@ const TickerHeader: React.FC<TickerHeaderProps> = ({
 }) => {
   const router = useRouter();
   const dispatch = useLixiSliceDispatch();
+  const { data } = useSession();
 
   const handleOpenCreateOffer = () => {
-    dispatch(openModal('CreateOfferModal', {}));
+    if (data?.user?.name.startsWith('@')) {
+      dispatch(openModal('CreateOfferModal', {}));
+    } else {
+      dispatch(openModal('RequiredUsernameModal', {}));
+    }
   };
 
   return (

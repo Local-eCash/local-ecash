@@ -1,6 +1,6 @@
 'use client';
 
-import { LIST_COIN } from '@/src/store/constants';
+import { COIN_OTHERS, LIST_COIN } from '@/src/store/constants';
 import { LIST_CURRENCIES_USED, Location } from '@bcpros/lixi-models';
 import {
   Coin,
@@ -16,7 +16,6 @@ import {
   useSliceDispatch as useLixiSliceDispatch,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
-import styled from '@emotion/styled';
 import { Close } from '@mui/icons-material';
 import {
   Button,
@@ -41,152 +40,146 @@ import {
   useMediaQuery,
   useTheme
 } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { TransitionProps } from '@mui/material/transitions';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import FilterListLocationModal from '../FilterList/FilterListLocationModal';
 import FilterListModal from '../FilterList/FilterListModal';
 import { FormControlWithNativeSelect } from '../FilterOfferModal/FilterOfferModal';
 import CustomToast from '../Toast/CustomToast';
 
-const StyledDialog = styled(Dialog)`
-  .MuiPaper-root {
-    background-image: url('/bg-dialog.svg');
-    background-repeat: no-repeat;
-    background-size: cover;
-    width: 500px;
-    height: 100vh;
-    max-height: 100%;
-    margin: 0;
-    @media (max-width: 576px) {
-      width: 100%;
+const StyledDialog = styled(Dialog)(({ theme }) => ({
+  '.MuiPaper-root': {
+    background: theme.palette.background.default,
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: 'cover',
+    width: '500px',
+    height: '100vh',
+    maxHeight: '100%',
+    margin: 0,
+    [theme.breakpoints.down('sm')]: {
+      width: '100%'
     }
-  }
+  },
 
-  .heading {
-    font-size: 18px;
-    font-weight: bold;
-  }
+  '.heading': {
+    fontSize: '18px',
+    fontWeight: 'bold'
+  },
 
-  .bold {
-    font-weight: bold;
-  }
+  '.bold': {
+    fontWeight: 'bold'
+  },
 
-  .prefix {
-    font-size: 15px;
-    color: #79869b;
-  }
+  '.prefix, .label': {
+    fontSize: '15px',
+    color: theme.palette.text.secondary
+  },
 
-  .label {
-    color: #79869b;
-    margin-top: 8px;
-    margin-bottom: 4px;
-  }
+  '.label': {
+    marginTop: '8px',
+    marginBottom: '4px'
+  },
 
-  .container-step2 {
-    .margin-component {
-      .MuiInputBase-root {
-        border-radius: 0px !important;
-        .MuiInputBase-input {
-          text-align: center;
-        }
+  '.container-step2 .margin-component .MuiInputBase-root': {
+    borderRadius: 0,
+    '& .MuiInputBase-input': {
+      textAlign: 'center'
+    }
+  },
+
+  '.container-step3 .payment-wrap': {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: '16px',
+
+    '.payment-method, .payment-currency': {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '0.5rem',
+
+      button: {
+        textTransform: 'none',
+        color: theme.palette.common.white
       }
     }
-  }
+  },
 
-  .container-step3 {
-    .payment-wrap {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 16px;
+  '.back-btn': {
+    padding: 0,
+    position: 'absolute',
+    left: '8px',
+    top: '20px',
+    borderRadius: '12px',
 
-      .payment-method,
-      .payment-currency {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
+    svg: {
+      fontSize: '32px'
+    }
+  },
 
-        button {
-          text-transform: none;
-          color: white;
-        }
+  '.MuiDialogActions-root': {
+    justifyContent: 'space-evenly',
+    padding: '16px 16px 32px',
+
+    button: {
+      textTransform: 'none',
+      width: '100%',
+      '&.confirm-btn': {
+        color: theme.palette.common.white
       }
     }
+  },
+
+  '.MuiButton-root': {
+    color: '#fff'
   }
+}));
 
-  .back-btn {
-    padding: 0;
-    position: absolute;
-    left: 8px;
-    top: 20px;
-    border-radius: 12px;
+const PercentInputWrap = styled('div')(({ theme }) => ({
+  margin: '16px 0',
+  display: 'grid',
+  gridTemplateColumns: 'max-content 1fr max-content',
+  borderRadius: '9px',
+  border: `1px solid ${theme.palette.grey[500]}`,
+  minHeight: '48px',
 
-    svg {
-      font-size: 32px;
-    }
+  '.btn-minus, .btn-plus': {
+    width: '15%',
+    borderRadius: 0,
+    border: 0
+  },
+
+  '.btn-minus': {
+    borderTopLeftRadius: '8px',
+    borderBottomLeftRadius: '8px'
+  },
+
+  '.btn-plus': {
+    borderTopRightRadius: '8px',
+    borderBottomRightRadius: '8px'
+  },
+
+  input: {
+    height: '36px'
+  },
+
+  fieldset: {
+    border: '0 !important'
   }
+}));
 
-  .MuiDialogActions-root {
-    justify-content: space-evenly;
-    padding: 16px;
-    padding-bottom: 32px;
+const OrderLimitWrap = styled('div')(() => ({
+  paddingLeft: '16px',
+  paddingTop: '16px',
 
-    button {
-      text-transform: math-auto;
-      width: 100%;
-
-      &.confirm-btn {
-        color: white;
-      }
-    }
+  '.group-input': {
+    display: 'grid',
+    gridTemplateColumns: '1fr max-content 1fr',
+    gap: '16px',
+    alignItems: 'baseline'
   }
-`;
-
-const PercentInputWrap = styled.div`
-  margin: 16px 0;
-  display: grid;
-  grid-template-columns: max-content 1fr max-content;
-  border-radius: 9px;
-  border: 1px solid gray;
-  min-height: 48px;
-
-  .btn-minus,
-  .btn-plus {
-    width: 15%;
-    border-radius: 0;
-    boder: 0;
-  }
-
-  .btn-minus {
-    border-top-left-radius: 8px;
-    border-bottom-left-radius: 8px;
-  }
-
-  .btn-plus {
-    border-bottom-right-radius: 8px;
-    border-top-right-radius: 8px;
-  }
-
-  input {
-    height: 36px;
-  }
-
-  fieldset {
-    border: 0 !important;
-  }
-`;
-
-const OrderLimitWrap = styled.div`
-  padding-left: 16px;
-  padding-top: 16px;
-
-  .group-input {
-    display: grid;
-    grid-template-columns: 1fr max-content 1fr;
-    gap: 16px;
-    align-items: baseline;
-  }
-`;
+}));
 
 interface CreateOfferModalProps {
   offer?: OfferQueryItem;
@@ -228,6 +221,8 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
   const [openStateList, setOpenStateList] = useState(false);
   const [openCityList, setOpenCityList] = useState(false);
 
+  const dialogContentRef = useRef<HTMLDivElement>(null);
+
   const {
     handleSubmit,
     control,
@@ -244,7 +239,8 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       max: `${offer?.orderLimitMax ?? ''}`,
       option: offer?.paymentMethods[0]?.paymentMethod.id ?? '',
       currency: null,
-      coin: null,
+      coin: offer?.coinPayment ?? null,
+      coinOthers: offer?.coinOthers ?? '',
       percentage: offer?.marginPercentage ?? 0,
       note: offer?.noteOffer ?? '',
       country: null,
@@ -275,6 +271,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       noteOffer: data.note,
       paymentMethodIds: [option],
       coinPayment: data?.coin ? data.coin.split(':')[0] : null,
+      coinOthers: data?.coinOthers ? data.coinOthers : null,
       localCurrency: data?.currency ? data.currency.split(':')[0] : null,
       marginPercentage: Number(data?.percentage ?? 0),
       orderLimitMin: minNum,
@@ -328,6 +325,10 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
 
   const handleCloseModal = () => {
     dispatch(closeModal());
+  };
+
+  const showMargin = () => {
+    return option !== 5 && !coinValue?.includes(COIN_OTHERS);
   };
 
   const marginComponent = (
@@ -540,6 +541,9 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                           </option>
                         );
                       })}
+                      <option key="Others" value={`${COIN_OTHERS}:0`}>
+                        {COIN_OTHERS}
+                      </option>
                     </NativeSelect>
                     {errors && errors?.coin && (
                       <FormHelperText error={true}>{errors.coin.message as string}</FormHelperText>
@@ -548,6 +552,42 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                 )}
               />
             </Grid>
+
+            {coinValue?.includes(COIN_OTHERS) && (
+              <Grid item xs={4}>
+                <Controller
+                  name="coinOthers"
+                  control={control}
+                  rules={{
+                    required: {
+                      value: true,
+                      message: 'Coin others is required!'
+                    }
+                  }}
+                  render={({ field: { onChange, onBlur, value, name, ref } }) => (
+                    <FormControl fullWidth={true}>
+                      <TextField
+                        className="form-input"
+                        onChange={onChange}
+                        onBlur={onBlur}
+                        value={value}
+                        name={name}
+                        inputRef={ref}
+                        id="coinOthers"
+                        label="Ticker"
+                        error={errors.coinOthers && true}
+                        helperText={errors.coinOthers && (errors.coinOthers?.message as string)}
+                        placeholder="E.g. PEPE"
+                        variant="standard"
+                        inputProps={{
+                          maxLength: 12
+                        }}
+                      />
+                    </FormControl>
+                  )}
+                />
+              </Grid>
+            )}
           </>
         )}
         {option === 1 && (
@@ -712,6 +752,23 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
     </div>
   );
 
+  const placeholderOfferNote = () => {
+    switch (option) {
+      case 1:
+        return 'A public note attached to your offer. For example: "Exchanging XEC to cash, only meeting in public places at daytime!"';
+      case 2:
+        return 'A public note attached to your offer. For example: "Bank transfer in Vietnam only. Available from 9AM to 5PM workdays."';
+      case 3:
+        return 'A public note attached to your offer. For example: "Bank transfer in Vietnam only. Available from 9AM to 5PM workdays."';
+      case 4:
+        return 'A public note attached to your offer. For example: "Accepting USDT on TRX and ETH network."';
+      case 5:
+        return 'A public note attached to your offer. For example: "Exchanging XEC for a logo design. Send your proposal along with a proposed price.';
+      default:
+        return 'Input offer note';
+    }
+  };
+
   const stepContent2 = (
     <div className="container-step2">
       <Grid container spacing={2}>
@@ -744,7 +801,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
             )}
           />
         </Grid>
-        {option !== 5 && marginComponent}
+        {showMargin() && marginComponent}
         <OrderLimitWrap>
           <Typography variant="body2" className="label">
             {`Order limit (${coinCurrency})`}
@@ -848,16 +905,20 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                   style={{ marginTop: '16px' }}
                   className="form-input"
                   onChange={onChange}
-                  onBlur={onBlur}
+                  onBlur={() => {
+                    dialogContentRef.current.style.paddingBottom = '20px';
+                    onBlur;
+                  }}
                   value={value}
                   name={name}
                   inputRef={ref}
                   id="note"
-                  placeholder="Input offer note..."
+                  placeholder={placeholderOfferNote()}
                   variant="filled"
                   multiline
                   minRows={3}
                   maxRows={10}
+                  onFocus={() => (dialogContentRef.current.style.paddingBottom = '40vh')}
                 />
               </FormControl>
             )}
@@ -910,7 +971,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
             <span className="prefix">Headline: </span> {getValues('message')}
           </Typography>
         </Grid>
-        {option !== 5 && (
+        {showMargin() && (
           <Grid item xs={12}>
             <Typography variant="body1">
               <span className="prefix">Price: </span> {percentageValue}% on top of market price
@@ -976,7 +1037,8 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
   useEffect(() => {
     const currency = currencyValue?.split(':')[0];
     const coin = coinValue?.split(':')[0];
-    setCoinCurrency(currency ?? coin ?? 'XEC');
+
+    setCoinCurrency(currency ?? (coin?.includes(COIN_OTHERS) ? 'XEC' : coin) ?? 'XEC');
   }, [currencyValue, coinValue]);
 
   return (
@@ -995,7 +1057,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       <IconButton className="back-btn" onClick={() => handleCloseModal()}>
         <Close />
       </IconButton>
-      <DialogContent>{stepContents[`stepContent${activeStep}`]}</DialogContent>
+      <DialogContent ref={dialogContentRef}>{stepContents[`stepContent${activeStep}`]}</DialogContent>
       <DialogActions>
         <Button
           variant="contained"
@@ -1026,7 +1088,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
             setSuccess(false);
             handleCloseModal();
           }}
-          content={`Offer ${isEdit ? 'updated' : 'created'} successfully`}
+          content={`Offer ${isEdit ? 'updated' : 'created'} successfully!`}
           type="success"
           autoHideDuration={3000}
         />

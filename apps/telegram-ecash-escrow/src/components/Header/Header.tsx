@@ -7,10 +7,10 @@ import {
   parseCashAddressToPrefix,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
-import styled from '@emotion/styled';
 import { CopyAllOutlined, SettingsOutlined, Wallet } from '@mui/icons-material';
 import AccountCircleRoundedIcon from '@mui/icons-material/AccountCircleRounded';
 import { Button, IconButton, Popover, Portal, Typography } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import React, { useContext, useState } from 'react';
@@ -18,63 +18,65 @@ import CopyToClipboard from 'react-copy-to-clipboard';
 import useAuthorization from '../Auth/use-authorization.hooks';
 import CustomToast from '../Toast/CustomToast';
 
-const StyledHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
+const StyledHeader = styled('div')(({ theme }) => ({
+  display: 'flex',
+  justifyContent: 'space-between',
 
-  .greeting {
-    margin-bottom: 16px;
-
-    .handle-name {
-      font-weight: 600;
+  '.greeting': {
+    marginBottom: 16,
+    '.handle-name': {
+      fontWeight: 600
     }
   }
-`;
+}));
 
-const PopoverStyled = styled.div`
-  padding: 8px 10px;
-  .heading-profile {
-    font-weight: bold;
-    font-size: 20px;
-    margin-bottom: 5px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .item-address,
-  .item-amount {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 7px;
-  }
+const PopoverStyled = styled('div')(({ theme }) => ({
+  padding: '8px 10px',
+  background: theme.palette.background.paper,
 
-  .address-amount {
-    font-size: 14px;
-    color: #e1e1e1;
-  }
-  .no-border-btn {
-    padding: 0;
-    min-width: 0;
-  }
-`;
+  '.heading-profile': {
+    fontWeight: 600,
+    fontSize: 20,
+    marginBottom: 5,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  '.item-address, .item-amount': {
+    display: 'flex',
+    justifyContent: 'space-between',
+    marginBottom: 7
+  },
+  '.address-amount': {
+    fontSize: 14,
+    color: theme.palette.text.secondary
+  },
+  '.no-border-btn': {
+    padding: 0,
+    minWidth: 0
+  },
 
-const StyledAvatar = styled.div`
-  width: 1.55em; /* Adjust size as needed */
-  height: 1.55em;
-  border-radius: 50%;
-  overflow: hidden;
-  display: inline-block;
-  border: 2px solid #0076c4; /* Optional: Add a border */
-  background-image: url('./eCash.svg'); /* Optional: Placeholder image */
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-
-  img {
-    width: 100%;
-    object-fit: cover;
+  button: {
+    color: theme.palette.text.secondary
   }
-`;
+}));
+
+const StyledAvatar = styled('div')(({ theme }) => ({
+  width: '1.55em',
+  height: '1.55em',
+  borderRadius: 50,
+  overflow: 'hidden',
+  display: 'inline-block',
+  border: '2px solid #0076c4',
+  backgroundImage: 'url("./eCash.svg")',
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
+  backgroundRepeat: 'no-repeat',
+  '& img': {
+    width: '100%',
+    objectFit: 'cover'
+  }
+}));
 
 export default function Header() {
   const router = useRouter();

@@ -37,7 +37,10 @@ export const authOptions: NextAuthOptions = {
           }
 
           const fullname = !_.isEmpty(user.last_name) ? [user.first_name, user.last_name].join(' ') : user.first_name;
-          const username = !_.isEmpty(user.username) ? `@${user.username}` : fullname;
+          const username =
+            !_.isEmpty(user.username) && !_.isNil(user.username) && user.username !== 'undefined'
+              ? `@${user.username}`
+              : fullname;
 
           if (user.id && user.first_name) {
             return {

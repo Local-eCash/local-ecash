@@ -8,40 +8,41 @@
  */
 'use client';
 
-import styled from '@emotion/styled';
+import { styled } from '@mui/material/styles';
 import React from 'react';
 
-const WrapMobile = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
-`;
-const Content = styled.div`
-  position: relative;
-  width: 500px;
-  min-height: 100vh;
-  box-shadow: 0px 0px 24px 1px;
-  background-color: black;
-  background-image: url(/bg-dialog.svg);
-  background-repeat: no-repeat;
-  background-size: cover;
-  @media (max-width: 576px) {
-    width: 100%;
-    box-shadow: none;
+const WrapMobile = styled('div')(({ theme }) => ({
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  background: theme.custom.bgMain
+}));
+
+const Content = styled('div')(({ theme }) => ({
+  position: 'relative',
+  width: '500px',
+  minHeight: '100vh',
+  boxShadow: '0px 0px 24px 1px',
+  background: theme.palette.background.default, // Background from the theme
+  backgroundRepeat: 'no-repeat',
+  backgroundSize: 'cover',
+  [theme.breakpoints.down('sm')]: {
+    width: '100%',
+    boxShadow: 'none'
   }
-`;
-export const WrapFooter = styled.div`
-  .Footer-content {
-    padding-bottom: 16px;
-    width: 500px;
-    @media (max-width: 576px) {
-      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
-      width: 100%;
-      box-shadow: none;
+}));
+
+export const WrapFooter = styled('div')(({ theme }) => ({
+  '.Footer-content': {
+    paddingBottom: '16px',
+    width: '500px',
+    [theme.breakpoints.down('sm')]: {
+      paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+      width: '100%',
+      boxShadow: 'none'
     }
   }
-`;
+}));
 
 export default function MobileLayout({ children }: { children: React.ReactNode }) {
   return (

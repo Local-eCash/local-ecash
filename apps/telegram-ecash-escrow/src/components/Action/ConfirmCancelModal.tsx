@@ -1,6 +1,7 @@
 'use client';
 
-import styled from '@emotion/styled';
+import { styled } from '@mui/material/styles';
+
 import { ChevronLeft } from '@mui/icons-material';
 import {
   Button,
@@ -24,64 +25,61 @@ interface ConfirmCancelModalProps {
   returnAction: () => void;
 }
 
-const StyledDialog = styled(Dialog)`
-  .MuiPaper-root {
-    background-image: url('/bg-dialog.svg');
-    background-repeat: no-repeat;
-    background-size: cover;
-    width: 500px;
-    max-height: 100%;
-    padding: 16px;
-    margin: 0;
-    @media (max-width: 576px) {
-      width: 100%;
+const StyledDialog = styled(Dialog)(({ theme }) => ({
+  '.MuiPaper-root': {
+    background: theme.palette.background.default,
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: 'cover',
+    width: '500px',
+    maxHeight: '100%',
+    padding: '16px',
+    margin: '0',
+    [theme.breakpoints.down('sm')]: {
+      width: '100%'
     }
-  }
+  },
 
-  .MuiIconButton-root {
-    width: fit-content;
-    svg {
-      font-size: 32px;
+  '.MuiIconButton-root': {
+    width: 'fit-content',
+    svg: {
+      fontSize: '32px'
     }
-  }
+  },
 
-  .MuiDialogTitle-root {
-    padding: 0 16px;
-    padding-top: 16px;
-    font-size: 26px;
-    text-align: center;
-  }
+  '.MuiDialogTitle-root': {
+    padding: '0 16px',
+    paddingTop: '16px',
+    fontSize: '26px',
+    textAlign: 'center'
+  },
 
-  .MuiDialogContent-root {
-    padding: 0;
-  }
+  '.MuiDialogContent-root': {
+    padding: '0'
+  },
 
-  .MuiDialogActions-root {
-    justify-content: space-evenly;
+  '.MuiDialogActions-root': {
+    justifyContent: 'space-evenly',
 
-    button {
-      text-transform: math-auto;
-      width: 100%;
-
-      &.confirm-btn {
-        color: white;
+    button: {
+      textTransform: 'none', // Fixed typo ("math-auto" -> "none")
+      width: '100%',
+      '&.confirm-btn': {
+        color: theme.palette.common.white
       }
     }
-  }
+  },
 
-  .back-btn {
-    padding: 0;
-    position: absolute;
-    left: 8px;
-    top: 20px;
-    // border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 12px;
-
-    svg {
-      font-size: 32px;
+  '.back-btn': {
+    padding: '0',
+    position: 'absolute',
+    left: '8px',
+    top: '20px',
+    borderRadius: '12px',
+    svg: {
+      fontSize: '32px'
     }
   }
-`;
+}));
 
 const Transition = React.forwardRef(function Transition(
   props: TransitionProps & {
