@@ -252,9 +252,7 @@ export default function DisputeDetail() {
             signatory: Buffer.from(arbiSignatory).toString('hex'),
             signatoryOwnerHash160: Buffer.from(arbiModPkh).toString('hex')
           }
-        })
-          .unwrap()
-          .catch(() => setError(true));
+        }).unwrap();
       } else {
         const modSignatory = SignOracleSignatory(arbiModSk, ACTION.MOD_RELEASE, nonce);
 
@@ -265,17 +263,15 @@ export default function DisputeDetail() {
             signatory: Buffer.from(modSignatory).toString('hex'),
             signatoryOwnerHash160: Buffer.from(arbiModPkh).toString('hex')
           }
-        })
-          .unwrap()
-          .catch(() => setError(true));
+        }).unwrap();
       }
 
       await updateDisputeTrigger({ input: { id: id!, escrowOrderId: escrowOrder.id!, status: DisputeStatus.Resolved } })
         .unwrap()
-        .then(() => setReleaseByArb(true))
-        .catch(() => setError(true));
+        .then(() => setReleaseByArb(true));
     } catch (e) {
       console.log(e);
+      setError(true);
     }
 
     setOpenReleaseModal(false);
@@ -305,8 +301,7 @@ export default function DisputeDetail() {
           }
         })
           .unwrap()
-          .then(() => setReturnByArb(true))
-          .catch(() => setError(true));
+          .then(() => setReturnByArb(true));
       } else {
         const modSignatory = SignOracleSignatory(arbiModSk, ACTION.MOD_RETURN, nonce);
 
@@ -317,19 +312,17 @@ export default function DisputeDetail() {
             signatory: Buffer.from(modSignatory).toString('hex'),
             signatoryOwnerHash160: Buffer.from(arbiModPkh).toString('hex')
           }
-        })
-          .unwrap()
-          .catch(() => setError(true));
+        }).unwrap();
       }
 
       await updateDisputeTrigger({
         input: { id: id!, escrowOrderId: escrowOrder.id!, status: DisputeStatus.Resolved }
       })
         .unwrap()
-        .then(() => setReleaseByArb(true))
-        .catch(() => setError(true));
+        .then(() => setReleaseByArb(true));
     } catch (e) {
       console.log(e);
+      setError(true);
     }
 
     setOpenReleaseModal(false);
@@ -441,12 +434,11 @@ export default function DisputeDetail() {
                 <AlertTitle>
                   <b>Resolved at: {new Date(escrowOrder?.updatedAt).toLocaleString('vi-VN')}</b>
                 </AlertTitle>
-                <b style={{ fontSize: '15px' }}>
+                <Typography style={{ fontSize: '15px' }} fontWeight="bold">
                   {escrowOrder?.escrowOrderStatus === EscrowOrderStatus.Complete
                     ? 'The fund have been forwarded to the buyer. '
                     : 'The fund have been returned to the seller. '}
-                </b>
-                <br />
+                </Typography>
                 <Link
                   target="_blank"
                   rel="noopener"

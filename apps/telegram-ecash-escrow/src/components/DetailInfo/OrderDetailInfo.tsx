@@ -138,14 +138,19 @@ const OrderDetailInfo = ({ item }: OrderItemProps) => {
   };
 
   const orderStatus = () => {
-    if (order?.escrowOrderStatus === EscrowOrderStatus.Escrow && order?.releaseSignatory) {
-      return 'Released';
+    if (order?.dispute && order?.dispute?.status === DisputeStatus.Active) return 'Dispute';
+
+    if (order?.escrowOrderStatus === EscrowOrderStatus.Escrow) {
+      if (order?.releaseSignatory) {
+        return 'Released';
+      }
+
+      if (order?.returnSignatory) {
+        return 'Returned';
+      }
     }
 
-    if (order?.dispute && order?.dispute?.status === DisputeStatus.Active) return 'Dispute';
-    else {
-      return order?.escrowOrderStatus?.toLowerCase()?.replace(/^./, char => char.toUpperCase());
-    }
+    return order?.escrowOrderStatus?.toLowerCase()?.replace(/^./, char => char.toUpperCase());
   };
 
   //get rate data

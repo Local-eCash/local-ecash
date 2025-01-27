@@ -275,10 +275,10 @@ const OrderDetail = () => {
         }
       })
         .unwrap()
-        .then(() => setRelease(true))
-        .catch(() => setError(true));
+        .then(() => setRelease(true));
     } catch (e) {
       console.log(e);
+      setError(true);
     }
 
     setLoading(false);
@@ -312,10 +312,10 @@ const OrderDetail = () => {
         }
       })
         .unwrap()
-        .then(() => setCancel(true))
-        .catch(() => setError(true));
+        .then(() => setCancel(true));
     } catch (e) {
       console.log(e);
+      setError(true);
     }
 
     setLoading(false);
@@ -359,7 +359,7 @@ const OrderDetail = () => {
       } else {
         const { signatoryOwnerHash160 } = currentData.escrowOrder;
         const { hash160: arbHash160, publicKey: arbPk } = currentData.escrowOrder.arbitratorAccount;
-        const { hash160: modHash160, publicKey: modPk } = currentData.escrowOrder.arbitratorAccount;
+        const { hash160: modHash160, publicKey: modPk } = currentData.escrowOrder.moderatorAccount;
         const arbSignedSignatory = signatoryOwnerHash160 === arbHash160;
 
         signatory = arbSignedSignatory
@@ -397,10 +397,10 @@ const OrderDetail = () => {
         }
       })
         .unwrap()
-        .then(() => setClaim(true))
-        .catch(() => setError(true));
+        .then(() => setClaim(true));
     } catch (e) {
       console.log(e);
+      setError(true);
     }
 
     setLoading(false);
@@ -440,7 +440,7 @@ const OrderDetail = () => {
       } else {
         const { signatoryOwnerHash160 } = currentData.escrowOrder;
         const { hash160: arbHash160, publicKey: arbPk } = currentData.escrowOrder.arbitratorAccount;
-        const { hash160: modHash160, publicKey: modPk } = currentData.escrowOrder.arbitratorAccount;
+        const { hash160: modHash160, publicKey: modPk } = currentData.escrowOrder.moderatorAccount;
         const arbSignedSignatory = signatoryOwnerHash160 === arbHash160;
 
         signatory =
@@ -479,10 +479,10 @@ const OrderDetail = () => {
         }
       })
         .unwrap()
-        .then(() => setClaim(true))
-        .catch(() => setError(true));
+        .then(() => setClaim(true));
     } catch (e) {
       console.log(e);
+      setError(true);
     }
 
     setLoading(false);
