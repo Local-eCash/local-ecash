@@ -9,11 +9,24 @@ import TelegramButton from '@/src/components/TelegramButton/TelegramButton';
 import TickerHeader from '@/src/components/TickerHeader/TickerHeader';
 import CustomToast from '@/src/components/Toast/CustomToast';
 import { UtxoContext } from '@/src/store/context/utxoProvider';
-import { buildReleaseTx, BuyerReturnSignatory, sellerBuildDepositTx, SellerReleaseSignatory } from '@/src/store/escrow';
+import {
+  ArbiReleaseSignatory,
+  ArbiReturnSignatory,
+  buildReleaseTx,
+  buildReturnTx,
+  BuyerReturnSignatory,
+  ModReleaseSignatory,
+  ModReturnSignatory,
+  sellerBuildDepositTx,
+  SellerReleaseSignatory,
+  SignOracleSignatory
+} from '@/src/store/escrow';
+import { ACTION } from '@/src/store/escrow/constant';
 import { deserializeTransaction, estimatedFee } from '@/src/store/util';
 import { COIN, coinInfo } from '@bcpros/lixi-models';
 import {
   DisputeStatus,
+  EscrowOrderAction,
   escrowOrderApi,
   EscrowOrderStatus,
   getSelectedWalletPath,
@@ -28,8 +41,9 @@ import {
 import CheckIcon from '@mui/icons-material/Check';
 import ClearIcon from '@mui/icons-material/Clear';
 import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule';
+import KeyboardReturnIcon from '@mui/icons-material/KeyboardReturn';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
-import { Button, CircularProgress, Stack, Typography } from '@mui/material';
+import { Button, CircularProgress, FormControlLabel, Radio, RadioGroup, Stack, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { fromHex, Script, shaRmd160, Tx } from 'ecash-lib';
 import cashaddr from 'ecashaddrjs';
@@ -94,15 +108,30 @@ const OrderDetail = () => {
   const [release, setRelease] = useState(false);
   const [cancel, setCancel] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [claim, setClaim] = useState(false);
   const [notEnoughFund, setNotEnoughFund] = useState(false);
   const [openCancelModal, setOpenCancelModal] = useState(false);
   const [openReleaseModal, setOpenReleaseModal] = useState(false);
   const [alreadyRelease, setAlreadyRelease] = useState(false);
   const [alreadyCancel, setAlreadyCancel] = useState(false);
+  const [buyerDonateOption, setBuyerDonateOption] = useState<number>(null);
+  const [sellerDonateOption, setSellerDonateOption] = useState<number>(null);
+  const [donateOption, setDonateOption] = useState<{ label: string; value: number }[]>([
+    {
+      label: '💼 Claim my security deposit back to my wallet',
+      value: 1
+    },
+    {
+      label: `💙 Donate my security deposit to Local eCash`,
+      value: 3
+    }
+  ]);
 
-  const { useEscrowOrderQuery, useUpdateEscrowOrderStatusMutation } = escrowOrderApi;
+  const { useEscrowOrderQuery, useUpdateEscrowOrderStatusMutation, useUpdateEscrowOrderSignatoryMutation } =
+    escrowOrderApi;
   const { currentData, isError, isSuccess } = useEscrowOrderQuery({ id: id! }, { skip: !id || !token });
   const [updateOrderTrigger] = useUpdateEscrowOrderStatusMutation();
+  const [updateEscrowOrderSignatoryTrigger] = useUpdateEscrowOrderSignatoryMutation();
 
   useEffect(() => {
     currentData?.escrowOrder.escrowOrderStatus !== EscrowOrderStatus.Complete &&
@@ -110,6 +139,24 @@ const OrderDetail = () => {
       !_.isNil(socket) &&
       dispatch(userSubcribeEscrowOrderChannel(id));
   }, [socket, isSuccess]);
+
+  useEffect(() => {
+    currentData?.escrowOrder.dispute &&
+      setDonateOption([
+        {
+          label: '💼 Claim my security deposit back to my wallet',
+          value: 1
+        },
+        {
+          label: `⚖️ Donate my security deposit to Arbitrator`,
+          value: 2
+        },
+        {
+          label: `💙 Donate my security deposit to Local eCash`,
+          value: 3
+        }
+      ]);
+  }, [currentData?.escrowOrder.dispute]);
 
   const updateOrderStatus = async (status: EscrowOrderStatus) => {
     setLoading(true);
@@ -201,15 +248,7 @@ const OrderDetail = () => {
     setLoading(false);
   };
 
-  const handleRelease = addressToRelease => {
-    const GNCAddress = process.env.NEXT_PUBLIC_ADDRESS_GNC;
-
-    const changeAddress = _.isEmpty(addressToRelease) || _.isNil(addressToRelease) ? GNCAddress : addressToRelease;
-    const isGNCAddress = changeAddress === GNCAddress;
-    handleSellerReleaseEscrow(EscrowOrderStatus.Complete, changeAddress, isGNCAddress);
-  };
-
-  const handleSellerReleaseEscrow = async (status: EscrowOrderStatus, changeAddress: string, isGNCAddress: boolean) => {
+  const handleSellerReleaseEscrow = async (sellerDonate: boolean) => {
     setLoading(true);
 
     if (currentData?.escrowOrder.escrowOrderStatus === EscrowOrderStatus.Complete) {
@@ -220,38 +259,21 @@ const OrderDetail = () => {
     }
 
     try {
-      const { amount } = currentData?.escrowOrder;
-      const disputeFee = calDisputeFee;
-      const isBuyerDeposit = currentData?.escrowOrder.buyerDepositTx ? true : false;
-
       const sellerSk = fromHex(selectedWalletPath?.privateKey);
-      const sellerPk = fromHex(selectedWalletPath?.publicKey);
-      const escrowTxids = currentData?.escrowOrder.escrowTxids;
-      const buyerPk = fromHex(currentData?.escrowOrder.buyerAccount.publicKey as string);
-      const buyerPkh = shaRmd160(buyerPk);
-      const buyerP2pkh = Script.p2pkh(buyerPkh);
+      const sellerPk = fromHex(selectedWalletPath.publicKey as string);
+      const sellerPkh = shaRmd160(sellerPk);
       const nonce = currentData?.escrowOrder.nonce as string;
-      const script = Buffer.from(currentData?.escrowOrder.escrowScript as string, 'hex') as unknown as Uint8Array;
+      const sellerSignatory = SignOracleSignatory(sellerSk, ACTION.SELLER_RELEASE, nonce);
 
-      const escrowScript = new Script(script);
-      const sellerSignatory = SellerReleaseSignatory(sellerSk, sellerPk, buyerPk, nonce);
-
-      const txBuild = buildReleaseTx(
-        escrowTxids,
-        amount,
-        escrowScript,
-        sellerSignatory,
-        buyerP2pkh,
-        changeAddress,
-        disputeFee,
-        isBuyerDeposit,
-        isGNCAddress
-      );
-
-      const txid = (await chronik.broadcastTx(txBuild)).txid;
-
-      // update order status to escrow
-      await updateOrderTrigger({ input: { orderId: id!, status, txid, socketId: socket?.id } })
+      await updateEscrowOrderSignatoryTrigger({
+        input: {
+          orderId: id!,
+          action: EscrowOrderAction.Release,
+          signatory: Buffer.from(sellerSignatory).toString('hex'),
+          signatoryOwnerHash160: Buffer.from(sellerPkh).toString('hex'),
+          sellerDonateAmount: sellerDonate ? calDisputeFee : null
+        }
+      })
         .unwrap()
         .then(() => setRelease(true))
         .catch(() => setError(true));
@@ -262,7 +284,7 @@ const OrderDetail = () => {
     setLoading(false);
   };
 
-  const handleBuyerReturnEscrow = async (status: EscrowOrderStatus) => {
+  const handleBuyerReturnEscrow = async (buyerDonate: boolean) => {
     setLoading(true);
 
     if (currentData?.escrowOrder.escrowOrderStatus === EscrowOrderStatus.Cancel) {
@@ -273,38 +295,22 @@ const OrderDetail = () => {
     }
 
     try {
-      const { amount } = currentData?.escrowOrder;
-      const buyerAddress = parseCashAddressToPrefix(COIN.XEC, selectedWalletPath?.cashAddress);
-      const disputeFee = calDisputeFee;
+      const buyerSk = fromHex(selectedWalletPath?.privateKey);
+      const buyerPk = fromHex(selectedWalletPath.publicKey as string);
+      const buyerPkh = shaRmd160(buyerPk);
+      const nonce = currentData?.escrowOrder.nonce as string;
+      const buyerSignatory = SignOracleSignatory(buyerSk, ACTION.BUYER_RETURN, nonce);
       const isBuyerDeposit = currentData?.escrowOrder.buyerDepositTx ? true : false;
 
-      const buyerSk = fromHex(selectedWalletPath?.privateKey);
-      const buyerPk = fromHex(selectedWalletPath?.publicKey);
-      const escrowTxid = currentData?.escrowOrder.escrowTxids;
-      const sellerPk = fromHex(currentData?.escrowOrder.sellerAccount.publicKey as string);
-      const sellerPkh = shaRmd160(sellerPk);
-      const sellerP2pkh = Script.p2pkh(sellerPkh);
-      const nonce = currentData?.escrowOrder.nonce as string;
-      const script = Buffer.from(currentData?.escrowOrder.escrowScript as string, 'hex') as unknown as Uint8Array;
-
-      const escrowScript = new Script(script);
-      const buyerSignatory = BuyerReturnSignatory(buyerSk, buyerPk, sellerPk, nonce);
-
-      const txBuild = buildReleaseTx(
-        escrowTxid,
-        amount,
-        escrowScript,
-        buyerSignatory,
-        sellerP2pkh,
-        isBuyerDeposit ? buyerAddress : null,
-        disputeFee,
-        isBuyerDeposit
-      );
-
-      const txid = (await chronik.broadcastTx(txBuild)).txid;
-
-      // update order status to escrow
-      await updateOrderTrigger({ input: { orderId: id!, status, txid, socketId: socket?.id } })
+      await updateEscrowOrderSignatoryTrigger({
+        input: {
+          orderId: id!,
+          action: EscrowOrderAction.Return,
+          signatory: Buffer.from(buyerSignatory).toString('hex'),
+          signatoryOwnerHash160: Buffer.from(buyerPkh).toString('hex'),
+          buyerDonateAmount: buyerDonate && isBuyerDeposit ? calDisputeFee : null
+        }
+      })
         .unwrap()
         .then(() => setCancel(true))
         .catch(() => setError(true));
@@ -317,6 +323,169 @@ const OrderDetail = () => {
 
   const handleCreateDispute = () => {
     dispatch(openModal('ReasonDisputeModal', { id: id! }));
+  };
+
+  const handleBuyerClaimEscrow = async () => {
+    setLoading(true);
+    try {
+      const { amount, sellerDonateAmount, dispute } = currentData?.escrowOrder || {};
+      const disputeFee = calDisputeFee;
+      const isBuyerDeposit = currentData?.escrowOrder.buyerDepositTx ? true : false;
+      const isDispute = !_.isNil(dispute);
+      const escrowTxids = currentData?.escrowOrder.escrowTxids;
+
+      const sellerPk = fromHex(currentData?.escrowOrder.sellerAccount.publicKey);
+      const sellerPkh = shaRmd160(sellerPk);
+      const sellerP2pkh = Script.p2pkh(sellerPkh);
+
+      const buyerPk = fromHex(selectedWalletPath.publicKey as string);
+      const buyerPkh = shaRmd160(buyerPk);
+      const buyerP2pkh = Script.p2pkh(buyerPkh);
+      const buyerSk = fromHex(selectedWalletPath?.privateKey);
+
+      const script = Buffer.from(currentData?.escrowOrder.escrowScript as string, 'hex') as unknown as Uint8Array;
+      const escrowScript = new Script(script);
+
+      const releaseSignatory = Buffer.from(
+        currentData?.escrowOrder.releaseSignatory as string,
+        'hex'
+      ) as unknown as Uint8Array;
+
+      let signatory = null;
+      let arbModP2pkh: Script | null = null;
+
+      if (!isDispute) {
+        signatory = SellerReleaseSignatory(sellerPk, buyerPk, buyerSk, releaseSignatory);
+      } else {
+        const { signatoryOwnerHash160 } = currentData.escrowOrder;
+        const { hash160: arbHash160, publicKey: arbPk } = currentData.escrowOrder.arbitratorAccount;
+        const { hash160: modHash160, publicKey: modPk } = currentData.escrowOrder.arbitratorAccount;
+        const arbSignedSignatory = signatoryOwnerHash160 === arbHash160;
+
+        signatory = arbSignedSignatory
+          ? ArbiReleaseSignatory(fromHex(arbPk), buyerPk, buyerSk, releaseSignatory)
+          : ModReleaseSignatory(fromHex(modPk), buyerPk, buyerSk, releaseSignatory);
+
+        arbModP2pkh = arbSignedSignatory ? Script.p2pkh(fromHex(arbHash160)) : Script.p2pkh(fromHex(modHash160));
+      }
+
+      const txBuild = buildReleaseTx(
+        escrowTxids,
+        amount,
+        disputeFee,
+        escrowScript,
+        signatory,
+        buyerP2pkh,
+        sellerP2pkh,
+        isBuyerDeposit,
+        buyerDonateOption,
+        sellerDonateAmount,
+        isDispute,
+        arbModP2pkh
+      );
+
+      const txid = (await chronik.broadcastTx(txBuild)).txid;
+
+      // update order status to escrow
+      await updateOrderTrigger({
+        input: {
+          orderId: id!,
+          status: EscrowOrderStatus.Complete,
+          txid,
+          socketId: socket?.id,
+          buyerDonateAmount: buyerDonateOption && isBuyerDeposit ? calDisputeFee : null
+        }
+      })
+        .unwrap()
+        .then(() => setClaim(true))
+        .catch(() => setError(true));
+    } catch (e) {
+      console.log(e);
+    }
+
+    setLoading(false);
+  };
+
+  const handleSellerClaimEscrow = async () => {
+    setLoading(true);
+    try {
+      const { amount, buyerDonateAmount } = currentData?.escrowOrder || {};
+      const disputeFee = calDisputeFee;
+      const isBuyerDeposit = currentData?.escrowOrder.buyerDepositTx ? true : false;
+      const escrowTxids = currentData?.escrowOrder.escrowTxids;
+      const isDispute = !_.isNil(currentData?.escrowOrder.dispute);
+
+      const buyerPk = fromHex(currentData?.escrowOrder.buyerAccount.publicKey);
+      const buyerPkh = shaRmd160(buyerPk);
+      const buyerP2pkh = Script.p2pkh(buyerPkh);
+
+      const sellerPk = fromHex(selectedWalletPath.publicKey as string);
+      const sellerPkh = shaRmd160(sellerPk);
+      const sellerP2pkh = Script.p2pkh(sellerPkh);
+      const sellerSk = fromHex(selectedWalletPath?.privateKey);
+
+      const script = Buffer.from(currentData?.escrowOrder.escrowScript as string, 'hex') as unknown as Uint8Array;
+      const escrowScript = new Script(script);
+
+      const returnSignatory = Buffer.from(
+        currentData?.escrowOrder.returnSignatory as string,
+        'hex'
+      ) as unknown as Uint8Array;
+
+      let signatory;
+      let arbModP2pkh: Script | null = null;
+
+      if (!isDispute) {
+        signatory = BuyerReturnSignatory(buyerPk, sellerPk, sellerSk, returnSignatory);
+      } else {
+        const { signatoryOwnerHash160 } = currentData.escrowOrder;
+        const { hash160: arbHash160, publicKey: arbPk } = currentData.escrowOrder.arbitratorAccount;
+        const { hash160: modHash160, publicKey: modPk } = currentData.escrowOrder.arbitratorAccount;
+        const arbSignedSignatory = signatoryOwnerHash160 === arbHash160;
+
+        signatory =
+          signatoryOwnerHash160 === arbHash160
+            ? ArbiReturnSignatory(fromHex(arbPk), sellerPk, sellerSk, returnSignatory)
+            : ModReturnSignatory(fromHex(modPk), sellerPk, sellerSk, returnSignatory);
+
+        arbModP2pkh = arbSignedSignatory ? Script.p2pkh(fromHex(arbHash160)) : Script.p2pkh(fromHex(modHash160));
+      }
+
+      const txBuild = buildReturnTx(
+        escrowTxids,
+        amount,
+        disputeFee,
+        escrowScript,
+        signatory,
+        buyerP2pkh,
+        sellerP2pkh,
+        isBuyerDeposit,
+        sellerDonateOption,
+        buyerDonateAmount,
+        isDispute,
+        arbModP2pkh
+      );
+
+      const txid = (await chronik.broadcastTx(txBuild)).txid;
+
+      //update order status to escrow
+      await updateOrderTrigger({
+        input: {
+          orderId: id!,
+          status: EscrowOrderStatus.Cancel,
+          txid,
+          socketId: socket?.id,
+          sellerDonateAmount: sellerDonateOption !== 1 ? calDisputeFee : null
+        }
+      })
+        .unwrap()
+        .then(() => setClaim(true))
+        .catch(() => setError(true));
+    } catch (e) {
+      console.log(e);
+    }
+
+    setLoading(false);
   };
 
   const escrowStatus = () => {
@@ -401,7 +570,46 @@ const OrderDetail = () => {
       );
     }
 
+    //ReleaseSignatory or ReturnSignatory only available after escrow so we check logic here
     if (currentData?.escrowOrder.escrowOrderStatus === EscrowOrderStatus.Escrow) {
+      if (currentData.escrowOrder.releaseSignatory) {
+        return (
+          <React.Fragment>
+            <Typography variant="body1" color="#66bb6a" align="center">
+              Successfully Released!
+            </Typography>
+            <Stack direction="row" spacing={0} justifyContent="center" color="white" alignItems="center" margin="20px">
+              <Image width={50} height={50} src="/safebox-open.svg" alt="" />
+              <CheckIcon color="success" style={{ fontSize: '50px' }} />
+            </Stack>
+            <Typography variant="body1" color="#66bb6a" align="center">
+              {`${currentData.escrowOrder.amount} XEC has been released.`}
+              <br />
+              {`${isSeller ? 'The buyer' : 'You'} can claim the fund now.`}
+            </Typography>
+          </React.Fragment>
+        );
+      }
+
+      if (currentData.escrowOrder.returnSignatory) {
+        return (
+          <React.Fragment>
+            <Typography variant="body1" color="#66bb6a" align="center">
+              Successfully Returned!
+            </Typography>
+            <Stack direction="row" spacing={0} justifyContent="center" color="white" alignItems="center" margin="20px">
+              <Image width={50} height={50} src="/safebox-open.svg" alt="" />
+              <KeyboardReturnIcon color="success" style={{ fontSize: '50px' }} />
+            </Stack>
+            <Typography variant="body1" color="#66bb6a" align="center">
+              {`${currentData.escrowOrder.amount} XEC has been returned.`}
+              <br />
+              {`${isSeller ? 'You' : 'The seller'} can now claim the fund.`}
+            </Typography>
+          </React.Fragment>
+        );
+      }
+
       return isSeller ? (
         <Typography variant="body1" color="#FFBF00" align="center">
           Only release the escrow when you have received the goods
@@ -456,7 +664,7 @@ const OrderDetail = () => {
           <Button
             style={{ backgroundColor: '#a41208' }}
             variant="contained"
-            onClick={() => updateOrderStatus(EscrowOrderStatus.Cancel)}
+            onClick={async () => await updateOrderStatus(EscrowOrderStatus.Cancel)}
             disabled={loading}
           >
             Decline
@@ -465,7 +673,7 @@ const OrderDetail = () => {
             disabled={!checkSellerEnoughFund()}
             color="success"
             variant="contained"
-            onClick={() => handleSellerDepositEscrow()}
+            onClick={async () => await handleSellerDepositEscrow()}
           >
             Escrow
           </Button>
@@ -475,7 +683,7 @@ const OrderDetail = () => {
           style={{ backgroundColor: '#a41208' }}
           variant="contained"
           fullWidth
-          onClick={() => updateOrderStatus(EscrowOrderStatus.Cancel)}
+          onClick={async () => await updateOrderStatus(EscrowOrderStatus.Cancel)}
           disabled={loading}
         >
           Cancel
@@ -484,8 +692,88 @@ const OrderDetail = () => {
     }
 
     if (currentData?.escrowOrder.escrowOrderStatus === EscrowOrderStatus.Escrow) {
-      if (currentData?.escrowOrder.dispute || isArbiOrMod) {
+      if (currentData?.escrowOrder.dispute?.status === DisputeStatus.Active || isArbiOrMod) {
         return;
+      }
+
+      //We use tenary operator here instead of && because we want to the code to stop executing
+      if (currentData.escrowOrder.releaseSignatory) {
+        return isSeller ? null : (
+          <React.Fragment>
+            {currentData?.escrowOrder.buyerDepositTx && (
+              <Stack>
+                <RadioGroup>
+                  {donateOption.map(item => {
+                    return (
+                      <FormControlLabel
+                        onClick={() => {
+                          setBuyerDonateOption(item.value);
+                        }}
+                        key={item.label}
+                        value={item.value}
+                        control={<Radio />}
+                        label={item.label}
+                        checked={item.value === buyerDonateOption}
+                      />
+                    );
+                  })}
+                </RadioGroup>
+                <Typography sx={{ fontSize: '12px', marginTop: '10px' }} fontStyle="italic">
+                  Optional: This service has been brought to you free of charge. We would appreciate a donation to
+                  continue maintaining it.
+                </Typography>
+              </Stack>
+            )}
+            <Button
+              color="success"
+              variant="contained"
+              disabled={loading || (currentData?.escrowOrder.buyerDepositTx && buyerDonateOption === null)}
+              onClick={async () => await handleBuyerClaimEscrow()}
+              fullWidth
+              style={{ marginTop: '10px' }}
+            >
+              Claim
+            </Button>
+          </React.Fragment>
+        );
+      }
+
+      if (currentData.escrowOrder.returnSignatory) {
+        return isSeller ? (
+          <React.Fragment>
+            <Stack>
+              <RadioGroup>
+                {donateOption.map(item => {
+                  return (
+                    <FormControlLabel
+                      onClick={() => {
+                        setSellerDonateOption(item.value);
+                      }}
+                      key={item.label}
+                      value={item.value}
+                      control={<Radio />}
+                      label={item.label}
+                      checked={item.value === sellerDonateOption}
+                    />
+                  );
+                })}
+              </RadioGroup>
+              <Typography sx={{ fontSize: '12px', marginTop: '10px' }} fontStyle="italic">
+                Optional: This service has been brought to you free of charge. We would appreciate a donation to
+                continue maintaining it.
+              </Typography>
+            </Stack>
+            <Button
+              color="success"
+              variant="contained"
+              disabled={loading || sellerDonateOption === null}
+              onClick={async () => await handleSellerClaimEscrow()}
+              fullWidth
+            >
+              Claim
+            </Button>
+          </React.Fragment>
+        ) : null;
       }
 
       return isSeller ? (
@@ -499,8 +787,6 @@ const OrderDetail = () => {
         </div>
       ) : (
         <div>
-          {telegramButton(true, 'Chat with seller for payment details')}
-
           <div className="group-button-wrap">
             <Button color="warning" variant="contained" disabled={loading} onClick={() => handleCreateDispute()}>
               Dispute
@@ -526,14 +812,14 @@ const OrderDetail = () => {
       selectedWalletPath?.hash160 === currentData?.escrowOrder.moderatorAccount.hash160;
 
     //remove bottom button when buyer in status escrow
-    if (
-      !isSeller &&
-      currentData?.escrowOrder?.escrowOrderStatus === EscrowOrderStatus.Escrow &&
-      !alwaysShow &&
-      !currentData?.escrowOrder?.dispute
-    ) {
-      return;
-    }
+    // if (
+    //   !isSeller &&
+    //   currentData?.escrowOrder?.escrowOrderStatus === EscrowOrderStatus.Escrow &&
+    //   !alwaysShow &&
+    //   !currentData?.escrowOrder?.dispute
+    // ) {
+    //   return;
+    // }
 
     return (
       !isArbiOrMod && (
@@ -565,7 +851,7 @@ const OrderDetail = () => {
       isSeller && (
         <QRCode
           address={parseCashAddressToPrefix(COIN.XEC, selectedWalletPath?.cashAddress)}
-          amount={totalAmountWithDepositAndEscrowFee()}
+          amount={Number(totalAmountWithDepositAndEscrowFee().toFixed(2))}
           width="60%"
         />
       )
@@ -640,14 +926,16 @@ const OrderDetail = () => {
 
         <ConfirmCancelModal
           isOpen={openCancelModal}
-          returnAction={() => handleBuyerReturnEscrow(EscrowOrderStatus.Cancel)}
+          returnAction={value => handleBuyerReturnEscrow(value)}
           onDissmissModal={value => setOpenCancelModal(value)}
+          isBuyerDeposit={currentData?.escrowOrder.buyerDepositTx ? true : false}
+          disputeFee={calDisputeFee}
         />
 
         <ConfirmReleaseModal
           isOpen={openReleaseModal}
           disputeFee={calDisputeFee}
-          returnAction={value => handleRelease(value)}
+          returnAction={value => handleSellerReleaseEscrow(value)}
           onDissmissModal={value => setOpenReleaseModal(value)}
         />
 
@@ -672,22 +960,18 @@ const OrderDetail = () => {
 
           <CustomToast
             isOpen={release}
-            content="Order released successfully. Click here to see transaction!"
+            content="Order released successfully!"
             handleClose={() => setRelease(false)}
             type="success"
             autoHideDuration={3500}
-            isLink={true}
-            linkDescription={`${coinInfo[COIN.XEC].blockExplorerUrl}/tx/${currentData?.escrowOrder.releaseTxid}`}
           />
 
           <CustomToast
             isOpen={cancel}
-            content="Order cancelled successfully. Funds have been returned to the seller. Click here to see transaction!"
+            content="Order cancelled successfully!"
             handleClose={() => setCancel(false)}
             type="success"
             autoHideDuration={3500}
-            isLink={true}
-            linkDescription={`${coinInfo[COIN.XEC].blockExplorerUrl}/tx/${currentData?.escrowOrder.returnTxid}`}
           />
 
           <CustomToast
@@ -706,6 +990,20 @@ const OrderDetail = () => {
             handleClose={() => setAlreadyCancel(false)}
             type="warning"
             autoHideDuration={3500}
+          />
+
+          <CustomToast
+            isOpen={claim}
+            content="Escrow fund claim successful. Click here to see transaction!"
+            handleClose={() => setClaim(false)}
+            type="success"
+            autoHideDuration={3500}
+            isLink={true}
+            linkDescription={
+              currentData?.escrowOrder.releaseTxid
+                ? `${coinInfo[COIN.XEC].blockExplorerUrl}/tx/${currentData?.escrowOrder.releaseTxid}`
+                : `${coinInfo[COIN.XEC].blockExplorerUrl}/tx/${currentData?.escrowOrder.returnTxid}`
+            }
           />
         </Stack>
       </OrderDetailPage>

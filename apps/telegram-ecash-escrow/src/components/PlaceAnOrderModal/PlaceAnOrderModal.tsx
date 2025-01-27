@@ -1,23 +1,23 @@
 'use client';
 
-import { COIN_OTHERS } from '@/src/store/constants';
+import { COIN_OTHERS, COIN_USD_STABLECOIN_TICKER } from '@/src/store/constants';
 import { UtxoContext } from '@/src/store/context/utxoProvider';
-import { buyerDepositFee, Escrow, splitUtxos } from '@/src/store/escrow';
+import { Escrow, buyerDepositFee, splitUtxos } from '@/src/store/escrow';
 import { convertXECToSatoshi, estimatedFee } from '@/src/store/util';
-import { COIN, coinInfo, CreateEscrowOrderInput } from '@bcpros/lixi-models';
+import { COIN, CreateEscrowOrderInput, coinInfo } from '@bcpros/lixi-models';
 import {
+  PostQueryItem,
+  UtxoInNodeInput,
+  WalletContextNode,
   closeModal,
   convertEscrowScriptHashToEcashAddress,
   escrowOrderApi,
   fiatCurrencyApi,
   getSelectedWalletPath,
   parseCashAddressToPrefix,
-  PostQueryItem,
   showToast,
   useSliceDispatch as useLixiSliceDispatch,
-  useSliceSelector as useLixiSliceSelector,
-  UtxoInNodeInput,
-  WalletContextNode
+  useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
 import { ChevronLeft } from '@mui/icons-material';
 import {
@@ -42,7 +42,7 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { TransitionProps } from '@mui/material/transitions';
-import { fromHex, Script, shaRmd160 } from 'ecash-lib';
+import { Script, fromHex, shaRmd160 } from 'ecash-lib';
 import _ from 'lodash';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -284,7 +284,7 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
     { skip: !data, refetchOnMountOrArgChange: true }
   );
   const { currentData: arbitratorCurrentData, isError: arbitratorIsError } = useGetRandomArbitratorAccountQuery(
-    {},
+    { offerId: post.id },
     { skip: !data, refetchOnMountOrArgChange: true }
   );
 
@@ -447,7 +447,7 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
     let amountCoinOrCurrency = 0;
     const textAmountPer1MXEC = 1000000;
     //if payment is crypto, we convert from coin => USD => XEC
-    if (post?.postOffer?.coinPayment) {
+    if (post?.postOffer?.coinPayment && post?.postOffer?.coinPayment !== COIN_USD_STABLECOIN_TICKER) {
       const coinPayment = post.postOffer.coinPayment.toLowerCase();
       const rateArrayCoin = rateData.find(item => item.coin === coinPayment);
       const rateArrayXec = rateData.find(item => item.coin === 'xec');
@@ -496,7 +496,7 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
   };
 
   const showMargin = () => {
-    return post.postOffer.paymentMethods[0]?.paymentMethod?.id !== 5 && !post.postOffer.coinOthers;
+    return post.postOffer.paymentMethods[0]?.paymentMethod?.id !== 5 && post.postOffer.coinPayment !== COIN_OTHERS;
   };
 
   //cal escrow script

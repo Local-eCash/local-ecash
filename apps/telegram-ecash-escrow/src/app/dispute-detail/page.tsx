@@ -4,21 +4,16 @@ import { TabPanel } from '@/src/components/Tab/Tab';
 import TickerHeader from '@/src/components/TickerHeader/TickerHeader';
 import CustomToast from '@/src/components/Toast/CustomToast';
 import { TabType } from '@/src/store/constants';
-import {
-  ArbiReleaseSignatory,
-  ArbiReturnSignatory,
-  buildReleaseTx,
-  ModReleaseSignatory,
-  ModReturnSignatory
-} from '@/src/store/escrow';
+import { SignOracleSignatory } from '@/src/store/escrow';
+import { ACTION } from '@/src/store/escrow/constant';
 import { COIN, coinInfo } from '@bcpros/lixi-models';
 import {
   disputeApi,
   DisputeStatus,
+  EscrowOrderAction,
   escrowOrderApi,
   EscrowOrderStatus,
   getSelectedWalletPath,
-  parseCashAddressToPrefix,
   SocketContext,
   useSliceDispatch as useLixiSliceDispatch,
   useSliceSelector as useLixiSliceSelector,
@@ -46,7 +41,7 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { TransitionProps } from '@mui/material/transitions';
-import { fromHex, Script, shaRmd160 } from 'ecash-lib';
+import { fromHex, shaRmd160 } from 'ecash-lib';
 import _ from 'lodash';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -210,9 +205,13 @@ export default function DisputeDetail() {
   const [validTextToReturn, setValidTextToReturn] = useState('');
   const [valueTab, setValueTab] = useState(0);
 
-  const { useDisputeQuery } = disputeApi;
-  const { useEscrowOrderQuery, useUpdateEscrowOrderStatusMutation, useLazyArbiRequestTelegramChatQuery } =
-    escrowOrderApi;
+  const { useDisputeQuery, useUpdateDisputeMutation } = disputeApi;
+  const {
+    useEscrowOrderQuery,
+    useUpdateEscrowOrderStatusMutation,
+    useLazyArbiRequestTelegramChatQuery,
+    useUpdateEscrowOrderSignatoryMutation
+  } = escrowOrderApi;
   const { currentData: disputeQueryData, isError } = useDisputeQuery({ id: id! }, { skip: !id || !token });
   const { currentData: escrowOrderQueryData, isSuccess: isEscrowOrderSuccess } = useEscrowOrderQuery(
     { id: disputeQueryData?.dispute.escrowOrder.id },
@@ -220,6 +219,8 @@ export default function DisputeDetail() {
   );
   const { escrowOrder } = { ...escrowOrderQueryData };
   const [updateOrderTrigger] = useUpdateEscrowOrderStatusMutation();
+  const [updateEscrowOrderSignatoryTrigger] = useUpdateEscrowOrderSignatoryMutation();
+  const [updateDisputeTrigger] = useUpdateDisputeMutation();
   const [trigger, { isFetching, isLoading }] = useLazyArbiRequestTelegramChatQuery();
 
   const handleChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -230,135 +231,109 @@ export default function DisputeDetail() {
     setValueTab(index);
   };
 
-  const handleArbModReleaseReturn = async (spenderPkStr: string, status: EscrowOrderStatus) => {
+  const handleArbModRelease = async () => {
     setLoading(true);
 
-    const id = disputeQueryData?.dispute.escrowOrder.id;
-    const escrowTxids = escrowOrder?.escrowTxids;
+    const nonce = escrowOrder.nonce as string;
     const isArbi = selectedWalletPath?.hash160 === escrowOrder.arbitratorAccount.hash160;
 
-    const nonce = escrowOrder.nonce as string;
-    const script = Buffer.from(escrowOrder.escrowScript as string, 'hex') as unknown as Uint8Array;
-    const escrowScript = new Script(script);
-    const spenderPk = fromHex(spenderPkStr);
-    const spenderPkh = shaRmd160(spenderPk);
-    const spenderP2pkh = Script.p2pkh(spenderPkh);
+    const arbiModSk = fromHex(selectedWalletPath?.privateKey);
+    const arbiModPk = fromHex(selectedWalletPath?.publicKey);
+    const arbiModPkh = shaRmd160(arbiModPk);
 
-    const { amount } = escrowOrder;
-    const arbModAddress = parseCashAddressToPrefix(COIN.XEC, selectedWalletPath?.cashAddress);
-    const disputeFee = calDisputeFee(amount);
-    const isBuyerDeposit = escrowOrder.buyerDepositTx ? true : false;
+    try {
+      if (isArbi) {
+        const arbiSignatory = SignOracleSignatory(arbiModSk, ACTION.ARBI_RELEASE, nonce);
 
-    if (isArbi) {
-      try {
-        const arbiSk = fromHex(selectedWalletPath?.privateKey);
-        const arbiPk = fromHex(selectedWalletPath?.publicKey);
-
-        let arbiSignatory;
-        switch (status) {
-          case EscrowOrderStatus.Complete:
-            arbiSignatory = ArbiReleaseSignatory(arbiSk, arbiPk, spenderPk, nonce);
-            break;
-          case EscrowOrderStatus.Cancel:
-            arbiSignatory = ArbiReturnSignatory(arbiSk, arbiPk, spenderPk, nonce);
-            break;
-        }
-
-        const txBuild = buildReleaseTx(
-          escrowTxids,
-          amount,
-          escrowScript,
-          arbiSignatory,
-          spenderP2pkh,
-          arbModAddress,
-          disputeFee,
-          isBuyerDeposit
-        );
-
-        const txid = (await chronik.broadcastTx(txBuild)).txid;
-
-        // update order status to escrow
-        await updateOrderTrigger({ input: { orderId: id, status, txid } })
+        await updateEscrowOrderSignatoryTrigger({
+          input: {
+            orderId: escrowOrder.id!,
+            action: EscrowOrderAction.Release,
+            signatory: Buffer.from(arbiSignatory).toString('hex'),
+            signatoryOwnerHash160: Buffer.from(arbiModPkh).toString('hex')
+          }
+        })
           .unwrap()
-          .then(() => {
-            switch (status) {
-              case EscrowOrderStatus.Complete:
-                setReleaseByArb(true);
-                break;
-              case EscrowOrderStatus.Cancel:
-                setReturnByArb(true);
-                break;
-            }
-          })
           .catch(() => setError(true));
-      } catch (e) {
-        console.log(e);
-      }
-    } else {
-      try {
-        const modSk = fromHex(selectedWalletPath?.privateKey);
-        const modPk = fromHex(selectedWalletPath?.publicKey);
+      } else {
+        const modSignatory = SignOracleSignatory(arbiModSk, ACTION.MOD_RELEASE, nonce);
 
-        let modSignatory;
-        switch (status) {
-          case EscrowOrderStatus.Complete:
-            modSignatory = ModReleaseSignatory(modSk, modPk, spenderPk, nonce);
-            break;
-          case EscrowOrderStatus.Cancel:
-            modSignatory = ModReturnSignatory(modSk, modPk, spenderPk, nonce);
-            break;
-        }
-
-        const txBuild = buildReleaseTx(
-          escrowTxids,
-          amount,
-          escrowScript,
-          modSignatory,
-          spenderP2pkh,
-          arbModAddress,
-          disputeFee,
-          isBuyerDeposit
-        );
-
-        const txid = (await chronik.broadcastTx(txBuild)).txid;
-
-        // update order status to escrow
-        await updateOrderTrigger({ input: { orderId: id, status, txid } })
+        await updateEscrowOrderSignatoryTrigger({
+          input: {
+            orderId: escrowOrder.id!,
+            action: EscrowOrderAction.Release,
+            signatory: Buffer.from(modSignatory).toString('hex'),
+            signatoryOwnerHash160: Buffer.from(arbiModPkh).toString('hex')
+          }
+        })
           .unwrap()
-          .then(() => {
-            dispatch(disputeApi.api.util.resetApiState());
-
-            switch (status) {
-              case EscrowOrderStatus.Complete:
-                setReleaseByArb(true);
-                break;
-              case EscrowOrderStatus.Cancel:
-                setReturnByArb(true);
-                break;
-            }
-          })
           .catch(() => setError(true));
-      } catch (e) {
-        console.log(e);
       }
+
+      await updateDisputeTrigger({ input: { id: id!, escrowOrderId: escrowOrder.id!, status: DisputeStatus.Resolved } })
+        .unwrap()
+        .then(() => setReleaseByArb(true))
+        .catch(() => setError(true));
+    } catch (e) {
+      console.log(e);
     }
 
     setOpenReleaseModal(false);
     setLoading(false);
   };
 
-  const handleArbiModReleaseEscrow = async () => {
-    const status = EscrowOrderStatus.Complete;
-    const buyerPk = escrowOrder?.buyerAccount.publicKey;
+  const handleArbModReturn = async () => {
+    setLoading(true);
 
-    handleArbModReleaseReturn(buyerPk, status);
-  };
+    const nonce = escrowOrder.nonce as string;
+    const isArbi = selectedWalletPath?.hash160 === escrowOrder.arbitratorAccount.hash160;
 
-  const handleArbiModReturnEscrow = async () => {
-    const status = EscrowOrderStatus.Cancel;
-    const sellerPk = escrowOrder?.sellerAccount.publicKey;
+    const arbiModSk = fromHex(selectedWalletPath?.privateKey);
+    const arbiModPk = fromHex(selectedWalletPath?.publicKey);
+    const arbiModPkh = shaRmd160(arbiModPk);
 
-    handleArbModReleaseReturn(sellerPk, status);
+    try {
+      if (isArbi) {
+        const arbiSignatory = SignOracleSignatory(arbiModSk, ACTION.ARBI_RETURN, nonce);
+
+        await updateEscrowOrderSignatoryTrigger({
+          input: {
+            orderId: escrowOrder.id!,
+            action: EscrowOrderAction.Return,
+            signatory: Buffer.from(arbiSignatory).toString('hex'),
+            signatoryOwnerHash160: Buffer.from(arbiModPkh).toString('hex')
+          }
+        })
+          .unwrap()
+          .then(() => setReturnByArb(true))
+          .catch(() => setError(true));
+      } else {
+        const modSignatory = SignOracleSignatory(arbiModSk, ACTION.MOD_RETURN, nonce);
+
+        await updateEscrowOrderSignatoryTrigger({
+          input: {
+            orderId: escrowOrder.id!,
+            action: EscrowOrderAction.Return,
+            signatory: Buffer.from(modSignatory).toString('hex'),
+            signatoryOwnerHash160: Buffer.from(arbiModPkh).toString('hex')
+          }
+        })
+          .unwrap()
+          .catch(() => setError(true));
+      }
+
+      await updateDisputeTrigger({
+        input: { id: id!, escrowOrderId: escrowOrder.id!, status: DisputeStatus.Resolved }
+      })
+        .unwrap()
+        .then(() => setReleaseByArb(true))
+        .catch(() => setError(true));
+    } catch (e) {
+      console.log(e);
+    }
+
+    setOpenReleaseModal(false);
+    setLoading(false);
   };
 
   const handleTelegramClick = async (username, publicKey) => {
@@ -577,15 +552,12 @@ export default function DisputeDetail() {
                   <Button
                     variant="contained"
                     color="warning"
-                    onClick={() => handleArbiModReleaseEscrow()}
+                    onClick={() => handleArbModRelease()}
                     autoFocus
                     disabled={loading || validTextToRelease !== escrowOrder?.buyerAccount?.telegramUsername}
                   >
                     Release to Buyer
                   </Button>
-                  <Typography className="disclaim-buyer" textAlign="center" variant="body2">
-                    *You will collect {calDisputeFee(escrowOrder?.amount)} {COIN.XEC} (security fee) from seller
-                  </Typography>
                 </div>
               </TabPanel>
               <TabPanel value={valueTab} index={1}>
@@ -605,16 +577,12 @@ export default function DisputeDetail() {
                   <Button
                     variant="contained"
                     color="info"
-                    onClick={() => handleArbiModReturnEscrow()}
+                    onClick={() => handleArbModReturn()}
                     autoFocus
                     disabled={loading || validTextToReturn !== escrowOrder?.sellerAccount?.telegramUsername}
                   >
                     Return to Seller
                   </Button>
-                  <Typography className="disclaim-seller" textAlign="center" variant="body2">
-                    *You will collect {calDisputeFee(escrowOrder?.amount)} {COIN.XEC} (security fee) from{' '}
-                    {escrowOrder?.buyerDepositTx ? 'buyer' : 'seller'}
-                  </Typography>
                 </div>
               </TabPanel>
             </SwipeableViews>

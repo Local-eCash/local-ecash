@@ -4,14 +4,13 @@ import Header from '@/src/components/Header/Header';
 import OfferItem from '@/src/components/OfferItem/OfferItem';
 import TopSection from '@/src/components/TopSection/TopSection';
 import {
+  PostQueryItem,
   TimelineQueryItem,
-  accountsApi,
   axiosClient,
   getCountries,
   getNewPostAvailable,
   getOfferFilterConfig,
   getPaymenMethods,
-  getSelectedWalletPath,
   offerApi,
   setNewPostAvailable,
   useInfiniteOfferFilterQuery,
@@ -22,7 +21,6 @@ import {
 import styled from '@emotion/styled';
 import CachedRoundedIcon from '@mui/icons-material/CachedRounded';
 import { Badge, Box, CircularProgress, Skeleton, Slide, Typography, useTheme } from '@mui/material';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
@@ -85,23 +83,9 @@ const StyledBadge = styled(Badge)`
 export default function Home() {
   const theme = useTheme();
   const router = useRouter();
-  const { data: sessionData } = useSession();
-
-  const selectedWalletPath = useLixiSliceSelector(getSelectedWalletPath);
   const offerFilterConfig = useLixiSliceSelector(getOfferFilterConfig);
   const newPostAvailable = useLixiSliceSelector(getNewPostAvailable);
-
-  // const [mismatchAccount, setMismatchAccount] = useState(false);
-  // const [networkError, setNetworkError] = useState(false);
   const [visible, setVisible] = useState(true);
-
-  const { useUpdateAccountTelegramUsernameMutation, useGetAccountByAddressQuery } = accountsApi;
-  const { currentData: accountQueryData } = useGetAccountByAddressQuery(
-    { address: selectedWalletPath?.xAddress },
-    { skip: !selectedWalletPath }
-  );
-
-  const [createTriggerUpdateAccountTelegramUsername] = useUpdateAccountTelegramUsernameMutation();
   const dispatch = useLixiSliceDispatch();
 
   const { data, hasNext, isFetching, fetchNext, refetch, isLoading } = useInfiniteOffersByScoreQuery(
@@ -140,16 +124,6 @@ export default function Home() {
   };
 
   useEffect(() => {
-    sessionData &&
-      accountQueryData &&
-      accountQueryData?.getAccountByAddress.telegramUsername !== sessionData?.user.name &&
-      createTriggerUpdateAccountTelegramUsername({
-        telegramId: sessionData.user.id,
-        telegramUsername: sessionData.user.name
-      });
-  }, [sessionData, accountQueryData?.getAccountByAddress]);
-
-  useEffect(() => {
     (async () => {
       const country = await axiosClient
         .get(`/api/countries/ipaddr`)
@@ -176,6 +150,26 @@ export default function Home() {
     dispatch(getPaymenMethods());
     dispatch(getCountries());
   }, []);
+
+  useEffect(() => {
+    if (!isFetching) {
+      const offerUnlisted = data.filter(item => (item.data as PostQueryItem).postOffer?.hideFromHome);
+      const offerShowed = data.length - offerUnlisted.length;
+      if (offerShowed < 4) {
+        loadMoreItems();
+      }
+    }
+  }, [data.length]);
+
+  useEffect(() => {
+    if (!isFetchingFilter) {
+      const offerUnlistedFilter = dataFilter.filter(item => (item.data as PostQueryItem).postOffer?.hideFromHome);
+      const offerShowedFilter = dataFilter.length - offerUnlistedFilter.length;
+      if (offerShowedFilter < 4) {
+        loadMoreItemsFilter();
+      }
+    }
+  }, [dataFilter.length]);
 
   return (
     <MobileLayout>

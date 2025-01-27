@@ -1,6 +1,6 @@
 'use client';
 
-import { COIN_OTHERS, LIST_COIN } from '@/src/store/constants';
+import { COIN_OTHERS, COIN_USD_STABLECOIN_TICKER, LIST_COIN } from '@/src/store/constants';
 import { LIST_CURRENCIES_USED, Location } from '@bcpros/lixi-models';
 import {
   Coin,
@@ -48,6 +48,7 @@ import FilterListLocationModal from '../FilterList/FilterListLocationModal';
 import FilterListModal from '../FilterList/FilterListModal';
 import { FormControlWithNativeSelect } from '../FilterOfferModal/FilterOfferModal';
 import CustomToast from '../Toast/CustomToast';
+import ConfirmOfferTypeModal from './ConfirmOfferTypeModal';
 
 const StyledDialog = styled(Dialog)(({ theme }) => ({
   '.MuiPaper-root': {
@@ -128,6 +129,12 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
       '&.confirm-btn': {
         color: theme.palette.common.white
       }
+    },
+
+    '.button-group': {
+      width: '100%',
+      display: 'flex',
+      gap: '7px'
     }
   },
 
@@ -220,6 +227,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
   const [openCountryList, setOpenCountryList] = useState(false);
   const [openStateList, setOpenStateList] = useState(false);
   const [openCityList, setOpenCityList] = useState(false);
+  const [openConfirmType, setOpenConfirmType] = useState(false);
 
   const dialogContentRef = useRef<HTMLDivElement>(null);
 
@@ -238,7 +246,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       min: `${offer?.orderLimitMin ?? ''}`,
       max: `${offer?.orderLimitMax ?? ''}`,
       option: offer?.paymentMethods[0]?.paymentMethod.id ?? '',
-      currency: null,
+      currency: offer?.localCurrency ?? null,
       coin: offer?.coinPayment ?? null,
       coinOthers: offer?.coinOthers ?? '',
       percentage: offer?.marginPercentage ?? 0,
@@ -262,10 +270,11 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
     setActiveStep(prevActiveStep => prevActiveStep - 1);
   };
 
-  const handleCreateOffer = async data => {
+  const handleCreateOffer = async (data, isHidden) => {
     setLoading(true);
-    const minNum = parseFloat(data.min);
-    const maxNum = parseFloat(data.max);
+    const minNum = parseFloat(parseFloat(data.min).toFixed(2));
+    const maxNum = parseFloat(parseFloat(data.max).toFixed(2));
+
     const input = {
       message: data.message,
       noteOffer: data.note,
@@ -276,7 +285,8 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       marginPercentage: Number(data?.percentage ?? 0),
       orderLimitMin: minNum,
       orderLimitMax: maxNum,
-      locationId: data?.city?.id ?? null
+      locationId: data?.city?.id ?? null,
+      hideFromHome: isHidden
     };
 
     //Just have location when paymentmethods is 1 or 2
@@ -312,6 +322,16 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
         .catch(err => {
           setError(true);
         });
+    }
+  };
+
+  const handleCreateUpdate = () => {
+    if (isEdit) {
+      handleSubmit(data => {
+        handleCreateOffer(data, false);
+      })();
+    } else {
+      setOpenConfirmType(true);
     }
   };
 
@@ -394,6 +414,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
             *You are selling XEC
           </Typography>
         </Grid>
+
         <Grid item xs={12}>
           <Typography variant="body2" className="label">
             Payment method
@@ -537,7 +558,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                         if (item.ticker === 'XEC') return;
                         return (
                           <option key={item.ticker} value={`${item.ticker}:${item.fixAmount}`}>
-                            {item.name} ({item.ticker})
+                            {item.name} {item.ticker !== COIN_USD_STABLECOIN_TICKER && `(${item.ticker})`}
                           </option>
                         );
                       })}
@@ -553,7 +574,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
               />
             </Grid>
 
-            {coinValue?.includes(COIN_OTHERS) && (
+            {(coinValue?.includes(COIN_OTHERS) || coinValue?.includes(COIN_USD_STABLECOIN_TICKER)) && (
               <Grid item xs={4}>
                 <Controller
                   name="coinOthers"
@@ -561,7 +582,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                   rules={{
                     required: {
                       value: true,
-                      message: 'Coin others is required!'
+                      message: 'Ticker is required!'
                     }
                   }}
                   render={({ field: { onChange, onBlur, value, name, ref } }) => (
@@ -954,14 +975,14 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
           <div className="payment-wrap">
             <div className="payment-method">
               <Typography>Payment method</Typography>
-              <Button variant="contained" color="success">
-                {paymentMethods[Number(option ?? '1') - 1]?.name}
+              <Button variant="outlined" color="success">
+                <Typography>{paymentMethods[Number(option ?? '1') - 1]?.name}</Typography>
               </Button>
             </div>
             <div className="payment-currency">
               <Typography>Payment currency</Typography>
-              <Button variant="contained" color="warning">
-                {coinCurrency}
+              <Button variant="outlined" color="warning">
+                <Typography>{coinCurrency}</Typography>
               </Button>
             </div>
           </div>
@@ -1059,23 +1080,27 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       </IconButton>
       <DialogContent ref={dialogContentRef}>{stepContents[`stepContent${activeStep}`]}</DialogContent>
       <DialogActions>
-        <Button
-          variant="contained"
-          onClick={() => handleBack()}
-          disabled={isEdit ? activeStep === 2 : activeStep === 1}
-        >
-          Back
-        </Button>
-        <Button
-          variant="contained"
-          color="success"
-          onClick={activeStep !== 3 ? handleSubmit(handleNext) : handleSubmit(handleCreateOffer)}
-          disabled={loading}
-        >
-          {activeStep === 1 && 'Next'}
-          {activeStep === 2 && 'Preview'}
-          {activeStep === 3 && `${isEdit ? 'Update' : 'Create'} offer`}
-        </Button>
+        <div className="button-group">
+          <Button
+            className="button-back"
+            variant="contained"
+            onClick={() => handleBack()}
+            disabled={isEdit ? activeStep === 2 : activeStep === 1}
+          >
+            Back
+          </Button>
+          <Button
+            className="button-create"
+            variant="contained"
+            color="success"
+            onClick={activeStep !== 3 ? handleSubmit(handleNext) : () => handleCreateUpdate()}
+            disabled={loading}
+          >
+            {activeStep === 1 && 'Next'}
+            {activeStep === 2 && 'Preview'}
+            {activeStep === 3 && `${isEdit ? 'Update' : 'Create'} offer`}
+          </Button>
+        </div>
       </DialogActions>
 
       <Portal>
@@ -1135,6 +1160,17 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
         setSelectedItem={value => {
           setValue('city', value);
           clearErrors('city');
+        }}
+      />
+
+      <ConfirmOfferTypeModal
+        isOpen={openConfirmType}
+        isLoading={loading}
+        onDissmissModal={value => setOpenConfirmType(value)}
+        createOffer={isHidden => {
+          handleSubmit(data => {
+            handleCreateOffer(data, isHidden);
+          })();
         }}
       />
     </StyledDialog>

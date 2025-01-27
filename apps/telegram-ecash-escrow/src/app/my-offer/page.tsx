@@ -71,6 +71,7 @@ export default function MyOffer() {
 
   const {
     data: dataOfferActive,
+    totalCount: totalCountOfferActive,
     hasNext: hasNextOfferActive,
     isFetching: isFetchingOfferActive,
     isLoading: isLoadingOfferActive,
@@ -90,6 +91,7 @@ export default function MyOffer() {
 
   const {
     data: dataOfferArchive,
+    totalCount: totalCountOfferArchive,
     hasNext: hasNextOfferArchive,
     isFetching: isFetchingOfferArchive,
     isLoading: isLoadingOfferArchive,
@@ -159,7 +161,8 @@ export default function MyOffer() {
                         // Issue: All custom useInfinite hooks have a mismatch between loading state and data.
                         // When loading state is false, data should have but it not available shortly afterward,
                         // leading to a delay in synchronization.
-                        dataOfferActive.length === 0 && dataOfferArchive.length === 0 ? (
+                        // use totalCount because data is not available immediately
+                        totalCountOfferActive === 0 && totalCountOfferArchive === 0 ? (
                           <Typography className="end-message" component={'div'}>
                             <Typography> You haven't created any offer yet</Typography>
                             <Button variant="contained" onClick={() => handleOpenCreateOffer()}>

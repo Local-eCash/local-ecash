@@ -3,6 +3,7 @@ import { AuthorizationModal } from './Auth/AuthorizationModal';
 import BoostModal from './BoostModal/BoostModal';
 import { BackupModal } from './Common/BackupModal';
 import { RequiredUsernameModal } from './Common/RequiredUsernameModal';
+import ShareSocialModal from './Common/ShareSocialModal';
 import CreateOfferModal from './CreateOfferModal/CreateOfferModal';
 import PlaceAnOrderModal from './PlaceAnOrderModal/PlaceAnOrderModal';
 import { QRcodeModal } from './QRcode/QRcodeModal';
@@ -16,7 +17,8 @@ const modalComponentLookupTable = {
   CreateOfferModal,
   BackupModal,
   PlaceAnOrderModal,
-  RequiredUsernameModal
+  RequiredUsernameModal,
+  ShareSocialModal
 };
 
 const ModalManager = () => {

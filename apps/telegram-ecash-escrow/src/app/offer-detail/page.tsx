@@ -154,7 +154,7 @@ const OfferDetail = () => {
   return (
     <MobileLayout>
       <OfferDetailPage>
-        <TickerHeader title="Offer Detail" />
+        <TickerHeader title="Offer Detail" showShareIcon={true} postData={currentData?.post} />
         {currentData?.post?.postOffer ? (
           <React.Fragment>
             <OfferDetailInfo

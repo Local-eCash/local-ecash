@@ -9,20 +9,24 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   IconButton,
+  Radio,
+  RadioGroup,
   Slide,
   Typography,
-  useMediaQuery,
   useTheme
 } from '@mui/material';
 import { TransitionProps } from '@mui/material/transitions';
-import React from 'react';
+import React, { useState } from 'react';
 
 interface ConfirmCancelModalProps {
   isOpen: boolean;
   onDissmissModal?: (value: boolean) => void;
   onConfirmClick?: () => void;
-  returnAction: () => void;
+  returnAction: (value: boolean) => void;
+  isBuyerDeposit: boolean;
+  disputeFee: number;
 }
 
 const StyledDialog = styled(Dialog)(({ theme }) => ({
@@ -92,7 +96,18 @@ const Transition = React.forwardRef(function Transition(
 
 const ConfirmCancelModal: React.FC<ConfirmCancelModalProps> = props => {
   const theme = useTheme();
-  const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
+  const [optionDonate, setOptionDonate] = useState(null);
+
+  const OptionDonate = [
+    {
+      label: '💼 Claim my security deposit back to my wallet',
+      value: false
+    },
+    {
+      label: `💙 Donate my security deposit to Local eCash`,
+      value: true
+    }
+  ];
 
   return (
     <React.Fragment>
@@ -105,9 +120,40 @@ const ConfirmCancelModal: React.FC<ConfirmCancelModalProps> = props => {
         <IconButton className="back-btn" onClick={() => props.onDissmissModal!(false)}>
           <ChevronLeft />
         </IconButton>
-        <DialogTitle>Confirm</DialogTitle>
+        <DialogTitle paddingTop="0px !important">Confirmation</DialogTitle>
         <DialogContent>
-          <Typography>Are you sure to cancel?</Typography>
+          {props.isBuyerDeposit ? (
+            <React.Fragment>
+              <Typography sx={{ fontSize: '16px', marginTop: '10px' }}>
+                Your order will be cancelled without a dispute. You will now be able to claim back your security deposit
+                ({props.disputeFee} XEC).
+              </Typography>
+              <RadioGroup style={{ marginTop: '10px' }} sx={{ gap: '8px' }}>
+                {OptionDonate.map(item => {
+                  return (
+                    <FormControlLabel
+                      onClick={() => {
+                        setOptionDonate(item.value);
+                      }}
+                      key={item.label}
+                      value={item.value}
+                      control={<Radio />}
+                      label={item.label}
+                      checked={item.value === optionDonate}
+                    />
+                  );
+                })}
+              </RadioGroup>
+              <Typography sx={{ fontSize: '12px', marginTop: '10px' }} fontStyle="italic">
+                Optional: This service has been brought to you free of charge. We would appreciate a donation to
+                continue maintaining it.
+              </Typography>
+            </React.Fragment>
+          ) : (
+            <Typography sx={{ fontSize: '16px', marginTop: '10px' }}>
+              Your order will be cancelled without a dispute.
+            </Typography>
+          )}
         </DialogContent>
         <DialogActions>
           <Button
@@ -115,7 +161,7 @@ const ConfirmCancelModal: React.FC<ConfirmCancelModalProps> = props => {
             style={{ backgroundColor: '#a41208' }}
             variant="contained"
             onClick={() => {
-              props.returnAction();
+              props.returnAction(optionDonate);
               props.onDissmissModal!(false);
             }}
             autoFocus

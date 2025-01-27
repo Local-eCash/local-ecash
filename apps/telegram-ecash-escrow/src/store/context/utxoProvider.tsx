@@ -3,6 +3,7 @@ import {
   UtxoInNode,
   UtxoInNodeInput,
   escrowOrderApi,
+  getSelectedAccount,
   getSlpBalancesAndUtxosNode,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
@@ -19,6 +20,7 @@ export const UtxoContext = createContext<UtxoContextType>(undefined);
 export function UtxoProvider({ children }) {
   const [token, setToken] = useState<string | null>(sessionStorage.getItem('Authorization'));
   const utxosNode = useLixiSliceSelector(getSlpBalancesAndUtxosNode);
+  const selectedAccount = useLixiSliceSelector(getSelectedAccount);
 
   const [totalValidAmount, setTotalValidAmount] = useState<number>(0);
   const [totalValidUtxos, setTotalValidUtxos] = useState([]);
@@ -47,7 +49,7 @@ export function UtxoProvider({ children }) {
 
       return () => clearInterval(interval);
     }
-  }, []);
+  }, [selectedAccount]);
 
   // Call to validate UTXOs
   useEffect(() => {

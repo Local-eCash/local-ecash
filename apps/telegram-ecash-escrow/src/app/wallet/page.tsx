@@ -4,23 +4,39 @@ import { BackupModalProps } from '@/src/components/Common/BackupModal';
 import Header from '@/src/components/Header/Header';
 import QRCode from '@/src/components/QRcode/QRcode';
 import SendComponent from '@/src/components/Send/send';
+import { TabPanel } from '@/src/components/Tab/Tab';
 import AuthorizationLayout from '@/src/components/layout/AuthorizationLayout';
 import MobileLayout from '@/src/components/layout/MobileLayout';
+import { TabType } from '@/src/store/constants';
 import { SettingContext } from '@/src/store/context/settingProvider';
 import { UtxoContext } from '@/src/store/context/utxoProvider';
-import { COIN } from '@bcpros/lixi-models';
+import { formatNumber } from '@/src/store/util';
+import { COIN, coinInfo } from '@bcpros/lixi-models';
 import {
+  WalletContextNode,
+  chronikNode,
+  convertHashToEcashAddress,
+  formatDate,
+  getSeedBackupTime,
   getSelectedWalletPath,
+  getWalletState,
   openModal,
   parseCashAddressToPrefix,
   useSliceDispatch as useLixiSliceDispatch,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
-import { Backdrop, Button, Stack, Typography } from '@mui/material';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import SendIcon from '@mui/icons-material/Send';
+import { Box, Card, CardContent, CircularProgress, Link, Stack, Tab, Tabs, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { signOut, useSession } from 'next-auth/react';
-import Image from 'next/image';
-import { useContext, useState } from 'react';
+import { Tx_InNode } from 'chronik-client';
+import { fromHex } from 'ecash-lib';
+import _, { Dictionary } from 'lodash';
+import React, { useContext, useEffect, useState } from 'react';
+import SwipeableViews from 'react-swipeable-views';
+
+const { getTxHistoryChronik: getTxHistoryChronikNode } = chronikNode;
 
 const WrapWallet = styled('div')(({ theme }) => ({
   position: 'relative',
@@ -28,11 +44,20 @@ const WrapWallet = styled('div')(({ theme }) => ({
   padding: '1rem',
   paddingBottom: '85px',
   minHeight: '100svh',
-  '.shape-reg-footer': {
-    position: 'absolute',
-    zIndex: -1,
-    bottom: 0,
-    right: 0
+
+  '.MuiTab-root': {
+    color: theme.custom.colorItem,
+    textTransform: 'none',
+    fontWeight: 600,
+    fontSize: '16px',
+    '&.Mui-selected': {
+      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+      backdropFilter: 'blur(8px)'
+    }
+  },
+
+  '.MuiTabs-indicator': {
+    backgroundColor: '#0076c4'
   }
 }));
 
@@ -55,19 +80,6 @@ const WrapContentWallet = styled('div')(({ theme }) => ({
         fontSize: '13px'
       }
     }
-  },
-
-  '.group-btn': {
-    display: 'flex',
-    gap: '10px',
-    button: {
-      background: '#0076c4',
-      width: '100%',
-      color: '#fff',
-      fontWeight: 600,
-      borderRadius: '12px',
-      textTransform: 'capitalize'
-    }
   }
 }));
 
@@ -85,19 +97,77 @@ const SendWrap = styled('div')(({ theme }) => ({
 }));
 
 export default function Wallet() {
-  const { data: sessionData } = useSession();
   const dispatch = useLixiSliceDispatch();
-
   const selectedWalletPath = useLixiSliceSelector(getSelectedWalletPath);
+  const lastSeedBackupTimeOnDevice = useLixiSliceSelector(getSeedBackupTime);
+  const walletState = useLixiSliceSelector(getWalletState);
+
+  const Wallet = useContext(WalletContextNode);
   const settingContext = useContext(SettingContext);
-  const seedBackupTime = settingContext?.setting?.lastSeedBackupTime ?? '';
-
-  const [address, setAddress] = useState(parseCashAddressToPrefix(COIN.XEC, selectedWalletPath?.cashAddress));
-  const [openReceive, setOpenReceive] = useState(true);
-
   const { totalValidAmount, totalValidUtxos } = useContext(UtxoContext);
 
-  const handleOpenSend = () => {
+  const [value, setValue] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [address, setAddress] = useState(parseCashAddressToPrefix(COIN.XEC, selectedWalletPath?.cashAddress));
+  const [walletHistory, setWalletHistory] = useState<
+    Dictionary<
+      (Tx_InNode & {
+        parsed: chronikNode.ParsedChronikTx_InNode;
+      })[]
+    >
+  >();
+
+  const { XPI, chronik } = Wallet;
+  const seedBackupTime = settingContext?.setting?.lastSeedBackupTime ?? lastSeedBackupTimeOnDevice ?? '';
+
+  const formatAddress = (address: string) => {
+    if (!address) return;
+
+    return address.slice(-8);
+  };
+
+  const handleChange = (event: React.SyntheticEvent, newValue: number) => {
+    if (newValue === 0 && !isBackup()) {
+      return;
+    }
+    setValue(newValue);
+  };
+
+  const handleChangeIndex = (index: number) => {
+    if (index === 0 && !isBackup()) {
+      return;
+    }
+    setValue(index);
+  };
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+
+      await getTxHistoryChronikNode(chronik, XPI, walletState, 0)
+        .then(({ chronikTxHistory }) => {
+          const orderedWalletParsedHistory = _.orderBy(chronikTxHistory, x => x.timeFirstSeen, 'desc');
+
+          const walletParsedHistoryGroupByDate = _.groupBy(orderedWalletParsedHistory, item => {
+            const currentMonth = new Date().getMonth();
+            const dateTime = new Date(formatDate(item.timeFirstSeen.toString()));
+            if (currentMonth == dateTime.getMonth()) return 'Recent';
+            const month = dateTime.toLocaleString('en', { month: 'long' });
+
+            return month + ' ' + dateTime.getFullYear();
+          });
+
+          setWalletHistory(walletParsedHistoryGroupByDate);
+        })
+        .catch(e => {
+          console.log('Error when getTxHistoryChronikNode', e);
+        });
+
+      setLoading(false);
+    })();
+  }, [walletState.walletStatusNode]);
+
+  const isBackup = () => {
     //check backup
     const oneMonthLater = new Date(seedBackupTime);
     oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
@@ -108,36 +178,15 @@ export default function Wallet() {
       isFromSetting: true,
       isFromHome: false
     };
+
     if (!seedBackupTime || isGreaterThanOneMonth) {
       dispatch(openModal('BackupModal', backupModalProps));
 
-      return;
+      return false;
     }
 
-    setOpenReceive(false);
+    return true;
   };
-
-  if (selectedWalletPath === null && sessionData) {
-    return (
-      <Backdrop sx={theme => ({ color: '#fff', zIndex: theme.zIndex.drawer + 1 })} open={true}>
-        <Stack>
-          <Typography variant="h5" align="center">
-            No wallet detected
-          </Typography>
-          <Typography variant="body1" align="center">
-            Please sign out and try again!
-          </Typography>
-          <Button
-            variant="contained"
-            style={{ marginTop: '15px' }}
-            onClick={() => signOut({ redirect: true, callbackUrl: '/' })}
-          >
-            Sign Out
-          </Button>
-        </Stack>
-      </Backdrop>
-    );
-  }
 
   return (
     <MobileLayout>
@@ -150,29 +199,130 @@ export default function Wallet() {
               <Typography variant="h5">Balance</Typography>
               <div className="amount">
                 <Typography variant="h5">
-                  {totalValidAmount ?? 0} <span className="coin-ticker">XEC</span>
+                  {formatNumber(totalValidAmount ?? 0)} <span className="coin-ticker">XEC</span>
                 </Typography>
               </div>
             </div>
-            <div className="group-btn">
-              <Button color="success" variant="contained" className="btn-send" onClick={() => handleOpenSend()}>
-                Send
-              </Button>
-              <Button color="success" variant="contained" className="btn-receive" onClick={() => setOpenReceive(true)}>
-                Receive
-              </Button>
+            <div>
+              <Tabs
+                value={value}
+                onChange={handleChange}
+                indicatorColor="secondary"
+                textColor="inherit"
+                variant="fullWidth"
+              >
+                <Tab
+                  label={TabType.SEND}
+                  id={`full-width-tab-${TabType.SEND}`}
+                  aria-controls={`full-width-tabpanel-${TabType.SEND}`}
+                />
+                <Tab
+                  label={TabType.RECEIVE}
+                  id={`full-width-tab-${TabType.RECEIVE}`}
+                  aria-controls={`full-width-tabpanel-${TabType.RECEIVE}`}
+                />
+              </Tabs>
+              <SwipeableViews index={value} onChangeIndex={handleChangeIndex}>
+                <TabPanel value={value} index={0}>
+                  <SendWrap>
+                    <SendComponent totalValidAmount={totalValidAmount} totalValidUtxos={totalValidUtxos} />
+                  </SendWrap>
+                </TabPanel>
+                <TabPanel value={value} index={1}>
+                  <ReceiveWrap>
+                    <QRCode address={address} />
+                  </ReceiveWrap>
+                  <Typography variant="h5" align="center" marginTop="10px" fontWeight="bold">
+                    Transaction History
+                  </Typography>
+                  {loading ? (
+                    <Box sx={{ height: '50vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <CircularProgress color="primary" />
+                    </Box>
+                  ) : (
+                    <React.Fragment>
+                      {!_.isEmpty(walletHistory) ? (
+                        Object.keys(walletHistory).map(index => {
+                          return (
+                            <React.Fragment key={index}>
+                              <Typography variant="h6" marginTop="10px" fontWeight="bold">
+                                {index}
+                              </Typography>
+                              {walletHistory[index].map(item => {
+                                return (
+                                  <Card key={item.txid} sx={{ marginTop: '10px' }}>
+                                    <CardContent sx={{ padding: '10px !important' }}>
+                                      <div
+                                        style={{
+                                          display: 'flex',
+                                          justifyContent: 'space-between',
+                                          alignItems: 'center'
+                                        }}
+                                      >
+                                        <Stack direction={'row'} spacing={1.5}>
+                                          {item.parsed.incoming ? (
+                                            <FileDownloadIcon sx={{ fontSize: '40px' }} color="primary" />
+                                          ) : (
+                                            <SendIcon sx={{ fontSize: '40px' }} />
+                                          )}
+                                          <Stack spacing={0.5}>
+                                            <Typography>
+                                              <span>{item.parsed.incoming ? 'Received from: ' : 'Sent to: '}</span>
+                                              <Link
+                                                style={{ fontWeight: 'bold' }}
+                                                href={`${coinInfo[COIN.XEC].blockExplorerUrl}/address/${item.parsed.incoming ? convertHashToEcashAddress(fromHex(item.parsed.replyAddressHash)) : convertHashToEcashAddress(fromHex(item.parsed.destinationAddressHash))}`}
+                                                target="_blank"
+                                                rel="noopener"
+                                              >
+                                                {item.parsed.incoming
+                                                  ? formatAddress(
+                                                      convertHashToEcashAddress(fromHex(item.parsed.replyAddressHash))
+                                                    )
+                                                  : formatAddress(
+                                                      convertHashToEcashAddress(
+                                                        fromHex(item.parsed.destinationAddressHash)
+                                                      )
+                                                    )}
+                                              </Link>
+                                            </Typography>
+                                            <Typography fontSize="12px">
+                                              {new Date(item.timeFirstSeen * 1000).toLocaleString('vi-VN')}
+                                            </Typography>
+                                          </Stack>
+                                        </Stack>
+                                        <Stack spacing={0.5}>
+                                          <Typography fontSize="17px" fontWeight={'bold'}>
+                                            {item.parsed.incoming ? '+ ' : '- '}
+                                            {formatNumber(parseFloat(item.parsed.xecAmount) ?? 0)} XEC
+                                          </Typography>
+                                          <Link
+                                            style={{ textAlign: 'right' }}
+                                            href={`${coinInfo[COIN.XEC].blockExplorerUrl}/tx/${item.txid}`}
+                                            target="_blank"
+                                            rel="noopener"
+                                          >
+                                            <OpenInNewIcon fontSize="small" sx={{ cursor: 'pointer' }} />
+                                          </Link>
+                                        </Stack>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                );
+                              })}
+                            </React.Fragment>
+                          );
+                        })
+                      ) : (
+                        <Typography variant="body1" align="center" marginTop="10px">
+                          So empty... Maybe this wallet need some XEC?
+                        </Typography>
+                      )}
+                    </React.Fragment>
+                  )}
+                </TabPanel>
+              </SwipeableViews>
             </div>
-            {openReceive ? (
-              <ReceiveWrap>
-                <QRCode address={address} />
-              </ReceiveWrap>
-            ) : (
-              <SendWrap>
-                <SendComponent totalValidAmount={totalValidAmount} totalValidUtxos={totalValidUtxos} />
-              </SendWrap>
-            )}
           </WrapContentWallet>
-          <Image width={200} height={200} className="shape-reg-footer" src="/shape-reg-footer.svg" alt="" />
         </WrapWallet>
       </AuthorizationLayout>
     </MobileLayout>

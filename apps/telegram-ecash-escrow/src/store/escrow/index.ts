@@ -12,6 +12,7 @@ import {
   OP_6,
   OP_CAT,
   OP_CHECKDATASIGVERIFY,
+  OP_CHECKSIG,
   OP_DUP,
   OP_ELSE,
   OP_ENDIF,
@@ -32,14 +33,17 @@ import {
   TxBuilderOutput,
   TxOutput,
   UnsignedTxInput,
+  flagSignature,
   fromHex,
   pushBytesOp,
   sha256,
+  sha256d,
   shaRmd160,
   strToBytes,
   toHex
 } from 'ecash-lib';
 import cashaddr from 'ecashaddrjs';
+import _ from 'lodash';
 import { convertXECToSatoshi, deserializeTransaction, serializeTransaction } from '../util';
 import { ACTION } from './constant';
 
@@ -137,9 +141,11 @@ export class Escrow {
       OP_FROMALTSTACK, //# Grab hashed pub key from alt stack
       OP_EQUALVERIFY, //# Public key checks out; now verify the oracle signature
       OP_CHECKDATASIGVERIFY, //# Now verify the sender
+      OP_DUP,
       OP_HASH160,
       OP_FROMALTSTACK,
-      OP_EQUAL
+      OP_EQUALVERIFY,
+      OP_CHECKSIG
     ]);
   }
 }
@@ -225,18 +231,30 @@ export const withdrawFund = (
   return txBuild.sign(ecc, roundedFeeInSatsPerKByte, coinInfo[COIN.XEC].etokenSats).ser();
 };
 
-export const buildReleaseTx = (
+const getGNCAddressScript = (): Script => {
+  const { type: typeXEC, hash: hashXEC } = cashaddr.decode(process.env.NEXT_PUBLIC_ADDRESS_GNC, false);
+
+  return typeXEC.toUpperCase() !== 'P2SH'
+    ? Script.p2pkh(fromHex(Buffer.from(hashXEC).toString('hex')))
+    : Script.p2sh(fromHex(Buffer.from(hashXEC).toString('hex')));
+};
+
+export const buildReturnTx = (
   txids: { txid: string; value: number; outIdx: number }[],
   amountToSend: number,
+  disputeFee: number,
   escrowScript: Script,
   scriptSignatory: Signatory,
-  receiverP2pkh: Script,
-  changeAddress: string,
-  disputeFee: number,
+  buyerP2pkh: Script,
+  sellerP2pkh: Script,
   isBuyerDeposit: boolean,
-  isGNCAddress = false
+  sellerDonateOption: number,
+  buyerDonateAmount?: number,
+  isDispute?: boolean,
+  arbModP2pkh?: Script
 ) => {
   const ecc = new Ecc();
+  const GNCAddressScript = getGNCAddressScript();
   const amountSatoshi = convertXECToSatoshi(amountToSend);
   const disputeSatoshi = convertXECToSatoshi(disputeFee);
 
@@ -256,70 +274,154 @@ export const buildReleaseTx = (
     };
   });
 
-  let changeP2pkhHOrP2sh;
-  if (changeAddress) {
-    const { type: typeXEC, hash: hashXEC } = cashaddr.decode(changeAddress, false);
-    const changeHash = Buffer.from(hashXEC).toString('hex');
-    changeP2pkhHOrP2sh = Script.p2pkh(fromHex(changeHash));
-
-    //process for GNC address
-    if (isGNCAddress && typeXEC.toUpperCase() === 'P2SH') {
-      changeP2pkhHOrP2sh = Script.p2sh(fromHex(changeHash));
+  const outputs: { value: number; script: Script }[] = [
+    {
+      value: amountSatoshi,
+      script: sellerP2pkh
     }
-  }
-
-  let txBuild;
+  ];
 
   if (isBuyerDeposit) {
-    txBuild = new TxBuilder({
-      inputs: utxos,
-      outputs: [
-        {
-          value: amountSatoshi + disputeSatoshi,
-          script: receiverP2pkh
-        },
-        {
+    !isDispute
+      ? outputs.push({
           value: disputeSatoshi,
-          script: changeAddress ? changeP2pkhHOrP2sh : receiverP2pkh
-        }
-      ]
-    });
-  } else {
-    txBuild = new TxBuilder({
-      inputs: utxos,
-      outputs: [
-        {
-          value: amountSatoshi,
-          script: receiverP2pkh
-        },
-        {
+          script: _.isNil(buyerDonateAmount) ? buyerP2pkh : GNCAddressScript
+        })
+      : outputs.push({
           value: disputeSatoshi,
-          script: changeAddress ? changeP2pkhHOrP2sh : receiverP2pkh
-        }
-      ]
-    });
+          script: arbModP2pkh
+        });
   }
+
+  switch (sellerDonateOption) {
+    case 1:
+      outputs.push({ value: disputeSatoshi, script: sellerP2pkh });
+      break;
+    case 2:
+      outputs.push({ value: disputeSatoshi, script: arbModP2pkh });
+      break;
+    case 3:
+      outputs.push({ value: disputeSatoshi, script: GNCAddressScript });
+      break;
+    default:
+      break;
+  }
+
+  const txBuild = new TxBuilder({
+    inputs: utxos,
+    outputs: outputs
+  });
 
   const feeInSatsPerKByte = coinInfo[COIN.XEC].defaultFee * 1000;
   const roundedFeeInSatsPerKByte = parseInt(feeInSatsPerKByte.toFixed(0));
+
   return txBuild.sign(ecc, roundedFeeInSatsPerKByte, 546).ser();
 };
 
+export const buildReleaseTx = (
+  txids: { txid: string; value: number; outIdx: number }[],
+  amountToSend: number,
+  disputeFee: number,
+  escrowScript: Script,
+  scriptSignatory: Signatory,
+  buyerP2pkh: Script,
+  sellerP2pkh: Script,
+  isBuyerDeposit: boolean,
+  buyerDonateOption: number,
+  sellerDonateAmount?: number,
+  isDispute?: boolean,
+  arbModP2pkh?: Script
+) => {
+  const ecc = new Ecc();
+  const GNCAddressScript = getGNCAddressScript();
+  const amountSatoshi = convertXECToSatoshi(amountToSend);
+  const disputeSatoshi = convertXECToSatoshi(disputeFee);
+
+  const utxos = txids.map(({ txid, value, outIdx }) => {
+    return {
+      input: {
+        prevOut: {
+          txid,
+          outIdx
+        },
+        signData: {
+          value: value,
+          redeemScript: escrowScript
+        }
+      },
+      signatory: scriptSignatory
+    };
+  });
+
+  const outputs: { value: number; script: Script }[] = [
+    {
+      value: amountSatoshi,
+      script: buyerP2pkh
+    }
+  ];
+
+  //If there is no dispute then check if seller donate or not else transfer dispute fee to ArbMod
+  //Can write shorter but this version easier to read
+  !isDispute
+    ? outputs.push({
+        value: disputeSatoshi,
+        script: _.isNil(sellerDonateAmount) ? sellerP2pkh : GNCAddressScript
+      })
+    : outputs.push({
+        value: disputeSatoshi,
+        script: arbModP2pkh
+      });
+
+  if (isBuyerDeposit) {
+    switch (buyerDonateOption) {
+      case 1:
+        outputs.push({ value: disputeSatoshi, script: buyerP2pkh });
+        break;
+      case 2:
+        outputs.push({ value: disputeSatoshi, script: arbModP2pkh });
+        break;
+      case 3:
+        outputs.push({ value: disputeSatoshi, script: GNCAddressScript });
+        break;
+      default:
+        break;
+    }
+  }
+
+  const txBuild = new TxBuilder({
+    inputs: utxos,
+    outputs: outputs
+  });
+
+  const feeInSatsPerKByte = coinInfo[COIN.XEC].defaultFee * 1000;
+  const roundedFeeInSatsPerKByte = parseInt(feeInSatsPerKByte.toFixed(0));
+
+  return txBuild.sign(ecc, roundedFeeInSatsPerKByte, 546).ser();
+};
+
+export const SignOracleSignatory = (oracleSk: Uint8Array, action: ACTION, nonce: string): Uint8Array => {
+  const ecc = new Ecc();
+  const hexNonce = toHex(strToBytes(nonce));
+  const message = action + hexNonce; // ACTION BYTE - 01 + NONCE - 48656c6c6f
+
+  const oracleMessage = sha256(fromHex(message));
+
+  return ecc.ecdsaSign(oracleSk, oracleMessage);
+};
+
 export const SellerReleaseSignatory = (
-  sellerSk: Uint8Array,
   sellerPk: Uint8Array,
   buyerPk: Uint8Array,
-  nonce: string
+  buyerSk: Uint8Array,
+  oracleSig: Uint8Array
 ) => {
   return (ecc: Ecc, input: UnsignedTxInput): Script => {
     const preimage = input.sigHashPreimage(ALL_BIP143);
-    const hexNonce = toHex(strToBytes(nonce));
-    const message = ACTION.SELLER_RELEASE + hexNonce;
-
-    const oracleMessage = sha256(fromHex(message)); // ACTION BYTE - 01 + NONCE - 48656c6c6f
-    const oracleSig = ecc.ecdsaSign(sellerSk, oracleMessage);
+    const sighash = sha256d(preimage.bytes);
+    const buyerSig = flagSignature(ecc.schnorrSign(buyerSk, sighash), ALL_BIP143);
 
     return Script.fromOps([
+      pushBytesOp(buyerSig),
       pushBytesOp(buyerPk),
       pushBytesOp(oracleSig),
       pushBytesOp(sellerPk),
@@ -329,35 +431,42 @@ export const SellerReleaseSignatory = (
   };
 };
 
-export const ArbiReleaseSignatory = (arbiSk: Uint8Array, arbiPk: Uint8Array, buyerPk: Uint8Array, nonce: string) => {
+export const ArbiReleaseSignatory = (
+  arbiPk: Uint8Array,
+  buyerPk: Uint8Array,
+  buyerSk: Uint8Array,
+  oracleSig: Uint8Array
+) => {
   return (ecc: Ecc, input: UnsignedTxInput): Script => {
     const preimage = input.sigHashPreimage(ALL_BIP143);
-    const hexNonce = Buffer.from(nonce, 'utf-8').toString('hex');
-    const message = ACTION.ARBI_RELEASE + hexNonce;
-
-    const oracleMessage = sha256(fromHex(message)); // ACTION BYTE - 01 + NONCE - 48656c6c6f
-    const oracleSig = ecc.ecdsaSign(arbiSk, oracleMessage);
+    const sighash = sha256d(preimage.bytes);
+    const buyerSig = flagSignature(ecc.schnorrSign(buyerSk, sighash), ALL_BIP143);
 
     return Script.fromOps([
+      pushBytesOp(buyerSig),
       pushBytesOp(buyerPk),
       pushBytesOp(oracleSig),
       pushBytesOp(arbiPk),
       OP_2,
       pushBytesOp(preimage.redeemScript.bytecode)
     ]);
+    buildReturnTx;
   };
 };
 
-export const BuyerReturnSignatory = (buyerSk: Uint8Array, buyerPk: Uint8Array, sellerPk: Uint8Array, nonce: string) => {
+export const BuyerReturnSignatory = (
+  buyerPk: Uint8Array,
+  sellerPk: Uint8Array,
+  sellerSk: Uint8Array,
+  oracleSig: Uint8Array
+) => {
   return (ecc: Ecc, input: UnsignedTxInput): Script => {
     const preimage = input.sigHashPreimage(ALL_BIP143);
-    const hexNonce = Buffer.from(nonce, 'utf-8').toString('hex');
-    const message = ACTION.BUYER_RETURN + hexNonce;
-
-    const oracleMessage = sha256(fromHex(message)); // ACTION BYTE - 01 + NONCE - 48656c6c6f
-    const oracleSig = ecc.ecdsaSign(buyerSk, oracleMessage);
+    const sighash = sha256d(preimage.bytes);
+    const sellerSig = flagSignature(ecc.schnorrSign(sellerSk, sighash), ALL_BIP143);
 
     return Script.fromOps([
+      pushBytesOp(sellerSig),
       pushBytesOp(sellerPk),
       pushBytesOp(oracleSig),
       pushBytesOp(buyerPk),
@@ -367,16 +476,19 @@ export const BuyerReturnSignatory = (buyerSk: Uint8Array, buyerPk: Uint8Array, s
   };
 };
 
-export const ArbiReturnSignatory = (arbiSk: Uint8Array, arbiPk: Uint8Array, sellerPk: Uint8Array, nonce: string) => {
+export const ArbiReturnSignatory = (
+  arbiPk: Uint8Array,
+  sellerPk: Uint8Array,
+  sellerSk: Uint8Array,
+  oracleSig: Uint8Array
+) => {
   return (ecc: Ecc, input: UnsignedTxInput): Script => {
     const preimage = input.sigHashPreimage(ALL_BIP143);
-    const hexNonce = Buffer.from(nonce, 'utf-8').toString('hex');
-    const message = ACTION.ARBI_RETURN + hexNonce;
-
-    const oracleMessage = sha256(fromHex(message)); // ACTION BYTE - 01 + NONCE - 48656c6c6f
-    const oracleSig = ecc.ecdsaSign(arbiSk, oracleMessage);
+    const sighash = sha256d(preimage.bytes);
+    const sellerSig = flagSignature(ecc.schnorrSign(sellerSk, sighash), ALL_BIP143);
 
     return Script.fromOps([
+      pushBytesOp(sellerSig),
       pushBytesOp(sellerPk),
       pushBytesOp(oracleSig),
       pushBytesOp(arbiPk),
@@ -386,16 +498,19 @@ export const ArbiReturnSignatory = (arbiSk: Uint8Array, arbiPk: Uint8Array, sell
   };
 };
 
-export const ModReleaseSignatory = (modSk: Uint8Array, modPk: Uint8Array, buyerPk: Uint8Array, nonce: string) => {
+export const ModReleaseSignatory = (
+  modPk: Uint8Array,
+  buyerPk: Uint8Array,
+  buyerSk: Uint8Array,
+  oracleSig: Uint8Array
+) => {
   return (ecc: Ecc, input: UnsignedTxInput): Script => {
     const preimage = input.sigHashPreimage(ALL_BIP143);
-    const hexNonce = Buffer.from(nonce, 'utf-8').toString('hex');
-    const message = ACTION.MOD_RELEASE + hexNonce;
-
-    const oracleMessage = sha256(fromHex(message)); // ACTION BYTE - 01 + NONCE - 48656c6c6f
-    const oracleSig = ecc.ecdsaSign(modSk, oracleMessage);
+    const sighash = sha256d(preimage.bytes);
+    const buyerSig = flagSignature(ecc.schnorrSign(buyerSk, sighash), ALL_BIP143);
 
     return Script.fromOps([
+      pushBytesOp(buyerSig),
       pushBytesOp(buyerPk),
       pushBytesOp(oracleSig),
       pushBytesOp(modPk),
@@ -405,16 +520,19 @@ export const ModReleaseSignatory = (modSk: Uint8Array, modPk: Uint8Array, buyerP
   };
 };
 
-export const ModReturnSignatory = (modSk: Uint8Array, modPk: Uint8Array, sellerPk: Uint8Array, nonce: string) => {
+export const ModReturnSignatory = (
+  modPk: Uint8Array,
+  sellerPk: Uint8Array,
+  sellerSk: Uint8Array,
+  oracleSig: Uint8Array
+) => {
   return (ecc: Ecc, input: UnsignedTxInput): Script => {
     const preimage = input.sigHashPreimage(ALL_BIP143);
-    const hexNonce = Buffer.from(nonce, 'utf-8').toString('hex');
-    const message = ACTION.MOD_RETURN + hexNonce;
-
-    const oracleMessage = sha256(fromHex(message)); // ACTION BYTE - 01 + NONCE - 48656c6c6f
-    const oracleSig = ecc.ecdsaSign(modSk, oracleMessage);
+    const sighash = sha256d(preimage.bytes);
+    const sellerSig = flagSignature(ecc.schnorrSign(sellerSk, sighash), ALL_BIP143);
 
     return Script.fromOps([
+      pushBytesOp(sellerSig),
       pushBytesOp(sellerPk),
       pushBytesOp(oracleSig),
       pushBytesOp(modPk),
@@ -623,6 +741,7 @@ export const buyerDepositFee = (
   const JsonTxAfterSign = serializeTransaction(txAfterSign);
   //convert it to hex
   const hexJsonStr = Buffer.from(JsonTxAfterSign).toString('hex');
+
   return hexJsonStr;
 };
 

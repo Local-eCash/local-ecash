@@ -7,6 +7,7 @@ import {
   getSelectedAccountId,
   getWalletMnemonic,
   settingApi,
+  updateSeedBackupTime,
   useSliceDispatch as useLixiSliceDispatch,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
@@ -93,24 +94,31 @@ export default function Backup() {
   const [libWord, setLibWord] = useState<string[]>([]);
   const [randomListFinal, setRandomListFinal] = useState<string[]>([]);
   const [finished, setFinished] = useState(false);
+  const [disableButton, setDisableButton] = useState(false);
 
   const router = useRouter();
   const finalStep = async () => {
     //set time backup
     try {
+      const currentTime = new Date();
       const updateSettingCommand: UpdateSettingCommand = {
         accountId: selectedAccountId,
-        lastSeedBackupTime: new Date()
+        lastSeedBackupTime: currentTime
       };
       if (selectedAccountId) {
+        //setting on server
         const updatedSetting = await settingApi.updateSetting(updateSettingCommand);
         setSetting(updatedSetting);
+
+        //set backup time on device
+        dispatch(updateSeedBackupTime(currentTime.toISOString()));
       }
     } catch (err) {
       console.log('err when update setting: ', err);
     }
 
     setFinished(true);
+    setDisableButton(true);
     //router after 2s
     setTimeout(() => {
       const isFromSetting = searchParams.get('isFromSetting');
@@ -205,7 +213,7 @@ export default function Backup() {
     <MobileLayout>
       <ContainerBackupGame>
         <div className="setting-info">
-          <IconButton className="back-btn" onClick={() => router.back()}>
+          <IconButton disabled={disableButton} className="back-btn" onClick={() => router.back()}>
             <Close />
           </IconButton>
           <Typography variant="h5">{!isPlayGame ? 'Your recovery phrase' : 'Verify your phrase'}</Typography>
@@ -260,6 +268,7 @@ export default function Backup() {
             }}
             variant="contained"
             fullWidth
+            disabled={disableButton}
           >
             Back
           </Button>

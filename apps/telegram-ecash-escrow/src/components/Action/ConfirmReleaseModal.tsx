@@ -1,12 +1,5 @@
 'use client';
 
-import { COIN } from '@bcpros/lixi-models';
-
-import {
-  getSelectedWalletPath,
-  parseCashAddressToPrefix,
-  useSliceSelector as useLixiSliceSelector
-} from '@bcpros/redux-store';
 import { ChevronLeft } from '@mui/icons-material';
 import {
   Button,
@@ -93,7 +86,7 @@ interface ConfirmReleaseModalProps {
   disputeFee: number;
   onDissmissModal?: (value: boolean) => void;
   onConfirmClick?: () => void;
-  returnAction: (value: string) => void;
+  returnAction: (value: boolean) => void;
 }
 
 const Transition = React.forwardRef(function Transition(
@@ -106,26 +99,23 @@ const Transition = React.forwardRef(function Transition(
 });
 
 const ConfirmReleaseModal: React.FC<ConfirmReleaseModalProps> = (props: ConfirmReleaseModalProps) => {
-  const selectedWalletPath = useLixiSliceSelector(getSelectedWalletPath);
   const [optionDonate, setOptionDonate] = useState(null);
   const [verified, setVerified] = useState(false);
   const OptionDonate = [
     {
       label: '💼 Claim my security deposit back to my wallet',
-      value: 1
+      value: false
     },
     {
       label: `💙 Donate my security deposit to Local eCash`,
-      value: 2
+      value: true
     }
   ];
 
   const { handleSubmit } = useForm();
 
   const handleReleaseConfirm = data => {
-    const eCashAddress = parseCashAddressToPrefix(COIN.XEC, selectedWalletPath?.cashAddress);
-
-    props.returnAction(optionDonate === 1 ? eCashAddress : '');
+    props.returnAction(optionDonate);
     props.onDissmissModal!(false);
   };
 
@@ -135,7 +125,7 @@ const ConfirmReleaseModal: React.FC<ConfirmReleaseModalProps> = (props: ConfirmR
         <IconButton className="back-btn" onClick={() => props.onDissmissModal!(false)}>
           <ChevronLeft />
         </IconButton>
-        <DialogTitle paddingTop="0px">Confirmation</DialogTitle>
+        <DialogTitle paddingTop="0px !important">Confirmation</DialogTitle>
         <DialogContent>
           <ActionStatusRelease>
             <div className="verified-container" onClick={() => setVerified(!verified)}>
@@ -158,10 +148,11 @@ const ConfirmReleaseModal: React.FC<ConfirmReleaseModalProps> = (props: ConfirmR
                         onClick={() => {
                           setOptionDonate(item.value);
                         }}
-                        key={item.value}
+                        key={item.label}
                         value={item.value}
                         control={<Radio />}
                         label={item.label}
+                        checked={item.value === optionDonate}
                       />
                     );
                   })}

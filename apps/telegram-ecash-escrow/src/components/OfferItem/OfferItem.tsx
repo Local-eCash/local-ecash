@@ -1,6 +1,6 @@
 'use client';
 
-import { COIN_OTHERS } from '@/src/store/constants';
+import { COIN_OTHERS, COIN_USD_STABLECOIN_TICKER } from '@/src/store/constants';
 import { SettingContext } from '@/src/store/context/settingProvider';
 import { formatNumber } from '@/src/store/util';
 import {
@@ -10,6 +10,7 @@ import {
   TimelineQueryItem,
   accountsApi,
   fiatCurrencyApi,
+  getSeedBackupTime,
   getSelectedWalletPath,
   openModal,
   useSliceDispatch as useLixiSliceDispatch,
@@ -22,7 +23,7 @@ import { Button, Card, CardContent, Collapse, IconButton, Typography } from '@mu
 import { styled } from '@mui/material/styles';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import React, { useContext, useEffect, useState } from 'react';
 import useAuthorization from '../Auth/use-authorization.hooks';
 import { BackupModalProps } from '../Common/BackupModal';
@@ -104,20 +105,25 @@ type OfferItemProps = {
 };
 
 export default function OfferItem({ timelineItem }: OfferItemProps) {
+  const { status } = useSession();
+  const askAuthorization = useAuthorization();
   const searchParams = useSearchParams();
+  const router = useRouter();
+
   const dispatch = useLixiSliceDispatch();
+
   const post = timelineItem?.data as PostQueryItem;
   const offerData = post?.postOffer;
   const countryName = offerData?.location?.country ?? offerData?.country?.name;
   const stateName = offerData?.location?.adminNameAscii;
   const cityName = offerData?.location?.cityAscii;
-  const { status } = useSession();
-  const askAuthorization = useAuthorization();
-  const { useGetAccountByAddressQuery } = accountsApi;
-  const selectedWalletPath = useLixiSliceSelector(getSelectedWalletPath);
-  const settingContext = useContext(SettingContext);
-  const seedBackupTime = settingContext?.setting?.lastSeedBackupTime ?? '';
 
+  const selectedWalletPath = useLixiSliceSelector(getSelectedWalletPath);
+  const lastSeedBackupTimeOnDevice = useLixiSliceSelector(getSeedBackupTime);
+  const settingContext = useContext(SettingContext);
+  const seedBackupTime = settingContext?.setting?.lastSeedBackupTime ?? lastSeedBackupTimeOnDevice ?? '';
+
+  const { useGetAccountByAddressQuery } = accountsApi;
   const { currentData: accountQueryData } = useGetAccountByAddressQuery(
     { address: selectedWalletPath?.xAddress },
     { skip: !selectedWalletPath }
@@ -158,19 +164,25 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
 
   const [expanded, setExpanded] = React.useState(false);
 
-  const handleBoost = async () => {
+  const handleBoost = async e => {
+    e.stopPropagation();
+
     if (status === 'unauthenticated') {
       askAuthorization();
 
       return;
     }
 
-    const amountBoost = 100;
-    dispatch(openModal('BoostModal', { amount: amountBoost, post: post }));
+    dispatch(openModal('BoostModal', { post: post }));
   };
 
-  const handleExpandClick = () => {
+  const handleExpandClick = e => {
+    e.stopPropagation();
     setExpanded(!expanded);
+  };
+
+  const handleItemClick = () => {
+    router.push(`/offer-detail?id=${offerData.postId}`);
   };
 
   const convertXECToAmount = async () => {
@@ -178,7 +190,7 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
     let amountXEC = 1000000;
     let amountCoinOrCurrency = 0;
     //if payment is crypto, we convert from coin => USD
-    if (post?.postOffer?.coinPayment) {
+    if (post?.postOffer?.coinPayment && post?.postOffer?.coinPayment !== COIN_USD_STABLECOIN_TICKER) {
       const coinPayment = post.postOffer.coinPayment.toLowerCase();
       const rateArrayCoin = rateData.find(item => item.coin === coinPayment);
       const rateArrayXec = rateData.find(item => item.coin === 'xec');
@@ -237,7 +249,7 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
         </Typography>
         {(accountQueryData?.getAccountByAddress.role === Role.Moderator ||
           post?.account.hash160 === selectedWalletPath?.hash160) && (
-          <IconButton onClick={handleBoost}>
+          <IconButton onClick={e => handleBoost(e)}>
             <ArrowCircleUpRoundedIcon />
           </IconButton>
         )}
@@ -246,26 +258,25 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
         <span className="prefix">Headline: </span>
         {offerData?.message}
       </Typography>
-      <div className="minmax-collapse-wrap">
+      <div className="minmax-collapse-wrap" onClick={e => handleExpandClick(e)}>
         <Typography variant="body2">
           <span className="prefix">Min / max: </span>
           {formatNumber(offerData?.orderLimitMin)} {coinCurrency} - {formatNumber(offerData?.orderLimitMax)}{' '}
           {coinCurrency}
         </Typography>
-        {expanded ? (
-          <ExpandLessIcon onClick={handleExpandClick} style={{ cursor: 'pointer' }} />
-        ) : (
-          <ExpandMoreIcon onClick={handleExpandClick} style={{ cursor: 'pointer' }} />
-        )}
+        {expanded ? <ExpandLessIcon style={{ cursor: 'pointer' }} /> : <ExpandMoreIcon style={{ cursor: 'pointer' }} />}
       </div>
     </OfferShowWrapItem>
   );
 
   if (offerData?.status == OfferStatus.Archive) return <div></div>;
+  if (offerData?.hideFromHome) return <div></div>;
+  //hide item have negative score
+  if (post?.boostScore?.boostScore < 0) return <div></div>;
 
   return (
     <React.Fragment>
-      <CardWrapper onClick={handleExpandClick}>
+      <CardWrapper onClick={handleItemClick}>
         <CardContent>{OfferItem}</CardContent>
         <Collapse in={expanded} timeout="auto" unmountOnExit className="hidden-item-wrap">
           <CardContent>
@@ -302,7 +313,7 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
         </Collapse>
 
         <Typography component={'div'} className="action-section">
-          {offerData?.paymentMethods[0]?.paymentMethod?.id !== 5 && !offerData?.coinOthers ? (
+          {offerData?.paymentMethods[0]?.paymentMethod?.id !== 5 && offerData?.coinPayment !== COIN_OTHERS ? (
             <Typography variant="body2">
               <span className="prefix">Price: </span>Market price +{post?.postOffer?.marginPercentage ?? 0}%{' '}
               {coinCurrency !== 'XEC' && (

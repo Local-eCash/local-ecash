@@ -15,17 +15,7 @@ import {
 } from '@bcpros/redux-store';
 import { CheckCircleOutline } from '@mui/icons-material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Alert,
-  Backdrop,
-  Button,
-  NativeSelect,
-  Stack,
-  Typography
-} from '@mui/material';
+import { Accordion, AccordionDetails, AccordionSummary, Alert, Button, NativeSelect, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { signOut, useSession } from 'next-auth/react';
 import { useState } from 'react';
@@ -128,31 +118,6 @@ export default function Setting() {
       dispatch(setIsSystemThemes(false));
     }
   };
-
-  if (selectedWalletPath === null && sessionData) {
-    return (
-      <Backdrop sx={theme => ({ color: '#fff', zIndex: theme.zIndex.drawer + 1 })} open={true}>
-        <Stack>
-          <Typography variant="h5" align="center">
-            No wallet detected
-          </Typography>
-          <Typography variant="body1" align="center">
-            Please sign out and try again!
-          </Typography>
-          <Button
-            variant="contained"
-            style={{ marginTop: '15px' }}
-            onClick={() => {
-              dispatch(removeAllWallets());
-              signOut({ redirect: true, callbackUrl: '/' });
-            }}
-          >
-            Sign Out
-          </Button>
-        </Stack>
-      </Backdrop>
-    );
-  }
 
   return (
     <MobileLayout>

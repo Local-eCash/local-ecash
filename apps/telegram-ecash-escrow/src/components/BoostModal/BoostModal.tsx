@@ -4,29 +4,23 @@ import { UtxoContext } from '@/src/store/context/utxoProvider';
 import { withdrawFund } from '@/src/store/escrow';
 import { COIN } from '@bcpros/lixi-models';
 import {
-  boostApi,
   BoostForType,
   BoostType,
-  closeModal,
   CreateBoostInput,
-  getSelectedWalletPath,
   PostQueryItem,
+  Role,
+  accountsApi,
+  boostApi,
+  closeActionSheet,
+  closeModal,
+  getSelectedWalletPath,
   useSliceDispatch as useLixiSliceDispatch,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
 import { styled } from '@mui/material/styles';
 
-import {
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Portal,
-  Slide,
-  Typography,
-  useTheme
-} from '@mui/material';
+import { BOOST_AMOUNT } from '@/src/store/constants';
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Portal, Slide, Typography } from '@mui/material';
 import { TransitionProps } from '@mui/material/transitions';
 import { fromHex, toHex } from 'ecash-lib';
 import cashaddr from 'ecashaddrjs';
@@ -67,6 +61,12 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
     flexDirection: 'column',
     alignItems: 'flex-start',
 
+    '.group-btn': {
+      display: 'flex',
+      width: '100%',
+      gap: '10px'
+    },
+
     '.boost-info': {
       marginTop: '10px',
       marginLeft: '0'
@@ -85,7 +85,6 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
 }));
 
 interface BoostModalProps {
-  amount: number;
   post: PostQueryItem;
   classStyle?: string;
 }
@@ -99,12 +98,17 @@ const Transition = React.forwardRef(function Transition(
   return <Slide direction="up" ref={ref} {...props} />;
 });
 
-const BoostModal: React.FC<BoostModalProps> = ({ amount, post }: BoostModalProps) => {
+const BoostModal: React.FC<BoostModalProps> = ({ post }: BoostModalProps) => {
   const { totalValidAmount, totalValidUtxos } = useContext(UtxoContext);
 
   const dispatch = useLixiSliceDispatch();
   const selectedWallet = useLixiSliceSelector(getSelectedWalletPath);
-  const theme = useTheme();
+  const { useGetAccountByAddressQuery } = accountsApi;
+
+  const { currentData: accountQueryData } = useGetAccountByAddressQuery(
+    { address: selectedWallet?.xAddress },
+    { skip: !selectedWallet?.xAddress }
+  );
 
   const [error, setError] = useState(false);
   const [notEnoughMoney, setNotEnoughMoney] = useState(false);
@@ -118,7 +122,7 @@ const BoostModal: React.FC<BoostModalProps> = ({ amount, post }: BoostModalProps
     dispatch(closeModal());
   };
 
-  const handleCreateBoost = async () => {
+  const handleCreateBoost = async (boostType: BoostType) => {
     try {
       setLoading(true);
       const myPk = fromHex(selectedWallet?.publicKey);
@@ -127,6 +131,7 @@ const BoostModal: React.FC<BoostModalProps> = ({ amount, post }: BoostModalProps
       const { hash: hashXEC } = cashaddr.decode(GNCAddress, false);
       const GNCHash = Buffer.from(hashXEC).toString('hex');
 
+      const amount = BOOST_AMOUNT;
       if (totalValidAmount < amount) {
         setNotEnoughMoney(true);
       }
@@ -138,7 +143,7 @@ const BoostModal: React.FC<BoostModalProps> = ({ amount, post }: BoostModalProps
         boostedValue: amount,
         boostForId: post?.id || '',
         boostForType: BoostForType.Post,
-        boostType: BoostType.Up,
+        boostType: boostType,
         txHex: toHex(txBuild)
       };
       await createBoostTrigger({ data: createBoostInput })
@@ -161,18 +166,37 @@ const BoostModal: React.FC<BoostModalProps> = ({ amount, post }: BoostModalProps
         </Typography>
       </DialogContent>
       <DialogActions style={{ flexBasis: 'column', padding: 0 }}>
-        <Button
-          className="create-boost-btn"
-          color="info"
-          variant="contained"
-          onClick={() => handleCreateBoost()}
-          disabled={loading}
-        >
-          100 XEC to boost
-        </Button>
-        <Typography className="boost-info">
-          Boosted <span className="bold">{post.boostScore.boostScore / 100}</span> times by you:{' '}
-          <span className="bold">{post.boostScore.boostScore}</span> {COIN.XEC}
+        <div className="group-btn">
+          {accountQueryData?.getAccountByAddress?.role === Role.Moderator && (
+            <Button
+              className="create-boost-btn"
+              variant="contained"
+              style={{ backgroundColor: '#a41208' }}
+              onClick={() => handleCreateBoost(BoostType.Down)}
+              disabled={loading}
+            >
+              100 XEC to downvote
+            </Button>
+          )}
+          <Button
+            className="create-boost-btn"
+            color="info"
+            variant="contained"
+            onClick={() => handleCreateBoost(BoostType.Up)}
+            disabled={loading}
+          >
+            100 XEC to boost
+          </Button>
+        </div>
+        <Typography component={'div'} className="boost-info">
+          <Typography>
+            Boosted <span className="bold">{post.boostScore.boostUp / 100}</span> times by you:{' '}
+            <span className="bold">{post.boostScore.boostUp}</span> {COIN.XEC}
+          </Typography>
+          <Typography>
+            Downvote <span className="bold">{post.boostScore.boostDown / 100}</span> times by moderator:{' '}
+            <span className="bold">{post.boostScore.boostDown}</span> {COIN.XEC}
+          </Typography>
         </Typography>
       </DialogActions>
       <Portal>
@@ -181,6 +205,7 @@ const BoostModal: React.FC<BoostModalProps> = ({ amount, post }: BoostModalProps
           handleClose={() => {
             setBoostSuccess(false);
             handleCloseModal();
+            dispatch(closeActionSheet());
           }}
           content="Boost offer successful"
           type="success"
@@ -190,6 +215,7 @@ const BoostModal: React.FC<BoostModalProps> = ({ amount, post }: BoostModalProps
           handleClose={() => {
             setError(false);
             handleCloseModal();
+            dispatch(closeActionSheet());
           }}
           content="Boost offer failed!"
           type="error"
@@ -200,6 +226,7 @@ const BoostModal: React.FC<BoostModalProps> = ({ amount, post }: BoostModalProps
           handleClose={() => {
             setNotEnoughMoney(false);
             handleCloseModal();
+            dispatch(closeActionSheet());
           }}
           content="Not enough XEC to boost!"
           type="error"

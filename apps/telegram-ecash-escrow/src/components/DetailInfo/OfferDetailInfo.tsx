@@ -5,11 +5,13 @@ import { SettingContext } from '@/src/store/context/settingProvider';
 import { formatNumber } from '@/src/store/util';
 import {
   OfferStatus,
-  openActionSheet,
-  openModal,
   PostQueryItem,
   TimelineQueryItem,
-  useSliceDispatch as useLixiSliceDispatch
+  getSeedBackupTime,
+  openActionSheet,
+  openModal,
+  useSliceDispatch as useLixiSliceDispatch,
+  useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import { Button, IconButton, Typography } from '@mui/material';
@@ -46,13 +48,18 @@ const OfferDetailWrap = styled('div')(({ theme }) => ({
     color: '#79869b'
   },
 
-  '.payment-group-btns': {
+  '.action-section': {
     display: 'flex',
-    flexWrap: 'wrap',
-    gap: '10px',
+    justifyContent: 'space-between',
     button: {
       borderRadius: '10px',
       textTransform: 'capitalize'
+    },
+
+    '.payment-group-btns': {
+      button: {
+        marginRight: '10px'
+      }
     }
   }
 }));
@@ -70,8 +77,9 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
   const { status } = useSession();
   const askAuthorization = useAuthorization();
 
+  const lastSeedBackupTimeOnDevice = useLixiSliceSelector(getSeedBackupTime);
   const settingContext = useContext(SettingContext);
-  const seedBackupTime = settingContext?.setting?.lastSeedBackupTime ?? '';
+  const seedBackupTime = settingContext?.setting?.lastSeedBackupTime ?? lastSeedBackupTimeOnDevice ?? '';
 
   const postData = timelineItem?.data as PostQueryItem;
   const offerData = postData?.postOffer ?? post?.postOffer;
@@ -81,7 +89,7 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
 
   const handleClickAction = e => {
     e.stopPropagation();
-    dispatch(openActionSheet('OfferActionSheet', { offer: offerData }));
+    dispatch(openActionSheet('OfferActionSheet', { post: postData }));
   };
 
   const handleBuyClick = e => {
@@ -131,7 +139,7 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
           </IconButton>
         )}
       </div>
-      {offerData?.paymentMethods[0]?.paymentMethod?.id !== 5 && !offerData?.coinOthers && (
+      {offerData?.paymentMethods[0]?.paymentMethod?.id !== 5 && offerData?.coinPayment !== COIN_OTHERS && (
         <Typography variant="body1">
           <span className="prefix">Price: </span>
           Market price +{offerData?.marginPercentage}%
@@ -154,21 +162,29 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
           {offerData.noteOffer}
         </Typography>
       )}
-      <div className="payment-group-btns">
-        {offerData?.paymentMethods &&
-          offerData.paymentMethods?.length > 0 &&
-          offerData.paymentMethods.map(item => {
-            return (
-              <Button size="small" color="success" variant="outlined" key={item.paymentMethod.name}>
-                {item.paymentMethod.name}
-              </Button>
-            );
-          })}
-        {offerData?.coinOthers && (
-          <Button size="small" color="success" variant="outlined">
-            {offerData.coinOthers}
+
+      <div className="action-section">
+        <div className="payment-group-btns">
+          <Button size="small" color="info" variant="outlined">
+            <Typography variant="body1" style={{ fontWeight: 'bold' }}>
+              <span style={{ fontSize: '14px' }}>{offerData?.hideFromHome ? 'Unlisted' : 'Listed'}</span>
+            </Typography>
           </Button>
-        )}
+          {offerData?.paymentMethods &&
+            offerData.paymentMethods?.length > 0 &&
+            offerData.paymentMethods.map(item => {
+              return (
+                <Button size="small" color="success" variant="outlined" key={item.paymentMethod.name}>
+                  {item.paymentMethod.name}
+                </Button>
+              );
+            })}
+          {offerData?.coinOthers && (
+            <Button size="small" color="success" variant="outlined">
+              {offerData.coinOthers}
+            </Button>
+          )}
+        </div>
         {isShowBuyButton && (
           <BuyButtonStyled variant="contained" onClick={e => handleBuyClick(e)}>
             Buy

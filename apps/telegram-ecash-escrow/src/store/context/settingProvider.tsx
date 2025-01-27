@@ -1,5 +1,11 @@
 import { Setting } from '@bcpros/lixi-models';
-import { getSelectedAccount, settingApi, useSliceSelector as useLixiSliceSelector } from '@bcpros/redux-store';
+import {
+  getSelectedAccount,
+  settingApi,
+  updateSeedBackupTime,
+  useSliceDispatch as useLixiSliceDispatch,
+  useSliceSelector as useLixiSliceSelector
+} from '@bcpros/redux-store';
 import _ from 'lodash';
 import { createContext, useEffect, useMemo, useState } from 'react';
 
@@ -12,6 +18,7 @@ export interface SettingContextType {
 export const SettingContext = createContext<SettingContextType>(undefined);
 
 export function SettingProvider({ children }) {
+  const dispatch = useLixiSliceDispatch();
   const selectedAccount = useLixiSliceSelector(getSelectedAccount);
   const [setting, setSetting] = useState<Setting>(null);
   const [token, setToken] = useState<string | null>(sessionStorage.getItem('Authorization'));
@@ -41,7 +48,7 @@ export function SettingProvider({ children }) {
 
       return () => clearInterval(interval);
     }
-  }, []);
+  }, [selectedAccount]);
 
   //get setting
   useEffect(() => {
@@ -49,6 +56,9 @@ export function SettingProvider({ children }) {
       (async () => {
         const data = (await getSetting(selectedAccount?.id)) as Setting;
         setSetting(data);
+
+        //set backup time on device
+        dispatch(updateSeedBackupTime(data?.lastSeedBackupTime?.toString()));
       })();
     }
   }, [selectedAccount?.id, token]);

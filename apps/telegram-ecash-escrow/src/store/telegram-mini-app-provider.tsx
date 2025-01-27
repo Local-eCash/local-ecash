@@ -1,12 +1,14 @@
 'use client';
 
 import {
+  accountsApi,
   axiosClient,
   getSelectedWalletPath,
   removeAllWallets,
   useSliceDispatch as useLixiSliceDispatch,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
+import { useUpdateAccountTelegramUsernameMutation } from '@bcpros/redux-store/build/main/store/account/accounts.api';
 import SignalWifiConnectedNoInternet4Icon from '@mui/icons-material/SignalWifiConnectedNoInternet4';
 import { Backdrop, Button, Stack, Typography } from '@mui/material';
 import { LaunchParams, init, postEvent, retrieveLaunchParams } from '@telegram-apps/sdk-react';
@@ -30,10 +32,16 @@ export function TelegramMiniAppProvider({ children }: { children: React.ReactNod
   const dispatch = useLixiSliceDispatch();
   const { data: sessionData } = useSession();
   const selectedWalletPath = useLixiSliceSelector(getSelectedWalletPath);
+  const { useGetAccountByAddressQuery } = accountsApi;
 
   const [launchParams, setLaunchParams] = useState<LaunchParams | undefined>(undefined);
   const [mismatchAccount, setMismatchAccount] = useState(false);
   const [networkError, setNetworkError] = useState(false);
+  const [createTriggerUpdateAccountTelegramUsername] = useUpdateAccountTelegramUsernameMutation();
+  const { currentData: accountQueryData } = useGetAccountByAddressQuery(
+    { address: selectedWalletPath?.xAddress },
+    { skip: !selectedWalletPath || !sessionData }
+  );
 
   useEffect(() => {
     if (selectedWalletPath && sessionData) {
@@ -75,6 +83,16 @@ export function TelegramMiniAppProvider({ children }: { children: React.ReactNod
       router.push(`/${param1}-${param2}?id=${id}`);
     }
   }, [launchParams]);
+
+  useEffect(() => {
+    sessionData &&
+      accountQueryData &&
+      accountQueryData?.getAccountByAddress.telegramUsername !== sessionData?.user.name &&
+      createTriggerUpdateAccountTelegramUsername({
+        telegramId: sessionData.user.id,
+        telegramUsername: sessionData.user.name
+      });
+  }, [sessionData, accountQueryData?.getAccountByAddress]);
 
   if (mismatchAccount) {
     return (

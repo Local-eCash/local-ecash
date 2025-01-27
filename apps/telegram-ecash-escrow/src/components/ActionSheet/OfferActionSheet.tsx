@@ -1,12 +1,15 @@
 import {
-  OfferQueryItem,
   OfferStatus,
+  PostQueryItem,
+  UpdateOfferHideFromHomeInput,
   UpdateOfferStatusInput,
   closeActionSheet,
   offerApi,
   openModal,
+  showToast,
   useSliceDispatch as useLixiSliceDispatch
 } from '@bcpros/redux-store';
+import { useUpdateOfferHideFromHomeMutation } from '@bcpros/redux-store/build/main/store/escrow/offer/offer.api';
 import { Box, List, ListItem, ListItemButton, ListItemText, SwipeableDrawer, styled } from '@mui/material';
 import { useState } from 'react';
 
@@ -26,15 +29,18 @@ const ListStyled = styled(List)(({ theme }) => ({
 }));
 
 interface OfferActionSheetProps {
-  offer: OfferQueryItem;
+  post: PostQueryItem;
 }
 
-export default function OfferActionSheet({ offer }: OfferActionSheetProps) {
+export default function OfferActionSheet({ post }: OfferActionSheetProps) {
+  const offer = post?.postOffer;
   const dispatch = useLixiSliceDispatch();
+
   const [open, setOpen] = useState(true);
 
   const { useUpdateOfferStatusMutation } = offerApi;
   const [triggerUpdateOfferStatus] = useUpdateOfferStatusMutation();
+  const [updateOfferHideFromHomeTrigger] = useUpdateOfferHideFromHomeMutation();
 
   const editOffer = () => {
     dispatch(openModal('CreateOfferModal', { offer: offer, isEdit: true }));
@@ -47,6 +53,42 @@ export default function OfferActionSheet({ offer }: OfferActionSheetProps) {
       status: OfferStatus.Archive
     };
     triggerUpdateOfferStatus({ input });
+  };
+
+  const handleListUnlistOffer = async () => {
+    let inputUpdateOffer: UpdateOfferHideFromHomeInput = {
+      id: offer?.postId,
+      hideFromHome: !offer?.hideFromHome
+    };
+    await updateOfferHideFromHomeTrigger({ input: inputUpdateOffer })
+      .unwrap()
+      .then(() => {
+        dispatch(
+          showToast('success', {
+            message: 'Success',
+            description: `${offer?.hideFromHome ? 'List' : 'Unlist'} offer successfully!`
+          })
+        );
+      })
+      .catch(err => {
+        dispatch(
+          showToast('error', {
+            message: 'error',
+            description: `Something wrong when ${offer?.hideFromHome ? 'list' : 'unlist'} offer!`
+          })
+        );
+      });
+
+    handleClose();
+  };
+
+  const handleBoostOffer = async () => {
+    dispatch(openModal('BoostModal', { post: post }));
+  };
+
+  const handleClickShare = () => {
+    dispatch(openModal('ShareSocialModal', { offer: offer }));
+    dispatch(closeActionSheet());
   };
 
   const handleClose = () => {
@@ -64,9 +106,26 @@ export default function OfferActionSheet({ offer }: OfferActionSheetProps) {
             <ListItemText primary={'Edit offer'} />
           </ListItemButton>
         </ListItem>
-        <ListItem key={'Archived'} disablePadding>
+        <ListItem key={'Archive'} disablePadding>
           <ListItemButton onClick={handleClickArchive}>
-            <ListItemText primary={'Archived offer'} />
+            <ListItemText primary={'Archive offer'} />
+          </ListItemButton>
+        </ListItem>
+        <ListItem key={'ListUnlist'} disablePadding>
+          <ListItemButton onClick={handleListUnlistOffer}>
+            <ListItemText primary={`${offer?.hideFromHome ? 'List' : 'Unlist'} offer`} />
+          </ListItemButton>
+        </ListItem>
+        {!offer?.hideFromHome && (
+          <ListItem key={'Boost'} disablePadding>
+            <ListItemButton onClick={handleBoostOffer}>
+              <ListItemText primary={'Boost offer'} />
+            </ListItemButton>
+          </ListItem>
+        )}
+        <ListItem key={'Share'} disablePadding>
+          <ListItemButton onClick={handleClickShare}>
+            <ListItemText primary={'Share offer'} />
           </ListItemButton>
         </ListItem>
       </ListStyled>

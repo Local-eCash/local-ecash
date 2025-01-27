@@ -1,5 +1,5 @@
 import { closeModal, useSliceDispatch as useLixiSliceDispatch } from '@bcpros/redux-store';
-import { Box, Button, Modal } from '@mui/material';
+import { Box, Button, Modal, Typography } from '@mui/material';
 import { useRouter } from 'next/navigation';
 
 const style = {
@@ -9,7 +9,6 @@ const style = {
   transform: 'translate(-50%, -50%)',
   width: 400,
   bgcolor: 'background.paper',
-  border: '2px solid #000',
   boxShadow: 24,
   pt: 2,
   px: 4,
@@ -56,7 +55,7 @@ export const BackupModal = ({ isFromHome = true, isFromSetting = false, offerId 
       aria-describedby="child-modal-description"
     >
       <Box sx={{ ...style, width: 300 }}>
-        <h2 style={{ color: 'white' }}>You need to back up your seed phrase before continuing!</h2>
+        <Typography variant="h6">You need to back up your seed phrase before continuing!</Typography>
         <Button
           style={{ textTransform: 'none', fontWeight: 'bold', fontSize: '16px' }}
           variant="contained"

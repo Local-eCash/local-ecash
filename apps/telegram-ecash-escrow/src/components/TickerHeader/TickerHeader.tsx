@@ -1,8 +1,9 @@
 'use client';
 
-import { openModal, useSliceDispatch as useLixiSliceDispatch } from '@bcpros/redux-store';
+import { openModal, PostQueryItem, useSliceDispatch as useLixiSliceDispatch } from '@bcpros/redux-store';
 import { ChevronLeft } from '@mui/icons-material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import ShareIcon from '@mui/icons-material/Share';
 import { IconButton, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useSession } from 'next-auth/react';
@@ -17,6 +18,14 @@ const Header = styled('div')(({ theme }) => ({
     padding: 0,
     svg: {
       fontSize: '32px'
+    }
+  },
+
+  '.share-btn': {
+    top: '15px',
+    right: '10px',
+    svg: {
+      fontSize: '30px'
     }
   },
 
@@ -46,13 +55,17 @@ interface TickerHeaderProps {
   iconHeader?: any;
   hideIcon?: boolean;
   showBtnCreateOffer?: boolean;
+  showShareIcon?: boolean;
+  postData?: PostQueryItem;
 }
 
 const TickerHeader: React.FC<TickerHeaderProps> = ({
   title,
   hideIcon,
   showBtnCreateOffer = false,
-  iconHeader = null
+  iconHeader = null,
+  showShareIcon = false,
+  postData
 }) => {
   const router = useRouter();
   const dispatch = useLixiSliceDispatch();
@@ -86,6 +99,17 @@ const TickerHeader: React.FC<TickerHeaderProps> = ({
         {iconHeader && <IconButton className="icon-header">{iconHeader}</IconButton>}
         {title} {showBtnCreateOffer && <AddCircleOutlineIcon onClick={handleOpenCreateOffer} />}{' '}
       </Typography>
+      {showShareIcon && (
+        <IconButton
+          style={{ fontSize: '25px' }}
+          className="share-btn"
+          onClick={() => {
+            dispatch(openModal('ShareSocialModal', { offer: postData?.postOffer }));
+          }}
+        >
+          <ShareIcon />
+        </IconButton>
+      )}
     </Header>
   );
 };

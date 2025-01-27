@@ -1,5 +1,6 @@
 'use client';
 
+import { COIN_OTHERS, COIN_USD_STABLECOIN_TICKER } from '@/src/store/constants';
 import { COIN, coinInfo } from '@bcpros/lixi-models';
 import {
   DisputeStatus,
@@ -109,7 +110,7 @@ const OrderDetailInfo = ({ item }: OrderItemProps) => {
     const amountXEC = 1000000;
     let amountCoinOrCurrency = 0;
     //if payment is crypto, we convert from coin => USD
-    if (order?.escrowOffer?.coinPayment) {
+    if (order?.escrowOffer?.coinPayment && order?.escrowOffer?.coinPayment !== COIN_USD_STABLECOIN_TICKER) {
       const coinPayment = order?.escrowOffer.coinPayment.toLowerCase();
       const rateArrayCoin = rateData.find(item => item.coin === coinPayment);
       const rateArrayXec = rateData.find(item => item.coin === 'xec');
@@ -133,7 +134,18 @@ const OrderDetailInfo = ({ item }: OrderItemProps) => {
   };
 
   const showMargin = () => {
-    return order?.paymentMethod?.id !== 5 && !order?.escrowOffer?.coinOthers;
+    return order?.paymentMethod?.id !== 5 && order?.escrowOffer?.coinPayment !== COIN_OTHERS;
+  };
+
+  const orderStatus = () => {
+    if (order?.escrowOrderStatus === EscrowOrderStatus.Escrow && order?.releaseSignatory) {
+      return 'Released';
+    }
+
+    if (order?.dispute && order?.dispute?.status === DisputeStatus.Active) return 'Dispute';
+    else {
+      return order?.escrowOrderStatus?.toLowerCase()?.replace(/^./, char => char.toUpperCase());
+    }
   };
 
   //get rate data
@@ -163,20 +175,16 @@ const OrderDetailInfo = ({ item }: OrderItemProps) => {
         </div>
         <div className="order-type">
           {order?.sellerAccount.id === selectedAccount?.id && (
-            <Button className="btn-order-type" size="small" color="info" variant="outlined">
+            <Button className="btn-order-type" size="small" color="error" variant="outlined">
               Sell
             </Button>
           )}
           {order?.buyerAccount.id === selectedAccount?.id && (
-            <Button className="btn-order-type" size="small" color="info" variant="outlined">
+            <Button className="btn-order-type" size="small" color="success" variant="outlined">
               Buy
             </Button>
           )}
         </div>
-      </Typography>
-      <Typography variant="body1">
-        <span className="prefix">Offer: </span>
-        {order?.escrowOffer.message}
       </Typography>
       <Typography variant="body1">
         {order?.sellerAccount.id === selectedAccount?.id && (
@@ -230,17 +238,24 @@ const OrderDetailInfo = ({ item }: OrderItemProps) => {
             <span className="prefix">Margin of current price:</span> {marginCurrentPrice.toFixed(2)}%
           </Typography>
         )}
-      {order?.message && (
-        <Typography variant="body1">
-          <span className="prefix">Message: </span>
-          {order?.message}
-        </Typography>
-      )}
       <Typography variant="body1">
         <span className="prefix">Status: </span>
-        {order?.dispute && order?.dispute?.status === DisputeStatus.Active
-          ? 'Dispute'
-          : order?.escrowOrderStatus?.toLowerCase()?.replace(/^./, char => char.toUpperCase())}
+        {orderStatus()}
+      </Typography>
+      <Typography>
+        <span className="prefix">Escrow Address: </span>
+        <a
+          style={{
+            color: 'cornflowerblue',
+            wordWrap: 'break-word',
+            maxWidth: '100%',
+            display: 'inline-block'
+          }}
+          href={`${coinInfo[COIN.XEC].blockExplorerUrl}/address/${order?.escrowAddress}`}
+          target="_blank"
+        >
+          <span>{order?.escrowAddress}</span>
+        </a>
       </Typography>
     </OrderDetailWrap>
   );
