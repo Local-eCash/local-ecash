@@ -6,7 +6,6 @@ import TopSection from '@/src/components/TopSection/TopSection';
 import {
   PostQueryItem,
   TimelineQueryItem,
-  axiosClient,
   getCountries,
   getNewPostAvailable,
   getOfferFilterConfig,
@@ -123,22 +122,22 @@ export default function Home() {
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
   };
 
-  useEffect(() => {
-    (async () => {
-      const country = await axiosClient
-        .get(`/api/countries/ipaddr`)
-        .then(result => {
-          return result.data;
-        })
-        .catch(({ response }) => {
-          console.log(response.data.message);
-        });
+  // useEffect(() => {
+  //   (async () => {
+  //     const country = await axiosClient
+  //       .get(`/api/countries/ipaddr`)
+  //       .then(result => {
+  //         return result.data;
+  //       })
+  //       .catch(({ response }) => {
+  //         console.log(response?.data.message);
+  //       });
 
-      if (country && country === 'US') {
-        return router.push('/not-available');
-      }
-    })();
-  }, []);
+  //     if (country && country === 'US') {
+  //       return router.push('/not-available');
+  //     }
+  //   })();
+  // }, []);
 
   //reset flag for new-post when reload
   useEffect(() => {

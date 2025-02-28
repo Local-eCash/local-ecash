@@ -3,12 +3,14 @@
 import { UtxoContext } from '@/src/store/context/utxoProvider';
 import { COIN } from '@bcpros/lixi-models';
 import {
+  getSelectedAccount,
   getSelectedWalletPath,
   parseCashAddressToPrefix,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
 import { CopyAllOutlined, SettingsOutlined, Wallet } from '@mui/icons-material';
 import AccountCircleRoundedIcon from '@mui/icons-material/AccountCircleRounded';
+import Person2Icon from '@mui/icons-material/Person2';
 import { Button, IconButton, Popover, Portal, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useSession } from 'next-auth/react';
@@ -84,6 +86,7 @@ export default function Header() {
   const askAuthorization = useAuthorization();
   const { totalValidAmount } = useContext(UtxoContext);
   const selectedWalletPath = useLixiSliceSelector(getSelectedWalletPath);
+  const selectedAccount = useLixiSliceSelector(getSelectedAccount);
 
   const [address, setAddress] = useState(parseCashAddressToPrefix(COIN.XEC, selectedWalletPath?.cashAddress));
   const [copy, setCopy] = useState(false);
@@ -126,6 +129,13 @@ export default function Header() {
       <Typography onClick={() => router.push('/settings')} className="heading-profile">
         <span>Settings</span>
         <Button className="no-border-btn" endIcon={<SettingsOutlined />} />
+      </Typography>
+      <Typography
+        onClick={() => router.push(`/profile?address=${selectedAccount?.address}`)}
+        className="heading-profile"
+      >
+        <span>Profile</span>
+        <Button className="no-border-btn" endIcon={<Person2Icon />} />
       </Typography>
     </PopoverStyled>
   );

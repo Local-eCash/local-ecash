@@ -13,6 +13,7 @@ import {
   convertEscrowScriptHashToEcashAddress,
   escrowOrderApi,
   fiatCurrencyApi,
+  getModals,
   getSelectedWalletPath,
   parseCashAddressToPrefix,
   showToast,
@@ -257,6 +258,8 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
   const theme = useTheme();
   const router = useRouter();
   const dispatch = useLixiSliceDispatch();
+  const currentModal = useLixiSliceSelector(getModals);
+
   const { post }: { post: PostQueryItem } = props;
   const { data } = useSession();
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
@@ -491,8 +494,37 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
     );
   };
 
+  // // Handle browser history to manage the modal
+  useEffect(() => {
+    // Function to handle the popstate event (when back button is clicked)
+    const handlePopState = event => {
+      if (currentModal.length > 0) {
+        // Prevent the default back action
+        event.preventDefault();
+
+        // Close the modal instead
+        dispatch(closeModal());
+      }
+    };
+
+    // When modal opens, add a new history entry
+    if (currentModal.length > 0) {
+      // Push a new entry to the history stack
+      window.history.pushState({ modal: true }, '');
+
+      // Add event listener for popstate (back button)
+      window.addEventListener('popstate', handlePopState);
+    }
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [currentModal]);
+
   const handleCloseModal = () => {
     dispatch(closeModal());
+    window.history.go(1);
   };
 
   const showMargin = () => {

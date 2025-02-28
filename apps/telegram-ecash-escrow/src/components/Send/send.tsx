@@ -12,7 +12,7 @@ import {
 } from '@bcpros/redux-store';
 import styled from '@emotion/styled';
 import { QrCodeScanner } from '@mui/icons-material';
-import { Button, Checkbox, FormControl, FormControlLabel, IconButton, TextField, Typography } from '@mui/material';
+import { Button, FormControl, IconButton, TextField } from '@mui/material';
 import { fromHex } from 'ecash-lib';
 import cashaddr from 'ecashaddrjs';
 import React, { useMemo, useState } from 'react';
@@ -72,13 +72,11 @@ const SendComponent: React.FC<SendComponentProps> = props => {
   } = useForm({
     defaultValues: {
       address: '',
-      amount: 0,
-      isDonateGNC: false
+      amount: 0
     }
   });
 
   const amountValue = watch('amount');
-  const isDonateGNC = watch('isDonateGNC');
 
   const [myAddress, setMyAddress] = useState(parseCashAddressToPrefix(COIN.XEC, selectedWallet?.cashAddress));
   const [feeSats, setFeeSats] = useState(
@@ -94,17 +92,12 @@ const SendComponent: React.FC<SendComponentProps> = props => {
   const [linkSend, setLinkSend] = useState('');
 
   const handleSendCoin = async data => {
-    const { address, amount, isDonateGNC } = data;
+    const { address, amount } = data;
     const { hash: hashXEC } = cashaddr.decode(address, false);
     const recipientHash = Buffer.from(hashXEC).toString('hex');
 
     const myPk = fromHex(selectedWallet?.publicKey);
     const mySk = fromHex(selectedWallet?.privateKey);
-
-    let GNCAddress = '';
-    if (isDonateGNC) {
-      GNCAddress = process.env.NEXT_PUBLIC_ADDRESS_GNC;
-    }
 
     const txBuild = withdrawFund(
       totalValidUtxos,
@@ -113,7 +106,7 @@ const SendComponent: React.FC<SendComponentProps> = props => {
       recipientHash,
       'P2PKH',
       Number(amount),
-      GNCAddress,
+      '',
       calFee1Percent
     );
     try {
@@ -130,9 +123,7 @@ const SendComponent: React.FC<SendComponentProps> = props => {
   };
 
   const checkEnoughFund = () => {
-    return isDonateGNC
-      ? totalValidAmount > calFee1Percent + Number(amountValue) + estimatedTxFee
-      : totalValidAmount > Number(amountValue) + estimatedTxFee;
+    return totalValidAmount > Number(amountValue) + estimatedTxFee;
   };
 
   const calFee1Percent = useMemo(() => {
@@ -225,31 +216,6 @@ const SendComponent: React.FC<SendComponentProps> = props => {
             </FormControl>
           )}
         />
-        <Controller
-          name="isDonateGNC"
-          control={control}
-          render={({ field }) => (
-            <FormControlLabel
-              control={
-                <Checkbox
-                  {...field}
-                  checked={field.value}
-                  onChange={e => field.onChange(e.target.checked)}
-                  style={{ paddingTop: '3px' }}
-                />
-              }
-              label="💙 Donate 1% to keep this service running 💙"
-            />
-          )}
-        />
-        {isDonateGNC && (
-          <Typography className="amount-donate-gnc">
-            <span className="bold">
-              {calFee1Percent.toLocaleString('de-DE')} {COIN.XEC}{' '}
-            </span>{' '}
-            will be sent to Local eCash to maintains this app
-          </Typography>
-        )}
       </div>
       <Button
         className="btn-send"

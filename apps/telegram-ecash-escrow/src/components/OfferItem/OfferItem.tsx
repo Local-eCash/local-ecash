@@ -96,7 +96,12 @@ const OfferShowWrapItem = styled('div')(({ theme }) => ({
   '.push-offer-wrap, .minmax-collapse-wrap': {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center'
+    alignItems: 'center',
+
+    '.reputation-account': {
+      fontSize: '11px',
+      color: theme.custom.colorItem1
+    }
   }
 }));
 
@@ -185,6 +190,11 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
     router.push(`/offer-detail?id=${offerData.postId}`);
   };
 
+  const handleUserNameClick = e => {
+    e?.stopPropagation();
+    router.push(`/profile?address=${post?.account?.address}`);
+  };
+
   const convertXECToAmount = async () => {
     if (!rateData) return 0;
     let amountXEC = 1000000;
@@ -244,8 +254,9 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
   const OfferItem = (
     <OfferShowWrapItem>
       <div className="push-offer-wrap">
-        <Typography variant="body2">
-          <span className="prefix">By: </span> {post?.account?.telegramUsername ?? ''}
+        <Typography variant="body2" onClick={handleUserNameClick}>
+          <span className="prefix">By: </span> {post?.account?.telegramUsername ?? ''}{' '}
+          <span className="reputation-account">- ☑️ {post?.account?.accountStatsOrder?.completedOrder} trades</span>
         </Typography>
         {(accountQueryData?.getAccountByAddress.role === Role.Moderator ||
           post?.account.hash160 === selectedWalletPath?.hash160) && (

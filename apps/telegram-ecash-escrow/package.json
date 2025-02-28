@@ -11,8 +11,8 @@
   },
   "dependencies": {
     "@bcpros/counter": "workspace:*",
-    "@bcpros/lixi-models": "1.2.51",
-    "@bcpros/redux-store": "1.2.51",
+    "@bcpros/lixi-models": "1.2.53",
+    "@bcpros/redux-store": "1.2.53",
     "@emotion/cache": "^11.11.0",
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.5",
@@ -36,6 +36,7 @@
     "ecashaddrjs": "^1.5.2",
     "file-saver": "^2.0.5",
     "graphql": "^16.8.1",
+    "inapp-spy": "^4.3.1",
     "iron-session": "^8.0.1",
     "lodash": "^4.17.21",
     "moment": "^2.30.1",

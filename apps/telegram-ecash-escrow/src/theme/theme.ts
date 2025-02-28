@@ -12,9 +12,11 @@ declare module '@mui/material/styles' {
       bgItem3: string;
       bgItem4: string;
       bgItem5: string;
+      bgItem6: string;
       borderColor: string;
       borderColor1: string;
       colorItem: string;
+      colorItem1: string;
     };
   }
 
@@ -26,9 +28,11 @@ declare module '@mui/material/styles' {
       bgItem3?: string;
       bgItem4?: string;
       bgItem5?: string;
+      bgItem6?: string;
       borderColor?: string;
       borderColor1?: string;
       colorItem?: string;
+      colorItem1?: string;
     };
   }
 }
@@ -61,9 +65,11 @@ export const darkTheme = createTheme({
     bgItem3: 'rgba(255, 255, 255, 0.08)',
     bgItem4: 'rgba(255, 255, 255, 0.1)',
     bgItem5: '#2c2c2c',
+    bgItem6: '#304f65',
     borderColor: 'rgba(255, 255, 255, 0.3)',
     borderColor1: 'rgba(255, 255, 255, 0.2)',
-    colorItem: '#fff'
+    colorItem: '#fff',
+    colorItem1: '#ecf3f1'
   },
   typography: {
     h1: {
@@ -151,9 +157,11 @@ export const lightTheme = createTheme({
     bgItem3: '#fff',
     bgItem4: '#fff',
     bgItem5: '#e9e9ea',
+    bgItem6: '#fff',
     borderColor: 'rgba(0, 0, 0, 0.3)',
     borderColor1: '#adafb3',
-    colorItem: '#000'
+    colorItem: '#000',
+    colorItem1: '#000'
   },
   typography: {
     h1: {

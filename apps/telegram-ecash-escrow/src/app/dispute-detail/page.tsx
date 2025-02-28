@@ -223,6 +223,33 @@ export default function DisputeDetail() {
   const [updateDisputeTrigger] = useUpdateDisputeMutation();
   const [trigger, { isFetching, isLoading }] = useLazyArbiRequestTelegramChatQuery();
 
+  useEffect(() => {
+    if (
+      escrowOrder?.escrowOrderStatus !== EscrowOrderStatus.Complete &&
+      escrowOrder?.escrowOrderStatus !== EscrowOrderStatus.Cancel
+    ) {
+      // Handle the beforeunload event
+      const handleBeforeUnload = e => {
+        // Cancel the event
+        e.preventDefault();
+
+        // Chrome requires returnValue to be set
+        e.returnValue = '';
+
+        // Native browser alert will be shown automatically
+        // The message below might be shown, but most modern browsers
+        // display their own standardized message for security reasons
+        return 'Are you sure you want to leave this page?';
+      };
+
+      window.addEventListener('beforeunload', handleBeforeUnload);
+
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+      };
+    }
+  }, [escrowOrder?.escrowOrderStatus]);
+
   const handleChange = (event: React.SyntheticEvent, newValue: number) => {
     setValueTab(newValue);
   };
