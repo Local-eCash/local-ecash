@@ -3,8 +3,10 @@
 import { COIN_OTHERS } from '@/src/store/constants';
 import { SettingContext } from '@/src/store/context/settingProvider';
 import { formatNumber } from '@/src/store/util';
+import { PAYMENT_METHOD } from '@bcpros/lixi-models';
 import {
   OfferStatus,
+  OfferType,
   PostQueryItem,
   TimelineQueryItem,
   getSeedBackupTime,
@@ -29,7 +31,7 @@ const OfferDetailWrap = styled('div')(({ theme }) => ({
   flexDirection: 'column',
   gap: '8px',
   cursor: 'pointer',
-  background: theme.custom.bgItem,
+  background: theme.custom.bgPrimary,
   borderRadius: '10px',
   padding: '16px',
   marginBottom: '16px',
@@ -57,9 +59,9 @@ const OfferDetailWrap = styled('div')(({ theme }) => ({
     },
 
     '.payment-group-btns': {
-      button: {
-        marginRight: '10px'
-      }
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: '5px'
     }
   }
 }));
@@ -139,12 +141,13 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
           </IconButton>
         )}
       </div>
-      {offerData?.paymentMethods[0]?.paymentMethod?.id !== 5 && offerData?.coinPayment !== COIN_OTHERS && (
-        <Typography variant="body1">
-          <span className="prefix">Price: </span>
-          Market price +{offerData?.marginPercentage}%
-        </Typography>
-      )}
+      {offerData?.paymentMethods[0]?.paymentMethod?.id !== PAYMENT_METHOD.GOODS_SERVICES &&
+        offerData?.coinPayment !== COIN_OTHERS && (
+          <Typography variant="body1">
+            <span className="prefix">Price: </span>
+            Market price +{offerData?.marginPercentage}%
+          </Typography>
+        )}
       <Typography variant="body1">
         <span className="prefix">Min-max: </span>
         {formatNumber(offerData?.orderLimitMin)} {getCoinCurrency()} - {''}
@@ -170,6 +173,11 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
               <span style={{ fontSize: '14px' }}>{offerData?.hideFromHome ? 'Unlisted' : 'Listed'}</span>
             </Typography>
           </Button>
+          <Button size="small" color="info" variant="outlined">
+            <Typography variant="body1" style={{ fontWeight: 'bold' }}>
+              <span style={{ fontSize: '14px' }}>{offerData?.type == OfferType.Buy ? 'Buy' : 'Sell'}</span>
+            </Typography>
+          </Button>
           {offerData?.paymentMethods &&
             offerData.paymentMethods?.length > 0 &&
             offerData.paymentMethods.map(item => {
@@ -184,10 +192,15 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
               {offerData.coinOthers}
             </Button>
           )}
+          {offerData?.paymentApp && (
+            <Button size="small" color="success" variant="outlined">
+              {offerData.paymentApp}
+            </Button>
+          )}
         </div>
         {isShowBuyButton && (
-          <BuyButtonStyled variant="contained" onClick={e => handleBuyClick(e)}>
-            Buy
+          <BuyButtonStyled style={{ height: 'fit-content' }} variant="contained" onClick={e => handleBuyClick(e)}>
+            {offerData?.type === OfferType.Buy ? 'Sell' : 'Buy'}
             <Image width={25} height={25} src="/eCash.svg" alt="" />
           </BuyButtonStyled>
         )}

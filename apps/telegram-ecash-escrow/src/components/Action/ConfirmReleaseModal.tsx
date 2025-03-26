@@ -84,7 +84,7 @@ const ActionStatusRelease = styled('div')(({ theme }) => ({
 interface ConfirmReleaseModalProps {
   isOpen: boolean;
   disputeFee: number;
-  onDissmissModal?: (value: boolean) => void;
+  onDismissModal?: (value: boolean) => void;
   onConfirmClick?: () => void;
   returnAction: (value: boolean) => void;
 }
@@ -116,13 +116,13 @@ const ConfirmReleaseModal: React.FC<ConfirmReleaseModalProps> = (props: ConfirmR
 
   const handleReleaseConfirm = data => {
     props.returnAction(optionDonate);
-    props.onDissmissModal!(false);
+    props.onDismissModal!(false);
   };
 
   return (
     <React.Fragment>
-      <StyledDialog open={props.isOpen} onClose={() => props.onDissmissModal!(false)} TransitionComponent={Transition}>
-        <IconButton className="back-btn" onClick={() => props.onDissmissModal!(false)}>
+      <StyledDialog open={props.isOpen} onClose={() => props.onDismissModal!(false)} TransitionComponent={Transition}>
+        <IconButton className="back-btn" onClick={() => props.onDismissModal!(false)}>
           <ChevronLeft />
         </IconButton>
         <DialogTitle paddingTop="0px !important">Confirmation</DialogTitle>

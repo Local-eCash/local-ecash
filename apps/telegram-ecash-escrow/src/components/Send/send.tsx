@@ -227,7 +227,7 @@ const SendComponent: React.FC<SendComponentProps> = props => {
       </Button>
       <ScanQRcode
         isOpen={openScan}
-        onDissmissModal={value => {
+        onDismissModal={value => {
           setOpenScan(value);
         }}
         setAddress={value => {

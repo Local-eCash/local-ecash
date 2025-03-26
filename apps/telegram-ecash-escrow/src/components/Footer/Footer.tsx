@@ -56,10 +56,10 @@ const TabMenu = styled('div')(({ theme }) => ({
   },
 
   '&.active button': {
-    color: theme.custom.colorItem
+    color: theme.custom.colorPrimary
   },
   '&.active p': {
-    color: theme.custom.colorItem,
+    color: theme.custom.colorPrimary,
     fontWeight: 600
   }
 }));

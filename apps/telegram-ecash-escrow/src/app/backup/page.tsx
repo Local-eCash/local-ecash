@@ -39,7 +39,6 @@ const ContainerBackupGame = styled('div')(({ theme }) => ({
     '.setting-item': {
       marginBottom: '1rem',
       '.title': {
-        // color: theme.custom.colorItem,
         paddingBottom: '1rem',
         fontSize: '14px',
         color: theme.typography.subtitle2
@@ -53,10 +52,10 @@ const ContainerBackupGame = styled('div')(({ theme }) => ({
 
 const WordGuessContainer = styled('div')(({ theme }) => ({
   padding: '1rem',
-  background: theme.custom.bgItem5,
+  background: theme.custom.bgQuinary,
   fontSize: '14px',
   borderRadius: '10px',
-  color: theme.custom.colorItem,
+  color: theme.custom.colorPrimary,
   '.word-guess-content': {
     display: 'flex',
     gap: '1rem',
@@ -64,7 +63,7 @@ const WordGuessContainer = styled('div')(({ theme }) => ({
     '.random-word': {
       padding: '0.5rem 1rem',
       border: '1px solid gray',
-      background: theme.custom.bgItem3,
+      background: theme.custom.bgTertiary,
       borderRadius: '8px',
       fontSize: '14px'
     }

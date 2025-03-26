@@ -25,7 +25,7 @@ function LoadingPlaceholder() {
 }
 
 const WrapLoginPage = styled('div')(({ theme }) => ({
-  backgroundColor: theme.custom.bgItem3,
+  backgroundColor: theme.custom.bgTertiary,
   marginTop: '40%',
   padding: '20px',
   borderRadius: '25px'

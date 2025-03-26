@@ -1,10 +1,12 @@
 'use client';
 
-import { COIN_OTHERS, COIN_USD_STABLECOIN_TICKER } from '@/src/store/constants';
+import { COIN_OTHERS, COIN_USD_STABLECOIN, COIN_USD_STABLECOIN_TICKER } from '@/src/store/constants';
 import { SettingContext } from '@/src/store/context/settingProvider';
 import { formatNumber } from '@/src/store/util';
+import { PAYMENT_METHOD } from '@bcpros/lixi-models';
 import {
   OfferStatus,
+  OfferType,
   PostQueryItem,
   Role,
   TimelineQueryItem,
@@ -30,7 +32,7 @@ import { BackupModalProps } from '../Common/BackupModal';
 
 const CardWrapper = styled(Card)(({ theme }) => ({
   marginTop: 16,
-  backgroundColor: theme.custom.bgItem,
+  backgroundColor: theme.custom.bgPrimary,
   borderRadius: 16,
 
   '.prefix': {
@@ -39,7 +41,16 @@ const CardWrapper = styled(Card)(({ theme }) => ({
   },
 
   '.MuiCardContent-root': {
-    padding: '16px 16px 0 16px'
+    padding: '16px 16px 0 16px',
+
+    '.payment-group-btns': {
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: 5,
+      '& button': {
+        borderRadius: '10px'
+      }
+    }
   },
 
   '.MuiCollapse-root': {
@@ -48,15 +59,6 @@ const CardWrapper = styled(Card)(({ theme }) => ({
       flexDirection: 'column',
       gap: 8,
       padding: '8px 16px 0'
-    },
-
-    '.payment-group-btns': {
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: 10,
-      '& button': {
-        borderRadius: '10px'
-      }
     }
   },
 
@@ -100,7 +102,7 @@ const OfferShowWrapItem = styled('div')(({ theme }) => ({
 
     '.reputation-account': {
       fontSize: '11px',
-      color: theme.custom.colorItem1
+      color: theme.custom.colorSecondary
     }
   }
 }));
@@ -119,6 +121,7 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
 
   const post = timelineItem?.data as PostQueryItem;
   const offerData = post?.postOffer;
+  const isBuyOffer = offerData?.type === OfferType.Buy;
   const countryName = offerData?.location?.country ?? offerData?.country?.name;
   const stateName = offerData?.location?.adminNameAscii;
   const cityName = offerData?.location?.cityAscii;
@@ -138,8 +141,8 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
   const [rateData, setRateData] = useState(null);
   const [amountPer1MXEC, setAmountPer1MXEC] = useState('');
 
-  const { useGetFiatRateQuery } = fiatCurrencyApi;
-  const { data: fiatData } = useGetFiatRateQuery();
+  const { useGetAllFiatRateQuery } = fiatCurrencyApi;
+  const { data: fiatData } = useGetAllFiatRateQuery();
 
   const handleBuyClick = e => {
     e.stopPropagation();
@@ -204,15 +207,15 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
       const coinPayment = post.postOffer.coinPayment.toLowerCase();
       const rateArrayCoin = rateData.find(item => item.coin === coinPayment);
       const rateArrayXec = rateData.find(item => item.coin === 'xec');
-      const latestRateCoin = rateArrayCoin?.rates?.reduce((max, item) => (item.ts > max.ts ? item : max));
-      const latestRateXec = rateArrayXec?.rates?.reduce((max, item) => (item.ts > max.ts ? item : max));
+      const latestRateCoin = rateArrayCoin?.rate;
+      const latestRateXec = rateArrayXec?.rate;
 
-      amountCoinOrCurrency = (latestRateXec?.rate * amountXEC) / latestRateCoin?.rate; //1M XEC (USD) / rateCoin (USD)
+      amountCoinOrCurrency = (latestRateXec * amountXEC) / latestRateCoin; //1M XEC (USD) / rateCoin (USD)
     } else {
       //convert from currency to XEC
       const rateArrayXec = rateData.find(item => item.coin === 'xec');
-      const latestRateXec = rateArrayXec?.rates?.reduce((max, item) => (item.ts > max.ts ? item : max));
-      amountCoinOrCurrency = amountXEC * latestRateXec?.rate;
+      const latestRateXec = rateArrayXec?.rate;
+      amountCoinOrCurrency = amountXEC * latestRateXec;
     }
 
     const compactNumberFormatter = new Intl.NumberFormat('en-GB', {
@@ -240,9 +243,11 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
 
   //get rate data
   useEffect(() => {
-    const rateData = fiatData?.getFiatRate?.find(item => item.currency === (post?.postOffer?.localCurrency ?? 'USD'));
+    const rateData = fiatData?.getAllFiatRate?.find(
+      item => item.currency === (post?.postOffer?.localCurrency ?? 'USD')
+    );
     setRateData(rateData?.fiatRates);
-  }, [post?.postOffer?.localCurrency, fiatData?.getFiatRate]);
+  }, [post?.postOffer?.localCurrency, fiatData?.getAllFiatRate]);
 
   //open placeAnOrderModal if offerId is in url
   useEffect(() => {
@@ -254,9 +259,8 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
   const OfferItem = (
     <OfferShowWrapItem>
       <div className="push-offer-wrap">
-        <Typography variant="body2" onClick={handleUserNameClick}>
-          <span className="prefix">By: </span> {post?.account?.telegramUsername ?? ''}{' '}
-          <span className="reputation-account">- ☑️ {post?.account?.accountStatsOrder?.completedOrder} trades</span>
+        <Typography variant="body2" style={{ fontWeight: 'bold' }}>
+          {offerData?.message}
         </Typography>
         {(accountQueryData?.getAccountByAddress.role === Role.Moderator ||
           post?.account.hash160 === selectedWalletPath?.hash160) && (
@@ -265,9 +269,9 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
           </IconButton>
         )}
       </div>
-      <Typography variant="body2">
-        <span className="prefix">Headline: </span>
-        {offerData?.message}
+      <Typography variant="body2" onClick={handleUserNameClick}>
+        <span className="prefix">{isBuyOffer ? 'Buyer' : 'Seller'}: </span> {post?.account?.telegramUsername ?? ''}{' '}
+        <span className="reputation-account">- ☑️ {post?.account?.accountStatsOrder?.completedOrder} trades</span>
       </Typography>
       <div className="minmax-collapse-wrap" onClick={e => handleExpandClick(e)}>
         <Typography variant="body2">
@@ -278,6 +282,37 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
         {expanded ? <ExpandLessIcon style={{ cursor: 'pointer' }} /> : <ExpandMoreIcon style={{ cursor: 'pointer' }} />}
       </div>
     </OfferShowWrapItem>
+  );
+
+  const OfferItemPaymentMethod = (
+    <div className="payment-group-btns">
+      {offerData?.paymentMethods &&
+        offerData.paymentMethods?.length > 0 &&
+        offerData.paymentMethods.map(item => {
+          return (
+            <Button size="small" color="success" variant="outlined" key={item.paymentMethod.name}>
+              {item.paymentMethod.name}
+            </Button>
+          );
+        })}
+
+      {(offerData?.coinPayment === COIN_USD_STABLECOIN_TICKER || offerData?.coinPayment === COIN_OTHERS) && (
+        <Button size="small" color="success" variant="outlined">
+          {offerData.coinPayment === COIN_USD_STABLECOIN_TICKER ? COIN_USD_STABLECOIN : COIN_OTHERS}
+        </Button>
+      )}
+
+      {offerData?.coinOthers && (
+        <Button size="small" color="success" variant="outlined">
+          {offerData.coinOthers}
+        </Button>
+      )}
+      {offerData?.paymentApp && (
+        <Button size="small" color="success" variant="outlined">
+          {offerData.paymentApp}
+        </Button>
+      )}
+    </div>
   );
 
   if (offerData?.status == OfferStatus.Archive) return <div></div>;
@@ -303,35 +338,24 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
                 {offerData.noteOffer}
               </Typography>
             )}
-            <div className="payment-group-btns">
-              {offerData?.paymentMethods &&
-                offerData.paymentMethods?.length > 0 &&
-                offerData.paymentMethods.map(item => {
-                  return (
-                    <Button size="small" color="success" variant="outlined" key={item.paymentMethod.name}>
-                      {item.paymentMethod.name}
-                    </Button>
-                  );
-                })}
-
-              {offerData?.coinOthers && (
-                <Button size="small" color="success" variant="outlined">
-                  {offerData.coinOthers}
-                </Button>
-              )}
-            </div>
           </CardContent>
         </Collapse>
+        <CardContent>{OfferItemPaymentMethod}</CardContent>
 
         <Typography component={'div'} className="action-section">
-          {offerData?.paymentMethods[0]?.paymentMethod?.id !== 5 && offerData?.coinPayment !== COIN_OTHERS ? (
+          {offerData?.paymentMethods[0]?.paymentMethod?.id !== PAYMENT_METHOD.GOODS_SERVICES &&
+          offerData?.coinPayment !== COIN_OTHERS ? (
             <Typography variant="body2">
-              <span className="prefix">Price: </span>Market price +{post?.postOffer?.marginPercentage ?? 0}%{' '}
+              <span className="prefix">Price: </span>
               {coinCurrency !== 'XEC' && (
                 <span>
-                  (~ {amountPer1MXEC} {coinCurrency} / 1M XEC)
+                  ~{' '}
+                  <span style={{ fontWeight: 'bold' }}>
+                    {amountPer1MXEC} {coinCurrency} / 1M XEC
+                  </span>
                 </span>
-              )}
+              )}{' '}
+              ( Market price +{post?.postOffer?.marginPercentage ?? 0}% )
             </Typography>
           ) : (
             <Typography variant="body2">
@@ -339,7 +363,7 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
             </Typography>
           )}
           <BuyButtonStyled variant="contained" onClick={e => handleBuyClick(e)}>
-            Buy
+            {offerData?.type === OfferType.Buy ? 'Sell' : 'Buy'}
             <Image width={25} height={25} src="/eCash.svg" alt="" />
           </BuyButtonStyled>
         </Typography>

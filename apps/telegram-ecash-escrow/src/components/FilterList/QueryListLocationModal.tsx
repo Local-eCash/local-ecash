@@ -21,7 +21,7 @@ interface QueryListLocationModalProps {
   listItems: any;
   loading?: boolean;
   handleChange: (value: any) => void;
-  onDissmissModal?: (value: boolean) => void;
+  onDismissModal?: (value: boolean) => void;
   setSelectedItem?: (value: any) => void;
 }
 
@@ -72,7 +72,7 @@ const Transition = React.forwardRef(function Transition(
 });
 
 const QueryListLocationModal: React.FC<QueryListLocationModalProps> = props => {
-  const { isOpen, listItems, loading, onDissmissModal, setSelectedItem, handleChange } = props;
+  const { isOpen, listItems, loading, onDismissModal, setSelectedItem, handleChange } = props;
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -80,7 +80,7 @@ const QueryListLocationModal: React.FC<QueryListLocationModalProps> = props => {
 
   const handleSelect = value => {
     setSelectedItem(value);
-    onDissmissModal(false);
+    onDismissModal(false);
   };
 
   return (
@@ -88,10 +88,10 @@ const QueryListLocationModal: React.FC<QueryListLocationModalProps> = props => {
       <StyledDialog
         fullScreen={fullScreen}
         open={isOpen}
-        onClose={() => props.onDissmissModal!(false)}
+        onClose={() => props.onDismissModal!(false)}
         TransitionComponent={Transition}
       >
-        <IconButton className="back-btn" onClick={() => props.onDissmissModal!(false)}>
+        <IconButton className="back-btn" onClick={() => props.onDismissModal!(false)}>
           <ChevronLeft />
         </IconButton>
         <DialogContent>

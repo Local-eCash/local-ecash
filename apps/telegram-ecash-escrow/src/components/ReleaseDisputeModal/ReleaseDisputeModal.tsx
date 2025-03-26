@@ -20,7 +20,7 @@ import DisputeDetailInfo from '../DisputeDetailInfo/DisputeDetailInfo';
 
 interface ReleaseDisputeModalProps {
   isOpen: boolean;
-  onDissmissModal?: (value: boolean) => void;
+  onDismissModal?: (value: boolean) => void;
   onConfirmClick?: () => void;
 }
 
@@ -115,10 +115,10 @@ const ReleaseDisputeModal: React.FC<ReleaseDisputeModalProps> = props => {
     <StyledDialog
       fullScreen={fullScreen}
       open={props.isOpen}
-      onClose={() => props.onDissmissModal!(false)}
+      onClose={() => props.onDismissModal!(false)}
       TransitionComponent={Transition}
     >
-      <IconButton className="back-btn" onClick={() => props.onDissmissModal!(false)}>
+      <IconButton className="back-btn" onClick={() => props.onDismissModal!(false)}>
         <ChevronLeft />
       </IconButton>
       <DialogTitle>Resolve Dispute</DialogTitle>
@@ -143,7 +143,7 @@ const ReleaseDisputeModal: React.FC<ReleaseDisputeModalProps> = props => {
           color="info"
           variant="contained"
           onClick={() => {
-            props.onDissmissModal!(false);
+            props.onDismissModal!(false);
           }}
         >
           Resolve

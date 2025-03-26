@@ -62,6 +62,10 @@ const ContainerImportWallet = styled.div`
       margin-top: 3px;
     }
   }
+
+  #recoveryPhrase {
+    color: #fff;
+  }
 `;
 
 const MiniAppBackdrop = () => {

@@ -6,33 +6,35 @@ import { createTheme } from '@mui/material/styles';
 declare module '@mui/material/styles' {
   interface Theme {
     custom: {
-      bgMain: string;
-      bgItem: string;
-      bgItem2: string;
-      bgItem3: string;
-      bgItem4: string;
-      bgItem5: string;
-      bgItem6: string;
-      borderColor: string;
-      borderColor1: string;
-      colorItem: string;
-      colorItem1: string;
+      bgAppMobile: string;
+      bgPrimary: string;
+      bgSecondary: string;
+      bgTertiary: string;
+      bgQuaternary: string;
+      bgQuinary: string;
+      bgSenary: string;
+
+      borderPrimary: string;
+      borderSecondary: string;
+
+      colorPrimary: string;
+      colorSecondary: string;
     };
   }
 
   interface ThemeOptions {
     custom?: {
-      bgMain?: string;
-      bgItem?: string;
-      bgItem2?: string;
-      bgItem3?: string;
-      bgItem4?: string;
-      bgItem5?: string;
-      bgItem6?: string;
-      borderColor?: string;
-      borderColor1?: string;
-      colorItem?: string;
-      colorItem1?: string;
+      bgAppMobile?: string;
+      bgPrimary?: string;
+      bgSecondary?: string;
+      bgTertiary?: string;
+      bgQuaternary?: string;
+      bgQuinary?: string;
+      bgSenary?: string;
+      borderPrimary?: string;
+      borderSecondary?: string;
+      colorPrimary?: string;
+      colorSecondary?: string;
     };
   }
 }
@@ -59,17 +61,17 @@ export const darkTheme = createTheme({
     }
   },
   custom: {
-    bgMain: 'linear-gradient(to right, #0f2027, #203a43, #2c5364)',
-    bgItem: 'rgba(255, 255, 255, 0.08)',
-    bgItem2: '#121212',
-    bgItem3: 'rgba(255, 255, 255, 0.08)',
-    bgItem4: 'rgba(255, 255, 255, 0.1)',
-    bgItem5: '#2c2c2c',
-    bgItem6: '#304f65',
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    borderColor1: 'rgba(255, 255, 255, 0.2)',
-    colorItem: '#fff',
-    colorItem1: '#ecf3f1'
+    bgAppMobile: 'linear-gradient(to right, #0f2027, #203a43, #2c5364)',
+    bgPrimary: 'rgba(255, 255, 255, 0.08)',
+    bgSecondary: '#121212',
+    bgTertiary: 'rgba(255, 255, 255, 0.08)',
+    bgQuaternary: 'rgba(255, 255, 255, 0.1)',
+    bgQuinary: '#2c2c2c',
+    bgSenary: '#304f65',
+    borderPrimary: 'rgba(255, 255, 255, 0.3)',
+    borderSecondary: 'rgba(255, 255, 255, 0.2)',
+    colorPrimary: '#fff',
+    colorSecondary: '#ecf3f1'
   },
   typography: {
     h1: {
@@ -151,17 +153,17 @@ export const lightTheme = createTheme({
     }
   },
   custom: {
-    bgMain: 'linear-gradient(to right, #026693, #357591, #026693)',
-    bgItem: '#e9e9ea',
-    bgItem2: '#8d8d8d',
-    bgItem3: '#fff',
-    bgItem4: '#fff',
-    bgItem5: '#e9e9ea',
-    bgItem6: '#fff',
-    borderColor: 'rgba(0, 0, 0, 0.3)',
-    borderColor1: '#adafb3',
-    colorItem: '#000',
-    colorItem1: '#000'
+    bgAppMobile: 'linear-gradient(to right, #026693, #357591, #026693)',
+    bgPrimary: '#e9e9ea',
+    bgSecondary: '#8d8d8d',
+    bgTertiary: '#fff',
+    bgQuaternary: '#fff',
+    bgQuinary: '#e9e9ea',
+    bgSenary: '#fff',
+    borderPrimary: 'rgba(0, 0, 0, 0.3)',
+    borderSecondary: '#adafb3',
+    colorPrimary: '#000',
+    colorSecondary: '#000'
   },
   typography: {
     h1: {

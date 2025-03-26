@@ -15,7 +15,7 @@ const WrapMobile = styled('div')(({ theme }) => ({
   display: 'flex',
   justifyContent: 'center',
   alignItems: 'center',
-  background: theme.custom.bgMain
+  background: theme.custom.bgAppMobile
 }));
 
 const Content = styled('div')(({ theme }) => ({

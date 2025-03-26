@@ -16,11 +16,10 @@ import {
 import { TransitionProps } from '@mui/material/transitions';
 import React from 'react';
 
-interface ConfirmOfferTypeModalProps {
+interface ConfirmSignoutModalProps {
   isOpen: boolean;
-  isLoading: boolean;
   onDismissModal?: (value: boolean) => void;
-  createOffer?: (isHidden: boolean) => void;
+  signout?: (isSignout: boolean) => void;
 }
 
 const StyledDialog = styled(Dialog)(({ theme }) => ({
@@ -88,47 +87,41 @@ const Transition = React.forwardRef(function Transition(
   return <Slide direction="up" ref={ref} {...props} />;
 });
 
-const ConfirmOfferTypeModal: React.FC<ConfirmOfferTypeModalProps> = props => {
+const ConfirmSignoutModal: React.FC<ConfirmSignoutModalProps> = props => {
   return (
     <React.Fragment>
       <StyledDialog open={props.isOpen} onClose={() => props.onDismissModal!(false)} TransitionComponent={Transition}>
         <IconButton className="back-btn" onClick={() => props.onDismissModal!(false)}>
           <ChevronLeft />
         </IconButton>
-        <DialogTitle paddingTop="0px !important">Confirm Offer Type</DialogTitle>
+        <DialogTitle paddingTop="0px !important">Confirm signout</DialogTitle>
         <DialogContent>
-          <Typography component={'div'} sx={{ fontSize: '16px', marginTop: '10px' }}>
-            <div>Choose your offer type:</div>
-            <div style={{ fontSize: '15px' }}>
-              - <b>Listed</b>: Your offer is listed on Marketplace and visible to everyone.
-              <br />- <b>Unlisted</b>: Your offer is not listed on Marketplace. Only you can see it.
-            </div>
+          <Typography variant="body1" sx={{ marginTop: '10px' }}>
+            You will need your seed phrase to sign in again. Back it up before signing out!
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button
             className="confirm-btn"
             variant="contained"
-            color="warning"
+            color="success"
             onClick={() => {
-              props.createOffer!(false);
+              props.signout!(false);
             }}
-            disabled={props.isLoading}
             autoFocus
           >
-            Listed
+            Stay
           </Button>
           <Button
             className="confirm-btn"
             variant="contained"
-            color="success"
+            color="warning"
             onClick={() => {
-              props.createOffer!(true);
+              props.signout!(true);
             }}
-            disabled={props.isLoading}
             autoFocus
           >
-            Unlisted
+            Sign out
           </Button>
         </DialogActions>
       </StyledDialog>
@@ -136,4 +129,4 @@ const ConfirmOfferTypeModal: React.FC<ConfirmOfferTypeModalProps> = props => {
   );
 };
 
-export default ConfirmOfferTypeModal;
+export default ConfirmSignoutModal;

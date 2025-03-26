@@ -1,7 +1,7 @@
 'use client';
 
 import { COIN_OTHERS, LIST_COIN } from '@/src/store/constants';
-import { LIST_CURRENCIES_USED } from '@bcpros/lixi-models';
+import { LIST_CURRENCIES_USED, PAYMENT_METHOD } from '@bcpros/lixi-models';
 import {
   Location,
   OfferFilterInput,
@@ -42,7 +42,7 @@ import FilterListModal from '../FilterList/FilterListModal';
 
 interface FilterOfferModalProps {
   isOpen: boolean;
-  onDissmissModal?: (value: boolean) => void;
+  onDismissModal?: (value: boolean) => void;
   onConfirmClick?: () => void;
 }
 
@@ -94,7 +94,7 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
 
   button: {
     color: theme.palette.text.secondary,
-    borderColor: theme.custom.borderColor1
+    borderColor: theme.custom.borderSecondary
   },
 
   '.close-btn': {
@@ -152,6 +152,24 @@ const FilterWrap = styled('div')(({ theme }) => ({
         border: `${theme.palette.mode === 'dark' ? '1px' : '2px'} solid rgb(41, 142, 23)`
       }
     }
+  },
+
+  '.type-btn-group': {
+    paddingTop: '0',
+    button: {
+      width: '50%',
+      border: `1px solid ${theme.custom.borderPrimary}`,
+      color: theme.custom.colorPrimary
+    },
+    '.type-buy-btn': {
+      borderRadius: '8px 0 0 8px'
+    },
+    '.type-sell-btn': {
+      borderRadius: '0 8px 8px 0'
+    },
+    '.inactive': {
+      background: 'transparent'
+    }
   }
 }));
 
@@ -204,10 +222,10 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
     offerFilterPaymenthod && offerFilterPaymenthod.length === 1 && offerFilterPaymenthod[0] >= 4
       ? offerFilterPaymenthod[0]
       : 0
-  ); //0 is fiat currency contains (cash, bank, app)
+  ); // 0 is fiat currency contains (cash, bank, app)
   const [selectedOptionPaymentFiatCurrency, setSelectedOptionPaymentFiatCurrency] = useState<number[]>(
     offerFilterPaymenthod && offerFilterPaymenthod.length > 1 ? offerFilterPaymenthod : [1]
-  ); //1 is cash
+  ); // 1 is cash
   const [openCountryList, setOpenCountryList] = useState(false);
   const [openStateList, setOpenStateList] = useState(false);
   const [openCityList, setOpenCityList] = useState(false);
@@ -217,6 +235,8 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
   const countries = useLixiSliceSelector(getAllCountries);
   const [listStates, setListStates] = useState<Location[]>([]);
   const [listCities, setListCities] = useState<Location[]>([]);
+
+  const [isBuyOffer, setIsBuyOffer] = useState(offerFilterConfig?.isBuyOffer ?? true);
 
   const handleSelect = (id: number) => {
     const isSelected = selectedOptionPayment === id;
@@ -230,11 +250,11 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
     const isSelected = selectedOptionPaymentFiatCurrency.includes(id);
 
     if (isSelected) {
-      //drop select if mutiple select
+      // drop select if mutiple select
       selectedOptionPaymentFiatCurrency.length > 1 &&
         setSelectedOptionPaymentFiatCurrency(pre => pre.filter(item => item !== id));
     } else {
-      //select it
+      // select it
       setSelectedOptionPaymentFiatCurrency(pre => [...pre, id]);
     }
   };
@@ -252,10 +272,11 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
       cityName: city && city.cityAscii,
       paymentMethodIds: paymentMethodSelected,
       coin: coin ? coin : null,
-      fiatCurrency: currency ? currency : null
+      fiatCurrency: currency ? currency : null,
+      isBuyOffer: isBuyOffer
     };
 
-    //remove country if payment > 3 (not location)
+    // remove country if payment > 3 (not location)
     if (paymentMethodSelected.includes(4) || paymentMethodSelected.includes(5)) {
       offerFilterInput = {
         ...offerFilterInput,
@@ -266,7 +287,7 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
         cityName: null,
         fiatCurrency: null
       };
-    } else if (paymentMethodSelected.length === 1 && paymentMethodSelected[0] !== 1)
+    } else if (!paymentMethodSelected.includes(1)) {
       offerFilterInput = {
         ...offerFilterInput,
         countryName: null,
@@ -275,7 +296,8 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
         adminCode: null,
         cityName: null
       };
-    //remove coin if not crypto
+    }
+    // remove coin if not crypto
     if (!paymentMethodSelected.includes(4)) {
       offerFilterInput = {
         ...offerFilterInput,
@@ -284,7 +306,7 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
     }
 
     dispatch(saveOfferFilterConfig(offerFilterInput));
-    props.onDissmissModal!(false);
+    props.onDismissModal!(false);
   };
 
   const handleReset = () => {
@@ -297,9 +319,11 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
       adminCode: null,
       paymentMethodIds: [],
       coin: null,
-      fiatCurrency: null
+      fiatCurrency: null,
+      isBuyOffer: true
     };
 
+    setIsBuyOffer(true);
     dispatch(saveOfferFilterConfig(offerFilterInput));
   };
 
@@ -314,27 +338,27 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
             const locations = await countryApi.getCoordinate(latitude.toString(), longitude.toString());
 
             if (locations.length > 0) {
-              //Config setting have country => Take from config. Otherwise take from location
+              // Config setting have country => Take from config. Otherwise take from location
               const countryDetected = countries.find(
                 item => item.iso2 === (offerFilterConfig?.countryCode || locations[0].iso2)
               );
               countryDetected && setValue('country', countryDetected);
 
-              //set currency
-              //Config setting have currency => Take from config. Otherwise take from location
+              // set currency
+              // Config setting have currency => Take from config. Otherwise take from location
               const currencyDetected = LIST_CURRENCIES_USED.find(item => item.country === countryDetected?.iso2);
               setValue('currency', offerFilterConfig?.fiatCurrency || currencyDetected.code);
 
               const states = await countryApi.getStates(countryDetected?.iso2 ?? '');
               setListStates(states);
 
-              //auto set state and city if config have
+              // auto set state and city if config have
               if (offerFilterConfig.adminCode) {
-                //set state
+                // set state
                 const stateDetected = states.find(item => item.adminCode === offerFilterConfig.adminCode);
                 stateDetected && setValue('state', stateDetected);
 
-                //set city if have
+                // set city if have
                 if (offerFilterConfig.cityName) {
                   const cities = await countryApi.getCities(countryDetected?.iso2, stateDetected?.adminCode);
                   setListCities(cities);
@@ -365,15 +389,33 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
     <StyledDialog
       fullScreen={fullScreen}
       open={props.isOpen}
-      onClose={() => props.onDissmissModal!(false)}
+      onClose={() => props.onDismissModal!(false)}
       TransitionComponent={Transition}
     >
-      <IconButton className="close-btn" onClick={() => props.onDissmissModal!(false)}>
+      <IconButton className="close-btn" onClick={() => props.onDismissModal!(false)}>
         <CloseOutlined />
       </IconButton>
       <DialogTitle>Filter</DialogTitle>
       <DialogContent>
         <FilterWrap>
+          <div className="type-btn-group filter-item">
+            <Button
+              className={`type-buy-btn ${isBuyOffer ? '' : 'inactive'}`}
+              variant="contained"
+              color="success"
+              onClick={() => setIsBuyOffer(true)}
+            >
+              Buy
+            </Button>
+            <Button
+              className={`type-sell-btn ${!isBuyOffer ? '' : 'inactive'}`}
+              variant="contained"
+              color="error"
+              onClick={() => setIsBuyOffer(false)}
+            >
+              Sell
+            </Button>
+          </div>
           <div className="filter-item">
             <Typography style={{ marginBottom: '12px' }} variant="body2">
               Payment method
@@ -410,7 +452,7 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
           </div>
 
           {/* Crypto */}
-          {selectedOptionPayment === 4 && (
+          {selectedOptionPayment === PAYMENT_METHOD.CRYPTO && (
             <div className="filter-item">
               <Typography variant="body2">Select coin</Typography>
               <div className="content">
@@ -444,7 +486,7 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
                           {LIST_COIN.map(item => {
                             return (
                               <option key={item.ticker} value={item.ticker}>
-                                {item.name} ({item.ticker})
+                                {item.name} {item.isDisplayTicker && `(${item.ticker})`}
                               </option>
                             );
                           })}
@@ -694,7 +736,7 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
           autoFocus
           onClick={() => {
             handleReset();
-            props.onDissmissModal!(false);
+            props.onDismissModal!(false);
           }}
         >
           Reset
@@ -705,7 +747,7 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
       </DialogActions>
       <FilterListModal
         isOpen={openCountryList}
-        onDissmissModal={value => setOpenCountryList(value)}
+        onDismissModal={value => setOpenCountryList(value)}
         setSelectedItem={async value => {
           setValue('country', value);
           clearErrors('country');
@@ -719,7 +761,7 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
         isOpen={openStateList}
         listItems={listStates}
         propertyToSearch="adminNameAscii"
-        onDissmissModal={value => setOpenStateList(value)}
+        onDismissModal={value => setOpenStateList(value)}
         setSelectedItem={async value => {
           setValue('state', value);
           clearErrors('state');
@@ -732,7 +774,7 @@ const FilterOfferModal: React.FC<FilterOfferModalProps> = props => {
         isOpen={openCityList}
         listItems={listCities}
         propertyToSearch="cityAscii"
-        onDissmissModal={value => setOpenCityList(value)}
+        onDismissModal={value => setOpenCityList(value)}
         setSelectedItem={value => {
           setValue('city', value);
           clearErrors('city');

@@ -19,7 +19,7 @@ import React, { useState } from 'react';
 interface FilterListModalProps {
   isOpen: boolean;
   listItems: any;
-  onDissmissModal?: (value: boolean) => void;
+  onDismissModal?: (value: boolean) => void;
   setSelectedItem?: (value: any) => void;
 }
 
@@ -70,7 +70,7 @@ const Transition = React.forwardRef(function Transition(
 });
 
 const FilterListModal: React.FC<FilterListModalProps> = props => {
-  const { isOpen, listItems, onDissmissModal, setSelectedItem } = props;
+  const { isOpen, listItems, onDismissModal, setSelectedItem } = props;
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -78,7 +78,7 @@ const FilterListModal: React.FC<FilterListModalProps> = props => {
 
   const handleSelect = value => {
     setSelectedItem(value);
-    onDissmissModal(false);
+    onDismissModal(false);
   };
 
   const filteredOptions = listItems.filter(option => option?.name?.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -87,10 +87,10 @@ const FilterListModal: React.FC<FilterListModalProps> = props => {
       <StyledDialog
         fullScreen={fullScreen}
         open={isOpen}
-        onClose={() => props.onDissmissModal!(false)}
+        onClose={() => props.onDismissModal!(false)}
         TransitionComponent={Transition}
       >
-        <IconButton className="back-btn" onClick={() => props.onDissmissModal!(false)}>
+        <IconButton className="back-btn" onClick={() => props.onDismissModal!(false)}>
           <ChevronLeft />
         </IconButton>
         <DialogContent>

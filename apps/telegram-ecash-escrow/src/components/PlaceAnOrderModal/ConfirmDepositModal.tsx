@@ -2,6 +2,7 @@
 
 import { styled } from '@mui/material/styles';
 
+import { COIN } from '@bcpros/lixi-models';
 import { ChevronLeft } from '@mui/icons-material';
 import {
   Button,
@@ -16,11 +17,12 @@ import {
 import { TransitionProps } from '@mui/material/transitions';
 import React from 'react';
 
-interface ConfirmOfferTypeModalProps {
+interface ConfirmDepositModalProps {
   isOpen: boolean;
+  depositSecurity: number;
   isLoading: boolean;
   onDismissModal?: (value: boolean) => void;
-  createOffer?: (isHidden: boolean) => void;
+  depositFee?: (isDeposit: boolean) => void;
 }
 
 const StyledDialog = styled(Dialog)(({ theme }) => ({
@@ -88,21 +90,21 @@ const Transition = React.forwardRef(function Transition(
   return <Slide direction="up" ref={ref} {...props} />;
 });
 
-const ConfirmOfferTypeModal: React.FC<ConfirmOfferTypeModalProps> = props => {
+const ConfirmDepositModal: React.FC<ConfirmDepositModalProps> = props => {
   return (
     <React.Fragment>
       <StyledDialog open={props.isOpen} onClose={() => props.onDismissModal!(false)} TransitionComponent={Transition}>
         <IconButton className="back-btn" onClick={() => props.onDismissModal!(false)}>
           <ChevronLeft />
         </IconButton>
-        <DialogTitle paddingTop="0px !important">Confirm Offer Type</DialogTitle>
+        <DialogTitle paddingTop="0px !important">Confirm Security Deposit</DialogTitle>
         <DialogContent>
-          <Typography component={'div'} sx={{ fontSize: '16px', marginTop: '10px' }}>
-            <div>Choose your offer type:</div>
-            <div style={{ fontSize: '15px' }}>
-              - <b>Listed</b>: Your offer is listed on Marketplace and visible to everyone.
-              <br />- <b>Unlisted</b>: Your offer is not listed on Marketplace. Only you can see it.
-            </div>
+          <Typography variant="subtitle2" sx={{ marginTop: '10px' }}>
+            * Deposit a security deposit to have a higher chance of being accepted. The security deposit will be
+            returned if there is no dispute.
+          </Typography>
+          <Typography variant="body1" sx={{ marginTop: '10px', fontWeight: 'bold' }}>
+            Security deposit (1%): {props.depositSecurity.toLocaleString('de-DE')} {COIN.XEC}
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -111,24 +113,24 @@ const ConfirmOfferTypeModal: React.FC<ConfirmOfferTypeModalProps> = props => {
             variant="contained"
             color="warning"
             onClick={() => {
-              props.createOffer!(false);
+              props.depositFee!(false);
             }}
             disabled={props.isLoading}
             autoFocus
           >
-            Listed
+            Not deposit
           </Button>
           <Button
             className="confirm-btn"
             variant="contained"
             color="success"
             onClick={() => {
-              props.createOffer!(true);
+              props.depositFee!(true);
             }}
             disabled={props.isLoading}
             autoFocus
           >
-            Unlisted
+            Deposit
           </Button>
         </DialogActions>
       </StyledDialog>
@@ -136,4 +138,4 @@ const ConfirmOfferTypeModal: React.FC<ConfirmOfferTypeModalProps> = props => {
   );
 };
 
-export default ConfirmOfferTypeModal;
+export default ConfirmDepositModal;

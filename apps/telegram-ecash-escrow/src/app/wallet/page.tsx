@@ -16,7 +16,9 @@ import {
   WalletContextNode,
   chronikNode,
   convertHashToEcashAddress,
+  fiatCurrencyApi,
   formatDate,
+  getOfferFilterConfig,
   getSeedBackupTime,
   getSelectedWalletPath,
   getWalletState,
@@ -46,7 +48,7 @@ const WrapWallet = styled('div')(({ theme }) => ({
   minHeight: '100svh',
 
   '.MuiTab-root': {
-    color: theme.custom.colorItem,
+    color: theme.custom.colorPrimary,
     textTransform: 'none',
     fontWeight: 600,
     fontSize: '16px',
@@ -71,11 +73,13 @@ const WrapContentWallet = styled('div')(({ theme }) => ({
     },
     '.amount': {
       margin: '16px 0',
-      backgroundColor: theme.custom.bgItem3,
+      backgroundColor: theme.custom.bgTertiary,
       padding: '28px 16px',
       borderRadius: '16px',
       display: 'flex',
+      flexDirection: 'column',
       justifyContent: 'center',
+      alignItems: 'center',
       '.coin-ticker': {
         fontSize: '13px'
       }
@@ -90,7 +94,7 @@ const ReceiveWrap = styled('div')(({ theme }) => ({
 }));
 
 const SendWrap = styled('div')(({ theme }) => ({
-  backgroundColor: theme.custom.bgItem4,
+  backgroundColor: theme.custom.bgQuaternary,
   borderRadius: '20px',
   padding: '15px',
   marginTop: '10px'
@@ -101,6 +105,8 @@ export default function Wallet() {
   const selectedWalletPath = useLixiSliceSelector(getSelectedWalletPath);
   const lastSeedBackupTimeOnDevice = useLixiSliceSelector(getSeedBackupTime);
   const walletState = useLixiSliceSelector(getWalletState);
+  const offerFilterConfig = useLixiSliceSelector(getOfferFilterConfig);
+  const fiatCurrencyFilter = offerFilterConfig?.fiatCurrency ?? 'USD';
 
   const Wallet = useContext(WalletContextNode);
   const settingContext = useContext(SettingContext);
@@ -116,6 +122,11 @@ export default function Wallet() {
       })[]
     >
   >();
+  const [rateData, setRateData] = useState(null);
+  const [amountConverted, setAmountConverted] = useState(0);
+
+  const { useGetAllFiatRateQuery } = fiatCurrencyApi;
+  const { data: fiatData } = useGetAllFiatRateQuery();
 
   const { XPI, chronik } = Wallet;
   const seedBackupTime = settingContext?.setting?.lastSeedBackupTime ?? lastSeedBackupTimeOnDevice ?? '';
@@ -138,6 +149,36 @@ export default function Wallet() {
       return;
     }
     setValue(index);
+  };
+
+  const isBackup = () => {
+    //check backup
+    const oneMonthLater = new Date(seedBackupTime);
+    oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
+    const currentDate = new Date();
+    const isGreaterThanOneMonth = currentDate > oneMonthLater;
+
+    const backupModalProps: BackupModalProps = {
+      isFromSetting: true,
+      isFromHome: false
+    };
+
+    if (!seedBackupTime || isGreaterThanOneMonth) {
+      dispatch(openModal('BackupModal', backupModalProps));
+
+      return false;
+    }
+
+    return true;
+  };
+
+  const convertXECToAmount = async () => {
+    if (!rateData) return 0;
+
+    const rateArrayXec = rateData.find(item => item.coin === 'xec');
+    const latestRateXec = rateArrayXec?.rate;
+    const amountConverted = totalValidAmount * latestRateXec;
+    setAmountConverted(parseFloat(amountConverted.toFixed(2)));
   };
 
   useEffect(() => {
@@ -167,26 +208,15 @@ export default function Wallet() {
     })();
   }, [walletState.walletStatusNode]);
 
-  const isBackup = () => {
-    //check backup
-    const oneMonthLater = new Date(seedBackupTime);
-    oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
-    const currentDate = new Date();
-    const isGreaterThanOneMonth = currentDate > oneMonthLater;
+  useEffect(() => {
+    const rateData = fiatData?.getAllFiatRate?.find(item => item.currency === fiatCurrencyFilter);
+    setRateData(rateData?.fiatRates);
+  }, [fiatData?.getAllFiatRate]);
 
-    const backupModalProps: BackupModalProps = {
-      isFromSetting: true,
-      isFromHome: false
-    };
-
-    if (!seedBackupTime || isGreaterThanOneMonth) {
-      dispatch(openModal('BackupModal', backupModalProps));
-
-      return false;
-    }
-
-    return true;
-  };
+  //convert to fiat
+  useEffect(() => {
+    convertXECToAmount();
+  }, [rateData]);
 
   return (
     <MobileLayout>
@@ -200,6 +230,9 @@ export default function Wallet() {
               <div className="amount">
                 <Typography variant="h5">
                   {formatNumber(totalValidAmount ?? 0)} <span className="coin-ticker">XEC</span>
+                </Typography>
+                <Typography variant="h6" style={{ fontSize: '16px' }}>
+                  ~{formatNumber(amountConverted ?? 0)} <span className="coin-ticker">{fiatCurrencyFilter}</span>
                 </Typography>
               </div>
             </div>

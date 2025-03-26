@@ -2,7 +2,6 @@
 
 import Header from '@/src/components/Header/Header';
 import OfferItem from '@/src/components/OfferItem/OfferItem';
-import TopSection from '@/src/components/TopSection/TopSection';
 import {
   PostQueryItem,
   TimelineQueryItem,
@@ -19,10 +18,10 @@ import {
 } from '@bcpros/redux-store';
 import styled from '@emotion/styled';
 import CachedRoundedIcon from '@mui/icons-material/CachedRounded';
-import { Badge, Box, CircularProgress, Skeleton, Slide, Typography, useTheme } from '@mui/material';
-import { useRouter } from 'next/navigation';
+import { Badge, Box, CircularProgress, Skeleton, Slide, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
+import FilterComponent from '../components/FilterOffer/FilterComponent';
 import MobileLayout from '../components/layout/MobileLayout';
 
 const WrapHome = styled.div``;
@@ -48,14 +47,10 @@ const HomePage = styled.div`
 `;
 
 const Section = styled.div`
-  .content-wrap {
+  .title-offer {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-
-    .title-offer {
-      font-weight: 600;
-    }
+    font-weight: 600;
   }
 `;
 
@@ -80,10 +75,9 @@ const StyledBadge = styled(Badge)`
 `;
 
 export default function Home() {
-  const theme = useTheme();
-  const router = useRouter();
   const offerFilterConfig = useLixiSliceSelector(getOfferFilterConfig);
   const newPostAvailable = useLixiSliceSelector(getNewPostAvailable);
+  const { countryName, stateName, cityName } = offerFilterConfig;
   const [visible, setVisible] = useState(true);
   const dispatch = useLixiSliceDispatch();
 
@@ -121,23 +115,6 @@ export default function Home() {
     dispatch(setNewPostAvailable(false));
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
   };
-
-  // useEffect(() => {
-  //   (async () => {
-  //     const country = await axiosClient
-  //       .get(`/api/countries/ipaddr`)
-  //       .then(result => {
-  //         return result.data;
-  //       })
-  //       .catch(({ response }) => {
-  //         console.log(response?.data.message);
-  //       });
-
-  //     if (country && country === 'US') {
-  //       return router.push('/not-available');
-  //     }
-  //   })();
-  // }, []);
 
   //reset flag for new-post when reload
   useEffect(() => {
@@ -180,20 +157,25 @@ export default function Home() {
         </Slide>
         <HomePage>
           <Header />
-          <TopSection />
+
+          <FilterComponent />
 
           <Section>
-            <div className="content-wrap">
-              <Typography className="title-offer" variant="body1">
-                Offer Watchlist
-              </Typography>
-            </div>
+            <Typography className="title-offer" variant="body1" component="div">
+              <span>Offers</span>
+              <span>
+                {(stateName || countryName || cityName) &&
+                  [cityName, stateName, countryName].filter(Boolean).join(', ')}
+              </span>
+            </Typography>
             <div className="offer-list">
               {offerFilterConfig.countryCode ||
               offerFilterConfig.stateName ||
               offerFilterConfig.cityName ||
               offerFilterConfig.coin ||
               offerFilterConfig.fiatCurrency ||
+              offerFilterConfig.paymentApp ||
+              offerFilterConfig.isBuyOffer !== undefined ||
               (offerFilterConfig.paymentMethodIds?.length ?? 0) > 0 ? (
                 !isLoadingFilter ? (
                   <InfiniteScroll

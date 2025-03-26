@@ -2,9 +2,8 @@
 
 import { openModal, PostQueryItem, useSliceDispatch as useLixiSliceDispatch } from '@bcpros/redux-store';
 import { ChevronLeft } from '@mui/icons-material';
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import ShareIcon from '@mui/icons-material/Share';
-import { IconButton, Typography } from '@mui/material';
+import { Button, IconButton, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -13,7 +12,7 @@ import React from 'react';
 const Header = styled('div')(({ theme }) => ({
   position: 'relative',
   padding: '16px 8px',
-  button: {
+  '.share-btn, .back-btn': {
     position: 'absolute',
     padding: 0,
     svg: {
@@ -32,7 +31,7 @@ const Header = styled('div')(({ theme }) => ({
   '.icon-header': {
     position: 'relative',
     '.MuiSvgIcon-root': {
-      color: theme.custom.colorItem
+      color: theme.custom.colorPrimary
     }
   },
 
@@ -47,6 +46,10 @@ const Header = styled('div')(({ theme }) => ({
       fontSize: '30px',
       color: '#3383ff'
     }
+  },
+
+  '.btn-create-offer': {
+    padding: '3px 5px'
   }
 }));
 
@@ -97,7 +100,12 @@ const TickerHeader: React.FC<TickerHeaderProps> = ({
       )}
       <Typography variant="h4">
         {iconHeader && <IconButton className="icon-header">{iconHeader}</IconButton>}
-        {title} {showBtnCreateOffer && <AddCircleOutlineIcon onClick={handleOpenCreateOffer} />}{' '}
+        {title}{' '}
+        {showBtnCreateOffer && (
+          <Button className="btn-create-offer" variant="contained" color="info" onClick={handleOpenCreateOffer}>
+            Create
+          </Button>
+        )}{' '}
       </Typography>
       {showShareIcon && (
         <IconButton

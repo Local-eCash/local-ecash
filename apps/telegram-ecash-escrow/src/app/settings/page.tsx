@@ -1,11 +1,10 @@
 'use client';
+import ConfirmSignoutModal from '@/src/components/Settings/ConfirmSignoutModal';
 import CustomToast from '@/src/components/Toast/CustomToast';
 import MobileLayout from '@/src/components/layout/MobileLayout';
 import {
   getCurrentThemes,
   getIsSystemThemes,
-  getSelectedAccount,
-  getSelectedWalletPath,
   getWalletMnemonic,
   removeAllWallets,
   setCurrentThemes,
@@ -17,7 +16,7 @@ import { CheckCircleOutline } from '@mui/icons-material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { Accordion, AccordionDetails, AccordionSummary, Alert, Button, NativeSelect, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { signOut, useSession } from 'next-auth/react';
+import { signOut } from 'next-auth/react';
 import { useState } from 'react';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 import { THEMES_TYPE } from 'src/store/constants';
@@ -73,15 +72,13 @@ const ContainerSetting = styled('div')(({ theme }) => ({
 }));
 
 export default function Setting() {
-  const { data: sessionData } = useSession();
   const dispatch = useLixiSliceDispatch();
-  const selectedWalletPath = useLixiSliceSelector(getSelectedWalletPath);
   const selectedMnemonic = useLixiSliceSelector(getWalletMnemonic);
-  const selectedAccount = useLixiSliceSelector(getSelectedAccount);
   const isSystemTheme = useLixiSliceSelector(getIsSystemThemes);
   const currentTheme = useLixiSliceSelector(getCurrentThemes);
 
   const [openToastCopySuccess, setOpenToastCopySuccess] = useState(false);
+  const [openSignoutModal, setOpenSignoutModal] = useState(false);
 
   const themeOptions = [
     {
@@ -124,7 +121,7 @@ export default function Setting() {
       <ContainerSetting>
         <div className="setting-info">
           <Typography variant="h4" className="title">
-            Setting
+            Settings
           </Typography>
         </div>
         {/*TODO: Verify account*/}
@@ -196,7 +193,7 @@ export default function Setting() {
                     fontWeight: 'bold',
                     color: '#fff'
                   }}
-                  onClick={() => handleSignOut()}
+                  onClick={() => setOpenSignoutModal(true)}
                 >
                   Sign Out
                 </Button>
@@ -206,7 +203,7 @@ export default function Setting() {
 
           <div className="setting-item">
             <Typography variant="subtitle1" className="title">
-              Themes
+              Theme
             </Typography>
             <NativeSelect
               fullWidth
@@ -247,6 +244,17 @@ export default function Setting() {
           type="info"
         />
       </ContainerSetting>
+      <ConfirmSignoutModal
+        isOpen={openSignoutModal}
+        onDismissModal={value => setOpenSignoutModal(value)}
+        signout={isSignout => {
+          if (isSignout) {
+            handleSignOut();
+          } else {
+            setOpenSignoutModal(false);
+          }
+        }}
+      />
     </MobileLayout>
   );
 }

@@ -44,7 +44,7 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
   },
 
   '.MuiSvgIcon-root': {
-    color: theme.custom.colorItem
+    color: theme.custom.colorPrimary
   }
 }));
 

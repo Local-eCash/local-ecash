@@ -14,7 +14,7 @@ import { Box, List, ListItem, ListItemButton, ListItemText, SwipeableDrawer, sty
 import { useState } from 'react';
 
 const ListStyled = styled(List)(({ theme }) => ({
-  backgroundColor: theme.custom.bgItem2,
+  backgroundColor: theme.custom.bgSecondary,
   padding: '32px 16px',
   paddingTop: '16px',
   li: {

@@ -22,7 +22,7 @@ import React, { useState } from 'react';
 
 interface ConfirmCancelModalProps {
   isOpen: boolean;
-  onDissmissModal?: (value: boolean) => void;
+  onDismissModal?: (value: boolean) => void;
   onConfirmClick?: () => void;
   returnAction: (value: boolean) => void;
   isBuyerDeposit: boolean;
@@ -114,10 +114,10 @@ const ConfirmCancelModal: React.FC<ConfirmCancelModalProps> = props => {
       <StyledDialog
         // fullScreen={fullScreen}
         open={props.isOpen}
-        onClose={() => props.onDissmissModal!(false)}
+        onClose={() => props.onDismissModal!(false)}
         TransitionComponent={Transition}
       >
-        <IconButton className="back-btn" onClick={() => props.onDissmissModal!(false)}>
+        <IconButton className="back-btn" onClick={() => props.onDismissModal!(false)}>
           <ChevronLeft />
         </IconButton>
         <DialogTitle paddingTop="0px !important">Confirmation</DialogTitle>
@@ -162,7 +162,7 @@ const ConfirmCancelModal: React.FC<ConfirmCancelModalProps> = props => {
             variant="contained"
             onClick={() => {
               props.returnAction(optionDonate);
-              props.onDissmissModal!(false);
+              props.onDismissModal!(false);
             }}
             autoFocus
           >

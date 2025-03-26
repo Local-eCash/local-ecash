@@ -1,12 +1,11 @@
 'use client';
 
 import { getOfferFilterConfig, useSliceSelector as useLixiSliceSelector } from '@bcpros/redux-store';
-import { FilterAltOutlined } from '@mui/icons-material';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import { IconButton, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import React, { useState } from 'react';
-import FilterOfferModal from '../FilterOfferModal/FilterOfferModal';
+import FilterOfferModal from '../FilterOffer/FilterOfferModal';
 
 const TopSectionWrap = styled('div')(({ theme }) => ({
   padding: theme.spacing(1.5, 1), // Adjusted padding using theme
@@ -31,13 +30,13 @@ const TopSection: React.FC = () => {
   const [open, setOpen] = useState<boolean>(false);
 
   const offerFilterConfig = useLixiSliceSelector(getOfferFilterConfig);
-  const { countryName, stateName, cityName, coin, fiatCurrency } = offerFilterConfig;
+  const { countryName, stateName, cityName, paymentApp } = offerFilterConfig;
 
   return (
     <>
       <TopSectionWrap>
         <div className="location-wrap">
-          <div onClick={() => setOpen(true)}>
+          <div>
             <IconButton size="large">
               <LocationOnOutlinedIcon />
             </IconButton>
@@ -47,20 +46,16 @@ const TopSection: React.FC = () => {
                 : 'All the world'}
             </Typography>
           </div>
-          <div onClick={() => setOpen(true)} style={{ display: 'flex', alignItems: 'end', gap: '2px' }}>
-            {coin || fiatCurrency ? (
-              <Typography fontWeight="bold"> {coin ?? fiatCurrency} </Typography>
-            ) : (
-              <Typography fontWeight="bold">Filter</Typography>
-            )}
-            <IconButton>
-              <FilterAltOutlined />
-            </IconButton>
-          </div>
+          {paymentApp && (
+            <Typography style={{ marginRight: '10px' }} fontWeight="bold">
+              {' '}
+              {paymentApp}{' '}
+            </Typography>
+          )}
         </div>
       </TopSectionWrap>
 
-      <FilterOfferModal isOpen={open} onDissmissModal={value => setOpen(value)} />
+      <FilterOfferModal isOpen={open} onDismissModal={value => setOpen(value)} />
     </>
   );
 };

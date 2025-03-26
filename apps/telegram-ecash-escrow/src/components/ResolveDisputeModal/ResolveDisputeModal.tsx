@@ -22,7 +22,7 @@ import DisputeDetailInfo from '../DisputeDetailInfo/DisputeDetailInfo';
 
 interface PlaceAnOrderModalProps {
   isOpen: boolean;
-  onDissmissModal?: (value: boolean) => void;
+  onDismissModal?: (value: boolean) => void;
   onConfirmClick?: () => void;
 }
 
@@ -185,10 +185,10 @@ const ResolveDisputeModal: React.FC<PlaceAnOrderModalProps> = props => {
       <StyledDialog
         fullScreen={fullScreen}
         open={props.isOpen}
-        onClose={() => props.onDissmissModal!(false)}
+        onClose={() => props.onDismissModal!(false)}
         TransitionComponent={Transition}
       >
-        <IconButton className="back-btn" onClick={() => props.onDissmissModal!(false)}>
+        <IconButton className="back-btn" onClick={() => props.onDismissModal!(false)}>
           <ChevronLeft />
         </IconButton>
         <DialogTitle>Resolve Dispute</DialogTitle>

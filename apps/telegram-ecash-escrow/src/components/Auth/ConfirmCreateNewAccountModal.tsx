@@ -16,11 +16,11 @@ import {
 import { TransitionProps } from '@mui/material/transitions';
 import React from 'react';
 
-interface ConfirmOfferTypeModalProps {
+interface ConfirmCreateNewAccountModalProps {
   isOpen: boolean;
   isLoading: boolean;
   onDismissModal?: (value: boolean) => void;
-  createOffer?: (isHidden: boolean) => void;
+  createAccount?: (isCreateAccount: boolean) => void;
 }
 
 const StyledDialog = styled(Dialog)(({ theme }) => ({
@@ -88,21 +88,18 @@ const Transition = React.forwardRef(function Transition(
   return <Slide direction="up" ref={ref} {...props} />;
 });
 
-const ConfirmOfferTypeModal: React.FC<ConfirmOfferTypeModalProps> = props => {
+const ConfirmCreateNewAccountModal: React.FC<ConfirmCreateNewAccountModalProps> = props => {
   return (
     <React.Fragment>
       <StyledDialog open={props.isOpen} onClose={() => props.onDismissModal!(false)} TransitionComponent={Transition}>
         <IconButton className="back-btn" onClick={() => props.onDismissModal!(false)}>
           <ChevronLeft />
         </IconButton>
-        <DialogTitle paddingTop="0px !important">Confirm Offer Type</DialogTitle>
+        <DialogTitle paddingTop="0px !important">Confirm create new account</DialogTitle>
         <DialogContent>
-          <Typography component={'div'} sx={{ fontSize: '16px', marginTop: '10px' }}>
-            <div>Choose your offer type:</div>
-            <div style={{ fontSize: '15px' }}>
-              - <b>Listed</b>: Your offer is listed on Marketplace and visible to everyone.
-              <br />- <b>Unlisted</b>: Your offer is not listed on Marketplace. Only you can see it.
-            </div>
+          <Typography variant="body1" sx={{ marginTop: '10px' }}>
+            Create a new account with a new seed phrase. This will overwrite the existing account. Are you sure want to
+            continue?
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -111,24 +108,24 @@ const ConfirmOfferTypeModal: React.FC<ConfirmOfferTypeModalProps> = props => {
             variant="contained"
             color="warning"
             onClick={() => {
-              props.createOffer!(false);
+              props.createAccount!(false);
             }}
             disabled={props.isLoading}
             autoFocus
           >
-            Listed
+            Not create
           </Button>
           <Button
             className="confirm-btn"
             variant="contained"
             color="success"
             onClick={() => {
-              props.createOffer!(true);
+              props.createAccount!(true);
             }}
             disabled={props.isLoading}
             autoFocus
           >
-            Unlisted
+            Create with new seed
           </Button>
         </DialogActions>
       </StyledDialog>
@@ -136,4 +133,4 @@ const ConfirmOfferTypeModal: React.FC<ConfirmOfferTypeModalProps> = props => {
   );
 };
 
-export default ConfirmOfferTypeModal;
+export default ConfirmCreateNewAccountModal;

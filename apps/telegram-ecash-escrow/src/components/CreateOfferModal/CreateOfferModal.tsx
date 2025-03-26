@@ -1,7 +1,8 @@
 'use client';
 
 import { COIN_OTHERS, COIN_USD_STABLECOIN_TICKER, LIST_COIN } from '@/src/store/constants';
-import { LIST_CURRENCIES_USED, Location } from '@bcpros/lixi-models';
+import { LIST_PAYMENT_APP } from '@/src/store/constants/list-payment-app';
+import { LIST_CURRENCIES_USED, Location, PAYMENT_METHOD } from '@bcpros/lixi-models';
 import {
   Coin,
   CreateOfferInput,
@@ -30,10 +31,12 @@ import {
   IconButton,
   InputAdornment,
   InputLabel,
+  MenuItem,
   NativeSelect,
   Portal,
   Radio,
   RadioGroup,
+  Select,
   Slide,
   TextField,
   Typography,
@@ -46,7 +49,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import FilterListLocationModal from '../FilterList/FilterListLocationModal';
 import FilterListModal from '../FilterList/FilterListModal';
-import { FormControlWithNativeSelect } from '../FilterOfferModal/FilterOfferModal';
+import { FormControlWithNativeSelect } from '../FilterOffer/FilterOfferModal';
 import CustomToast from '../Toast/CustomToast';
 import ConfirmOfferTypeModal from './ConfirmOfferTypeModal';
 
@@ -83,10 +86,40 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
     marginBottom: '4px'
   },
 
+  '.container-step1': {
+    '.type-btn-group': {
+      paddingTop: '0',
+      button: {
+        width: '50%',
+        border: `1px solid ${theme.custom.borderPrimary}`,
+        color: theme.custom.colorPrimary
+      },
+      '.type-buy-btn': {
+        borderRadius: '8px 0 0 8px'
+      },
+      '.type-sell-btn': {
+        borderRadius: '0 8px 8px 0'
+      },
+      '.inactive': {
+        background: 'transparent'
+      },
+      '.active': {
+        color: '#fff'
+      }
+    }
+  },
+
   '.container-step2 .margin-component .MuiInputBase-root': {
     borderRadius: 0,
     '& .MuiInputBase-input': {
       textAlign: 'center'
+    }
+  },
+
+  '.container-step2': {
+    '.buy-offer-text-example': {
+      fontSize: '13px',
+      color: theme.custom.colorSecondary
     }
   },
 
@@ -229,6 +262,8 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
   const [openCityList, setOpenCityList] = useState(false);
   const [openConfirmType, setOpenConfirmType] = useState(false);
 
+  const [isBuyOffer, setIsBuyOffer] = useState(offer?.type ? offer?.type === OfferType.Buy : true);
+
   const dialogContentRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -247,6 +282,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       max: `${offer?.orderLimitMax ?? ''}`,
       option: offer?.paymentMethods[0]?.paymentMethod.id ?? '',
       currency: offer?.localCurrency ?? null,
+      paymentApp: '',
       coin: offer?.coinPayment ?? null,
       coinOthers: offer?.coinOthers ?? '',
       percentage: offer?.marginPercentage ?? 0,
@@ -282,6 +318,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       coinPayment: data?.coin ? data.coin.split(':')[0] : null,
       coinOthers: data?.coinOthers ? data.coinOthers : null,
       localCurrency: data?.currency ? data.currency.split(':')[0] : null,
+      paymentApp: data?.paymentApp ? data.paymentApp : null,
       marginPercentage: Number(data?.percentage ?? 0),
       orderLimitMin: minNum,
       orderLimitMax: maxNum,
@@ -289,8 +326,8 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       hideFromHome: isHidden
     };
 
-    //Just have location when paymentmethods is 1 or 2
-    if (option !== 1) {
+    // Just have location when paymentmethods is 1
+    if (option !== PAYMENT_METHOD.CASH_IN_PERSON) {
       input.locationId = null;
     }
 
@@ -314,7 +351,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
         ...input,
         price: '',
         coin: Coin.Xec,
-        type: OfferType.Sell
+        type: isBuyOffer ? OfferType.Buy : OfferType.Sell
       };
       await createOfferTrigger({ input: inputCreateOffer })
         .unwrap()
@@ -348,7 +385,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
   };
 
   const showMargin = () => {
-    return option !== 5 && !coinValue?.includes(COIN_OTHERS);
+    return option !== PAYMENT_METHOD.GOODS_SERVICES && !coinValue?.includes(COIN_OTHERS);
   };
 
   const marginComponent = (
@@ -391,16 +428,36 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
         {errors && errors?.percentage && (
           <FormHelperText error={true}>{errors.percentage.message as string}</FormHelperText>
         )}
-        <Typography className="example-value">
-          <span className="bold">Example: </span> If you sell <span className="bold">XEC</span> worth{' '}
-          <span className="bold">
-            {Intl.NumberFormat('de-DE').format(fixAmount)} {coinCurrency}
-          </span>
-          , you will receive{' '}
-          <span className="bold">
-            {Intl.NumberFormat('de-DE').format(fixAmount * (1 + percentageValue / 100))} {coinCurrency}
-          </span>{' '}
-          in return
+        <Typography className="example-value" component="div">
+          {isBuyOffer ? (
+            <div>
+              <span className="buy-offer-text-example">
+                You will pay {percentageValue}% less than the market price for every XEC you buy
+              </span>
+              <br />
+              <span className="bold">Example: </span> If you pay{' '}
+              <span className="bold">
+                {Intl.NumberFormat('de-DE').format(fixAmount)} {coinCurrency}
+              </span>
+              , you will receive{' '}
+              <span className="bold">
+                {Intl.NumberFormat('de-DE').format(fixAmount * (1 + percentageValue / 100))} {coinCurrency}
+              </span>{' '}
+              worth of <span className="bold">XEC</span> in return
+            </div>
+          ) : (
+            <div>
+              <span className="bold">Example: </span> If you sell <span className="bold">XEC</span> worth{' '}
+              <span className="bold">
+                {Intl.NumberFormat('de-DE').format(fixAmount)} {coinCurrency}
+              </span>
+              , you will receive{' '}
+              <span className="bold">
+                {Intl.NumberFormat('de-DE').format(fixAmount * (1 + percentageValue / 100))} {coinCurrency}
+              </span>{' '}
+              in return
+            </div>
+          )}
         </Typography>
       </div>
     </Grid>
@@ -409,9 +466,29 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
   const stepContent1 = (
     <div className="container-step1">
       <Grid container spacing={2}>
+        <Grid item xs={12} className="type-btn-group">
+          <Button
+            className={`type-buy-btn ${isBuyOffer ? 'active' : 'inactive'}`}
+            variant="contained"
+            color="success"
+            onClick={() => setIsBuyOffer(true)}
+          >
+            Buy
+          </Button>
+          <Button
+            className={`type-sell-btn ${!isBuyOffer ? 'active' : 'inactive'}`}
+            variant="contained"
+            color="error"
+            onClick={() => setIsBuyOffer(false)}
+          >
+            Sell
+          </Button>
+        </Grid>
         <Grid item xs={12}>
           <Typography fontStyle={'italic'} className="heading" variant="body2">
-            *You are selling XEC
+            {isBuyOffer
+              ? 'You are buying XEC. Your offer will be listed in Sell Crypto space'
+              : 'You are selling XEC. Your offer will be listed in Sell Crypto space'}
           </Typography>
         </Grid>
 
@@ -463,6 +540,63 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
 
         {option != 0 && option < 4 && (
           <>
+            {option === PAYMENT_METHOD.PAYMENT_APP && (
+              <>
+                <Grid item xs={12}>
+                  <Typography variant="body2" className="label">
+                    Select payment-app
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} style={{ paddingTop: 0 }}>
+                  <Controller
+                    name="paymentApp"
+                    control={control}
+                    rules={{
+                      validate: value => {
+                        if (!value) return 'payment-app is required';
+
+                        return true;
+                      }
+                    }}
+                    render={({ field: { onChange, onBlur, value, ref } }) => (
+                      <FormControlWithNativeSelect>
+                        <InputLabel variant="outlined" htmlFor="select-paymentApp">
+                          Payment-app
+                        </InputLabel>
+                        <NativeSelect
+                          id="select-paymentApp"
+                          value={value ?? ''}
+                          onBlur={onBlur}
+                          ref={ref}
+                          onChange={e => {
+                            onChange(e);
+                          }}
+                        >
+                          <option aria-label="None" value="" />
+                          {LIST_PAYMENT_APP.sort((a, b) => {
+                            const nameA = a.name.toLowerCase();
+                            const nameB = b.name.toLowerCase();
+                            if (nameA < nameB) return -1;
+                            if (nameA > nameB) return 1;
+
+                            return 0;
+                          }).map(item => {
+                            return (
+                              <option key={item.id} value={`${item.name}`}>
+                                {item.name}
+                              </option>
+                            );
+                          })}
+                        </NativeSelect>
+                        {errors && errors?.paymentApp && (
+                          <FormHelperText error={true}>{errors.paymentApp.message as string}</FormHelperText>
+                        )}
+                      </FormControlWithNativeSelect>
+                    )}
+                  />
+                </Grid>
+              </>
+            )}
             <Grid item xs={12}>
               <Typography variant="body2" className="label">
                 Select currency
@@ -558,13 +692,10 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                         if (item.ticker === 'XEC') return;
                         return (
                           <option key={item.ticker} value={`${item.ticker}:${item.fixAmount}`}>
-                            {item.name} {item.ticker !== COIN_USD_STABLECOIN_TICKER && `(${item.ticker})`}
+                            {item.name} {item.isDisplayTicker && `(${item.ticker})`}
                           </option>
                         );
                       })}
-                      <option key="Others" value={`${COIN_OTHERS}:0`}>
-                        {COIN_OTHERS}
-                      </option>
                     </NativeSelect>
                     {errors && errors?.coin && (
                       <FormHelperText error={true}>{errors.coin.message as string}</FormHelperText>
@@ -574,7 +705,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
               />
             </Grid>
 
-            {(coinValue?.includes(COIN_OTHERS) || coinValue?.includes(COIN_USD_STABLECOIN_TICKER)) && (
+            {coinValue?.includes(COIN_OTHERS) && (
               <Grid item xs={4}>
                 <Controller
                   name="coinOthers"
@@ -609,9 +740,39 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                 />
               </Grid>
             )}
+
+            {coinValue?.includes(COIN_USD_STABLECOIN_TICKER) && (
+              <Grid item xs={4}>
+                <Controller
+                  name="coinOthers"
+                  control={control}
+                  render={({ field: { onChange, onBlur, value, name, ref } }) => (
+                    <FormControl fullWidth={true} variant="standard" error={errors.coinOthers && true}>
+                      <InputLabel id="coinOthers-label">Ticker</InputLabel>
+                      <Select
+                        className="form-input"
+                        onChange={onChange}
+                        onBlur={onBlur}
+                        value={value}
+                        name={name}
+                        inputRef={ref}
+                        id="coinOthers"
+                        labelId="coinOthers-label"
+                        label="Ticker"
+                      >
+                        <MenuItem value="">None</MenuItem>
+                        <MenuItem value="USDT">USDT</MenuItem>
+                        <MenuItem value="USDC">USDC</MenuItem>
+                      </Select>
+                      {errors.coinOthers && <FormHelperText>{errors.coinOthers?.message as string}</FormHelperText>}
+                    </FormControl>
+                  )}
+                />
+              </Grid>
+            )}
           </>
         )}
-        {option === 1 && (
+        {option === PAYMENT_METHOD.CASH_IN_PERSON && (
           <>
             <Grid item xs={12}>
               <Typography variant="body2" className="label">
@@ -633,7 +794,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                 render={({ field: { onChange, value, onBlur, ref } }) => (
                   <FormControl fullWidth>
                     <TextField
-                      label={option === 1 ? 'Country' : ''}
+                      label={option === PAYMENT_METHOD.CASH_IN_PERSON ? 'Country' : ''}
                       variant="outlined"
                       fullWidth
                       onChange={onChange}
@@ -867,9 +1028,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                 </FormControl>
               )}
             />
-            <Typography variant="h6" style={{ color: 'white' }}>
-              to
-            </Typography>
+            <Typography variant="h6">to</Typography>
             <Controller
               name="max"
               control={control}
@@ -954,10 +1113,10 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       <Grid container spacing={2}>
         <Grid item xs={12}>
           <Typography fontStyle={'italic'} className="heading" variant="body1">
-            *You are selling XEC
+            {isBuyOffer ? '*You are buying XEC' : '*You are selling XEC'}
           </Typography>
         </Grid>
-        {option === 1 && (
+        {option === PAYMENT_METHOD.CASH_IN_PERSON && (
           <Grid item xs={12}>
             <Typography variant="body1">
               <span className="prefix">Location: </span>
@@ -1035,6 +1194,10 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
               setValue('country', countryDetected);
               const states = await countryApi.getStates(countryDetected?.iso2 ?? '');
               setListStates(states);
+
+              // set currency
+              const currencyDetected = LIST_CURRENCIES_USED.find(item => item.country === countryDetected?.iso2);
+              if (currencyDetected) setValue('currency', `${currencyDetected?.code}:${currencyDetected?.fixAmount}`);
             }
           })();
         },
@@ -1129,7 +1292,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       </Portal>
       <FilterListModal
         isOpen={openCountryList}
-        onDissmissModal={value => setOpenCountryList(value)}
+        onDismissModal={value => setOpenCountryList(value)}
         setSelectedItem={async value => {
           setValue('country', value);
           clearErrors('country');
@@ -1143,7 +1306,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
         isOpen={openStateList}
         listItems={listStates}
         propertyToSearch="adminNameAscii"
-        onDissmissModal={value => setOpenStateList(value)}
+        onDismissModal={value => setOpenStateList(value)}
         setSelectedItem={async value => {
           setValue('state', value);
           clearErrors('state');
@@ -1156,7 +1319,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
         isOpen={openCityList}
         listItems={listCities}
         propertyToSearch="cityAscii"
-        onDissmissModal={value => setOpenCityList(value)}
+        onDismissModal={value => setOpenCityList(value)}
         setSelectedItem={value => {
           setValue('city', value);
           clearErrors('city');
@@ -1166,7 +1329,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       <ConfirmOfferTypeModal
         isOpen={openConfirmType}
         isLoading={loading}
-        onDissmissModal={value => setOpenConfirmType(value)}
+        onDismissModal={value => setOpenConfirmType(value)}
         createOffer={isHidden => {
           handleSubmit(data => {
             handleCreateOffer(data, isHidden);

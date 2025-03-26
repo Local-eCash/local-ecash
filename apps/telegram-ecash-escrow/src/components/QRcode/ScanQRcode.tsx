@@ -9,19 +9,19 @@ const StyledDialog = styled(Dialog)``;
 
 interface ScanQRcodeProps {
   isOpen: boolean;
-  onDissmissModal: (value: boolean) => void;
+  onDismissModal: (value: boolean) => void;
   setAddress: (addr: string) => void;
 }
 
-const ScanQRcode: React.FC<ScanQRcodeProps> = ({ isOpen, onDissmissModal, setAddress }) => {
+const ScanQRcode: React.FC<ScanQRcodeProps> = ({ isOpen, onDismissModal, setAddress }) => {
   return (
     <>
-      <StyledDialog open={isOpen} onClose={() => onDissmissModal(false)}>
+      <StyledDialog open={isOpen} onClose={() => onDismissModal(false)}>
         <div>
           <Scanner
             onScan={result => {
               setAddress(result[0]?.rawValue ?? '');
-              onDissmissModal(false);
+              onDismissModal(false);
             }}
             onError={err => {
               console.log(err);

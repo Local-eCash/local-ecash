@@ -23,7 +23,7 @@ const MyOfferPage = styled('div')(({ theme }) => ({
   minHeight: '100vh',
   paddingBottom: '85px',
   '.MuiTab-root': {
-    color: theme.custom.colorItem,
+    color: theme.custom.colorPrimary,
     textTransform: 'none',
     fontWeight: 600,
     fontSize: '16px',

@@ -10,7 +10,6 @@ import { IconButton, Skeleton, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import * as _ from 'lodash';
 import moment from 'moment';
-import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import InfiniteScroll from 'react-infinite-scroll-component';
 
@@ -24,7 +23,7 @@ const ProfileDetaillPage = styled('div')(({ theme }) => ({
   },
 
   '.profile-info': {
-    background: theme.custom.bgItem6,
+    background: theme.custom.bgSenary,
     borderRadius: '10px',
     padding: '10px',
 
@@ -78,7 +77,13 @@ const ProfileDetail = () => {
     isError,
     isLoading
   } = useGetAccountByAddressQuery({ address: addressAccount }, { skip: !addressAccount });
-  const { data } = useSession();
+
+  const { useGetLocaleCashAvatarQuery } = accountsApi;
+  const { data: avatarPath } = useGetLocaleCashAvatarQuery(
+    { accountId: accountQueryData?.getAccountByAddress?.id },
+    { skip: !accountQueryData?.getAccountByAddress?.id }
+  );
+
   const router = useRouter();
 
   const {
@@ -156,17 +161,15 @@ const ProfileDetail = () => {
         </div>
         <div className="profile-info">
           <div className="basic-info">
-            <AccountCircleRoundedIcon className="account-avatar-default" fontSize="large" />
-            {/* TODO: add image user */}
-            {/* {data && data?.user?.image ? (
+            {avatarPath?.getLocaleCashAvatar ? (
               <StyledAvatar>
                 <picture>
-                  <img src={data.user.image} alt="" />
+                  <img src={avatarPath.getLocaleCashAvatar} alt="" />
                 </picture>
               </StyledAvatar>
             ) : (
               <AccountCircleRoundedIcon className="account-avatar-default" fontSize="large" />
-            )} */}
+            )}
             <div>
               <Typography>{accountQueryData?.getAccountByAddress?.telegramUsername}</Typography>
               <Typography className="info-item">

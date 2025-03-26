@@ -1,4 +1,5 @@
 'use client';
+import ConfirmCreateNewAccountModal from '@/src/components/Auth/ConfirmCreateNewAccountModal';
 import CustomToast from '@/src/components/Toast/CustomToast';
 import MobileLayout from '@/src/components/layout/MobileLayout';
 import { AccountType, COIN, GenerateAccountType, ImportAccountType } from '@bcpros/lixi-models';
@@ -41,7 +42,7 @@ const ContainerImportWallet = styled('div')(({ theme }) => ({
       gap: '8px',
 
       svg: {
-        color: theme.custom.colorItem
+        color: theme.custom.colorPrimary
       }
     }
   },
@@ -97,16 +98,10 @@ export default function ImportWallet() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<boolean>(false);
   const [success, setSuccess] = useState<boolean>(false);
+  const [openConfirmCreateAccount, setOpenConfirmCreateAccount] = useState(false);
+
   const { getXecWalletPublicKey } = useContext(WalletContextNode);
   const selectedWalletPath = useLixiSliceSelector(getSelectedWalletPath);
-
-  const scanQRCode = () => {
-    // haptic.notificationOccurred('warning');
-    // scanner.open('Scan the seed phrase').then((content) => {
-    //   setSeedPhrase(content || '');
-    //   scanner.close();
-    // });
-  };
 
   useEffect(() => {
     selectedWalletPath && router.push('/');
@@ -154,7 +149,6 @@ export default function ImportWallet() {
 
       setSuccess(true);
     } catch (e) {
-      console.log('🚀 ~ handleCreateNewWal ~ e:', e);
       setError(true);
     }
 
@@ -218,7 +212,7 @@ export default function ImportWallet() {
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
-                        <div onClick={scanQRCode}>
+                        <div>
                           <QrCodeScannerOutlinedIcon />
                         </div>
                       </InputAdornment>
@@ -249,7 +243,7 @@ export default function ImportWallet() {
           <Button
             className="btn-create"
             variant="contained"
-            onClick={() => handleCreateNewWallet()}
+            onClick={() => setOpenConfirmCreateAccount(true)}
             disabled={loading || success}
           >
             Create new wallet
@@ -274,6 +268,19 @@ export default function ImportWallet() {
           />
         </Stack>
       </ContainerImportWallet>
+
+      <ConfirmCreateNewAccountModal
+        isOpen={openConfirmCreateAccount}
+        isLoading={loading}
+        onDismissModal={value => setOpenConfirmCreateAccount(value)}
+        createAccount={isCreateAccount => {
+          if (isCreateAccount) {
+            handleCreateNewWallet();
+          } else {
+            setOpenConfirmCreateAccount(false);
+          }
+        }}
+      />
     </MobileLayout>
   );
 }

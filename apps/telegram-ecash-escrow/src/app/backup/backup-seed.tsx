@@ -14,13 +14,13 @@ const WordAlignment = styled('div')(({ theme }) => ({
     },
     '.word-letter': {
       fontSize: '14px',
-      color: theme.custom.colorItem
+      color: theme.custom.colorPrimary
     },
     '&.wrong': {
       background: 'red !important'
     },
     '&.right': {
-      background: `${theme.custom.bgItem5} !important`
+      background: `${theme.custom.bgQuinary} !important`
     },
     '&.blur': {
       filter: 'blur(3px)'

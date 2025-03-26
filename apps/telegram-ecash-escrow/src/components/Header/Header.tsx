@@ -3,6 +3,7 @@
 import { UtxoContext } from '@/src/store/context/utxoProvider';
 import { COIN } from '@bcpros/lixi-models';
 import {
+  accountsApi,
   getSelectedAccount,
   getSelectedWalletPath,
   parseCashAddressToPrefix,
@@ -88,6 +89,12 @@ export default function Header() {
   const selectedWalletPath = useLixiSliceSelector(getSelectedWalletPath);
   const selectedAccount = useLixiSliceSelector(getSelectedAccount);
 
+  const { useGetLocaleCashAvatarQuery } = accountsApi;
+  const { data: avatarPath } = useGetLocaleCashAvatarQuery(
+    { accountId: selectedAccount?.id },
+    { skip: !selectedAccount }
+  );
+
   const [address, setAddress] = useState(parseCashAddressToPrefix(COIN.XEC, selectedWalletPath?.cashAddress));
   const [copy, setCopy] = useState(false);
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
@@ -150,14 +157,14 @@ export default function Header() {
       </div>
       <div className="wallet-minimals">
         <IconButton onClick={e => handlePopoverOpen(e)}>
-          {data && data.user.image ? (
+          {avatarPath?.getLocaleCashAvatar ? (
             <StyledAvatar>
               <picture>
-                <img src={data.user.image} alt="" />
+                <img src={avatarPath.getLocaleCashAvatar} alt="" />
               </picture>
             </StyledAvatar>
           ) : (
-            <AccountCircleRoundedIcon fontSize="large" />
+            <AccountCircleRoundedIcon className="account-avatar-default" fontSize="large" />
           )}
         </IconButton>
         <Popover
