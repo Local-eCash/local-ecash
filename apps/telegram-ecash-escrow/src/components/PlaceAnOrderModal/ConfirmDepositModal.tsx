@@ -2,6 +2,7 @@
 
 import { styled } from '@mui/material/styles';
 
+import { formatNumber } from '@/src/store/util';
 import { COIN } from '@bcpros/lixi-models';
 import { ChevronLeft } from '@mui/icons-material';
 import {
@@ -104,7 +105,7 @@ const ConfirmDepositModal: React.FC<ConfirmDepositModalProps> = props => {
             returned if there is no dispute.
           </Typography>
           <Typography variant="body1" sx={{ marginTop: '10px', fontWeight: 'bold' }}>
-            Security deposit (1%): {props.depositSecurity.toLocaleString('de-DE')} {COIN.XEC}
+            Security deposit (1%): {formatNumber(props.depositSecurity)} {COIN.XEC}
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -118,7 +119,7 @@ const ConfirmDepositModal: React.FC<ConfirmDepositModalProps> = props => {
             disabled={props.isLoading}
             autoFocus
           >
-            Not deposit
+            No, thanks
           </Button>
           <Button
             className="confirm-btn"
@@ -130,7 +131,7 @@ const ConfirmDepositModal: React.FC<ConfirmDepositModalProps> = props => {
             disabled={props.isLoading}
             autoFocus
           >
-            Deposit
+            Deposit {formatNumber(props.depositSecurity)} {COIN.XEC}
           </Button>
         </DialogActions>
       </StyledDialog>

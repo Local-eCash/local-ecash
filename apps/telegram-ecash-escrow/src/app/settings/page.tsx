@@ -187,6 +187,7 @@ export default function Setting() {
               <AccordionDetails>
                 <Button
                   variant="contained"
+                  color="warning"
                   style={{
                     display: 'inline-block',
                     width: '100%',

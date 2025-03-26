@@ -14,7 +14,7 @@ import {
 } from '@bcpros/redux-store';
 import { Button, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 
 const OrderDetailWrap = styled('div')(({ theme }) => ({
@@ -44,8 +44,8 @@ const OrderDetailWrap = styled('div')(({ theme }) => ({
 
   '.btn-order-type': {
     fontSize: '12px',
-    borderRadius: '16px',
-    textTransform: 'none'
+    textTransform: 'none',
+    borderRadius: '10px'
   },
 
   '.order-first-line': {
@@ -69,7 +69,11 @@ const OrderDetailWrap = styled('div')(({ theme }) => ({
     textOverflow: 'ellipsis'
   },
 
-  button: {
+  '.btn-view-order': {
+    textTransform: 'none'
+  },
+
+  'button:not(.btn-view-order)': {
     pointerEvents: 'none'
   }
 }));
@@ -93,6 +97,8 @@ const OrderDetailInfo = ({
   const isBuyOffer = order?.escrowOffer?.type === OfferType.Buy;
 
   const router = useRouter();
+  const pathname = usePathname();
+
   const [rateData, setRateData] = useState(null);
   const [marginCurrentPrice, setMarginCurrentPrice] = useState(0);
 
@@ -266,7 +272,7 @@ const OrderDetailInfo = ({
   return (
     <OrderDetailWrap>
       <Typography className="order-first-line" variant="body1" component="div">
-        <div className="wrap-order-id" onClick={() => router.push(`/order-detail?id=${order.id}`)}>
+        <div className="wrap-order-id">
           <span className="prefix">No: </span>
           <span className="order-id">{order.id}</span>
         </div>
@@ -365,6 +371,15 @@ const OrderDetailInfo = ({
           <span className="prefix">Payment-detail: </span>
           {paymentDetailInfo()}
         </Typography>
+      )}
+      {pathname !== '/order-detail' && (
+        <Button
+          className="btn-view-order"
+          variant="contained"
+          onClick={() => router.push(`/order-detail?id=${order.id}`)}
+        >
+          View
+        </Button>
       )}
     </OrderDetailWrap>
   );

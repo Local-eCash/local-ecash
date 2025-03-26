@@ -104,7 +104,7 @@ const ConfirmSignoutModal: React.FC<ConfirmSignoutModalProps> = props => {
           <Button
             className="confirm-btn"
             variant="contained"
-            color="success"
+            color="info"
             onClick={() => {
               props.signout!(false);
             }}
