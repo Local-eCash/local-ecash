@@ -463,8 +463,8 @@ export default function DisputeDetail() {
                 </AlertTitle>
                 <Typography style={{ fontSize: '15px' }} fontWeight="bold">
                   {escrowOrder?.escrowOrderStatus === EscrowOrderStatus.Complete
-                    ? 'The fund have been forwarded to the buyer. '
-                    : 'The fund have been returned to the seller. '}
+                    ? 'The funds have been forwarded to the buyer. '
+                    : 'The funds have been returned to the seller. '}
                 </Typography>
                 <Link
                   target="_blank"

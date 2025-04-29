@@ -2,13 +2,19 @@
 import ConfirmSignoutModal from '@/src/components/Settings/ConfirmSignoutModal';
 import CustomToast from '@/src/components/Toast/CustomToast';
 import MobileLayout from '@/src/components/layout/MobileLayout';
+import { SettingContext } from '@/src/store/context/settingProvider';
+import { UpdateSettingCommand } from '@bcpros/lixi-models';
 import {
+  accountsApi,
   getCurrentThemes,
   getIsSystemThemes,
+  getSelectedAccountId,
+  getSelectedWalletPath,
   getWalletMnemonic,
   removeAllWallets,
   setCurrentThemes,
   setIsSystemThemes,
+  settingApi,
   useSliceDispatch as useLixiSliceDispatch,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
@@ -17,9 +23,9 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { Accordion, AccordionDetails, AccordionSummary, Alert, Button, NativeSelect, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { signOut } from 'next-auth/react';
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
-import { THEMES_TYPE } from 'src/store/constants';
+import { IDENTITY_TYPE, THEMES_TYPE } from 'src/store/constants';
 
 const ContainerSetting = styled('div')(({ theme }) => ({
   padding: '1rem',
@@ -73,11 +79,22 @@ const ContainerSetting = styled('div')(({ theme }) => ({
 
 export default function Setting() {
   const dispatch = useLixiSliceDispatch();
+  const { setSetting, setting } = useContext(SettingContext);
+
   const selectedMnemonic = useLixiSliceSelector(getWalletMnemonic);
   const isSystemTheme = useLixiSliceSelector(getIsSystemThemes);
   const currentTheme = useLixiSliceSelector(getCurrentThemes);
+  const selectedWallet = useLixiSliceSelector(getSelectedWalletPath);
+  const selectedAccountId = useLixiSliceSelector(getSelectedAccountId);
+
+  const { useGetAccountByAddressQuery } = accountsApi;
+  const { currentData: accountQueryData } = useGetAccountByAddressQuery(
+    { address: selectedWallet?.xAddress },
+    { skip: !selectedWallet?.xAddress }
+  );
 
   const [openToastCopySuccess, setOpenToastCopySuccess] = useState(false);
+  const [openToastChangeIdentity, setOpenToastChangeIdentity] = useState(false);
   const [openSignoutModal, setOpenSignoutModal] = useState(false);
 
   const themeOptions = [
@@ -98,6 +115,19 @@ export default function Setting() {
     }
   ];
 
+  const identityOptions = [
+    {
+      id: 1,
+      value: IDENTITY_TYPE.TELEGRAM,
+      label: `Telegram handle: ${accountQueryData?.getAccountByAddress?.telegramUsername}`
+    },
+    {
+      id: 2,
+      value: IDENTITY_TYPE.ANONYMOUS,
+      label: `Anonymous username: ${accountQueryData?.getAccountByAddress?.anonymousUsernameLocalecash}`
+    }
+  ];
+
   const handleOnCopy = () => {
     setOpenToastCopySuccess(true);
   };
@@ -113,6 +143,20 @@ export default function Setting() {
     } else {
       dispatch(setCurrentThemes(selectedTheme));
       dispatch(setIsSystemThemes(false));
+    }
+  };
+
+  const handleChangeIdentity = async (selectedIdentity: string) => {
+    const updateSettingCommand: UpdateSettingCommand = {
+      accountId: selectedAccountId,
+      usePublicLocalUserName: selectedIdentity === IDENTITY_TYPE.ANONYMOUS
+    };
+
+    if (selectedAccountId) {
+      //setting on server
+      const updatedSetting = await settingApi.updateSetting(updateSettingCommand);
+      setSetting(updatedSetting);
+      setOpenToastChangeIdentity(true);
     }
   };
 
@@ -142,6 +186,46 @@ export default function Setting() {
             </AccordionDetails>
           </Accordion>
         </div> */}
+
+          <div className="setting-item">
+            <Typography variant="subtitle1" className="title">
+              Theme
+            </Typography>
+            <NativeSelect
+              fullWidth
+              id="select-theme"
+              defaultValue={isSystemTheme ? THEMES_TYPE.SYSTEM : currentTheme}
+              onChange={e => handleChangeTheme(e.target.value)}
+            >
+              {themeOptions.map(item => {
+                return (
+                  <option key={item.id} value={item.value}>
+                    {item.label}
+                  </option>
+                );
+              })}
+            </NativeSelect>
+          </div>
+
+          <div className="setting-item">
+            <Typography variant="subtitle1" className="title">
+              Listing Identity
+            </Typography>
+            <NativeSelect
+              fullWidth
+              id="select-identity"
+              defaultValue={setting?.usePublicLocalUserName ? IDENTITY_TYPE.ANONYMOUS : IDENTITY_TYPE.TELEGRAM}
+              onChange={e => handleChangeIdentity(e.target.value)}
+            >
+              {identityOptions.map(item => {
+                return (
+                  <option key={item.id} value={item.value}>
+                    {item.label}
+                  </option>
+                );
+              })}
+            </NativeSelect>
+          </div>
 
           <div className="setting-item">
             <Typography variant="subtitle1" className="title">
@@ -202,26 +286,6 @@ export default function Setting() {
             </Accordion>
           </div>
 
-          <div className="setting-item">
-            <Typography variant="subtitle1" className="title">
-              Theme
-            </Typography>
-            <NativeSelect
-              fullWidth
-              id="select-theme"
-              defaultValue={isSystemTheme ? THEMES_TYPE.SYSTEM : currentTheme}
-              onChange={e => handleChangeTheme(e.target.value)}
-            >
-              {themeOptions.map(item => {
-                return (
-                  <option key={item.id} value={item.value}>
-                    {item.label}
-                  </option>
-                );
-              })}
-            </NativeSelect>
-          </div>
-
           {/*TODO: delete account*/}
           {/* <div className="setting-item">
           <p className="title">Delete account</p>
@@ -243,6 +307,12 @@ export default function Setting() {
           handleClose={() => setOpenToastCopySuccess(false)}
           content="Copy to clipboard"
           type="info"
+        />
+        <CustomToast
+          isOpen={openToastChangeIdentity}
+          handleClose={() => setOpenToastChangeIdentity(false)}
+          content="Identity changed successfully!"
+          type="success"
         />
       </ContainerSetting>
       <ConfirmSignoutModal

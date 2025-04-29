@@ -21,9 +21,10 @@ type TelegramButtonProps = {
   escrowOrderId: string;
   username?: string;
   content?: string;
+  disabled?: boolean;
 };
 
-const TelegramButton: React.FC<TelegramButtonProps> = ({ escrowOrderId, username, content }) => {
+const TelegramButton: React.FC<TelegramButtonProps> = ({ escrowOrderId, username, content, disabled }) => {
   const { useLazyUserRequestTelegramChatQuery } = escrowOrderApi;
   const [trigger, { isFetching, isLoading }] = useLazyUserRequestTelegramChatQuery();
   const [request, setRequest] = useState(false);
@@ -54,7 +55,7 @@ const TelegramButton: React.FC<TelegramButtonProps> = ({ escrowOrderId, username
         color="info"
         variant="contained"
         onClick={() => handleTelegramClick()}
-        disabled={isFetching || isLoading}
+        disabled={isFetching || isLoading || disabled}
       >
         {content}
         <Image src={'/ico-telegram.svg'} width={32} height={32} alt="" />

@@ -10,7 +10,9 @@ import {
   countryApi,
   getAllCountries,
   getAllPaymentMethods,
+  getCountries,
   getOfferFilterConfig,
+  getPaymentMethods,
   saveOfferFilterConfig,
   useSliceDispatch as useLixiSliceDispatch,
   useSliceSelector as useLixiSliceSelector
@@ -298,6 +300,13 @@ const FilterFiatPaymentMethodModal: React.FC<FilterFiatPaymentMethodModal> = pro
 
   useEffect(() => {
     props.isOpen && getLocation();
+  }, [props.isOpen]);
+
+  useEffect(() => {
+    if (props.isOpen) {
+      dispatch(getPaymentMethods());
+      dispatch(getCountries());
+    }
   }, [props.isOpen]);
 
   return (

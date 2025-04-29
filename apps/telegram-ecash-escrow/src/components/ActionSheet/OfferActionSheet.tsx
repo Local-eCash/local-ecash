@@ -1,3 +1,4 @@
+import { capitalizeStr } from '@/src/store/util';
 import {
   OfferStatus,
   PostQueryItem,
@@ -34,6 +35,7 @@ interface OfferActionSheetProps {
 
 export default function OfferActionSheet({ post }: OfferActionSheetProps) {
   const offer = post?.postOffer;
+  const isOfferActive = offer?.status === OfferStatus.Active;
   const dispatch = useLixiSliceDispatch();
 
   const [open, setOpen] = useState(true);
@@ -47,12 +49,31 @@ export default function OfferActionSheet({ post }: OfferActionSheetProps) {
     dispatch(closeActionSheet());
   };
 
-  const handleClickArchive = () => {
+  const handleClickArchiveOrReopen = async (offerStatus: OfferStatus) => {
     const input: UpdateOfferStatusInput = {
       id: offer.postId,
-      status: OfferStatus.Archive
+      status: offerStatus
     };
-    triggerUpdateOfferStatus({ input });
+    await triggerUpdateOfferStatus({ input })
+      .unwrap()
+      .then(() => {
+        dispatch(
+          showToast('success', {
+            message: 'Success',
+            description: `${capitalizeStr(offerStatus)} successful`
+          })
+        );
+      })
+      .catch(err => {
+        dispatch(
+          showToast('error', {
+            message: 'error',
+            description: `Something wrong when ${capitalizeStr(offerStatus)}`
+          })
+        );
+      });
+
+    handleClose();
   };
 
   const handleListUnlistOffer = async () => {
@@ -98,39 +119,49 @@ export default function OfferActionSheet({ post }: OfferActionSheetProps) {
     }, 500);
   };
 
-  const list = () => (
-    <Box role="presentation">
-      <ListStyled>
-        <ListItem key={'Edit'} disablePadding>
-          <ListItemButton onClick={editOffer}>
-            <ListItemText primary={'Edit offer'} />
+  const listActionItemActive = (
+    <ListStyled>
+      <ListItem key={'Edit'} disablePadding>
+        <ListItemButton onClick={editOffer}>
+          <ListItemText primary={'Edit offer'} />
+        </ListItemButton>
+      </ListItem>
+      <ListItem key={'Archive'} disablePadding>
+        <ListItemButton onClick={() => handleClickArchiveOrReopen(OfferStatus.Archive)}>
+          <ListItemText primary={'Archive offer'} />
+        </ListItemButton>
+      </ListItem>
+      <ListItem key={'ListUnlist'} disablePadding>
+        <ListItemButton onClick={handleListUnlistOffer}>
+          <ListItemText primary={`${offer?.hideFromHome ? 'List' : 'Unlist'} offer`} />
+        </ListItemButton>
+      </ListItem>
+      {!offer?.hideFromHome && (
+        <ListItem key={'Boost'} disablePadding>
+          <ListItemButton onClick={handleBoostOffer}>
+            <ListItemText primary={'Boost offer'} />
           </ListItemButton>
         </ListItem>
-        <ListItem key={'Archive'} disablePadding>
-          <ListItemButton onClick={handleClickArchive}>
-            <ListItemText primary={'Archive offer'} />
-          </ListItemButton>
-        </ListItem>
-        <ListItem key={'ListUnlist'} disablePadding>
-          <ListItemButton onClick={handleListUnlistOffer}>
-            <ListItemText primary={`${offer?.hideFromHome ? 'List' : 'Unlist'} offer`} />
-          </ListItemButton>
-        </ListItem>
-        {!offer?.hideFromHome && (
-          <ListItem key={'Boost'} disablePadding>
-            <ListItemButton onClick={handleBoostOffer}>
-              <ListItemText primary={'Boost offer'} />
-            </ListItemButton>
-          </ListItem>
-        )}
-        <ListItem key={'Share'} disablePadding>
-          <ListItemButton onClick={handleClickShare}>
-            <ListItemText primary={'Share offer'} />
-          </ListItemButton>
-        </ListItem>
-      </ListStyled>
-    </Box>
+      )}
+      <ListItem key={'Share'} disablePadding>
+        <ListItemButton onClick={handleClickShare}>
+          <ListItemText primary={'Share offer'} />
+        </ListItemButton>
+      </ListItem>
+    </ListStyled>
   );
+
+  const listActionItemArchive = (
+    <ListStyled>
+      <ListItem key={'Reopen'} disablePadding>
+        <ListItemButton onClick={() => handleClickArchiveOrReopen(OfferStatus.Active)}>
+          <ListItemText primary={'Reopen offer'} />
+        </ListItemButton>
+      </ListItem>
+    </ListStyled>
+  );
+
+  const list = () => <Box role="presentation">{isOfferActive ? listActionItemActive : listActionItemArchive}</Box>;
 
   return (
     <SwipeableDrawer

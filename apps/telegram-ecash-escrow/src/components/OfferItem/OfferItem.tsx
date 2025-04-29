@@ -2,7 +2,7 @@
 
 import { COIN_OTHERS, COIN_USD_STABLECOIN, COIN_USD_STABLECOIN_TICKER } from '@/src/store/constants';
 import { SettingContext } from '@/src/store/context/settingProvider';
-import { formatNumber } from '@/src/store/util';
+import { getOrderLimitText } from '@/src/store/util';
 import { PAYMENT_METHOD } from '@bcpros/lixi-models';
 import {
   OfferStatus,
@@ -49,7 +49,8 @@ const CardWrapper = styled(Card)(({ theme }) => ({
       gap: 5,
       '& button': {
         borderRadius: '10px'
-      }
+      },
+      pointerEvents: 'none'
     }
   },
 
@@ -98,12 +99,16 @@ const OfferShowWrapItem = styled('div')(({ theme }) => ({
   '.push-offer-wrap, .minmax-collapse-wrap': {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'center'
+  },
+  '.username, .push-offer-wrap': {
+    cursor: 'pointer',
+    textDecoration: 'underline'
+  },
 
-    '.reputation-account': {
-      fontSize: '11px',
-      color: theme.custom.colorSecondary
-    }
+  '.reputation-account': {
+    fontSize: '11px',
+    color: theme.custom.colorSecondary
   }
 }));
 
@@ -259,7 +264,7 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
   const OfferItem = (
     <OfferShowWrapItem>
       <div className="push-offer-wrap">
-        <Typography variant="body2" style={{ fontWeight: 'bold' }}>
+        <Typography variant="body2" style={{ fontWeight: 'bold' }} onClick={handleItemClick}>
           {offerData?.message}
         </Typography>
         {(accountQueryData?.getAccountByAddress.role === Role.Moderator ||
@@ -269,15 +274,19 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
           </IconButton>
         )}
       </div>
-      <Typography variant="body2" onClick={handleUserNameClick}>
-        <span className="prefix">{isBuyOffer ? 'Buyer' : 'Seller'}: </span> {post?.account?.telegramUsername ?? ''}{' '}
-        <span className="reputation-account">- ☑️ {post?.account?.accountStatsOrder?.completedOrder} trades</span>
+      <Typography variant="body2">
+        <span className="prefix">{isBuyOffer ? 'Buyer' : 'Seller'}: </span>{' '}
+        <span className="username" onClick={handleUserNameClick}>
+          {settingContext?.allSettings[`${post?.account?.id.toString()}`]?.usePublicLocalUserName
+            ? post?.account?.anonymousUsernameLocalecash
+            : post?.account?.telegramUsername}
+        </span>
+        <span className="reputation-account"> - {post?.account?.accountStatsOrder?.completedOrder} trades</span>
       </Typography>
       <div className="minmax-collapse-wrap" onClick={e => handleExpandClick(e)}>
         <Typography variant="body2">
           <span className="prefix">Min / max: </span>
-          {formatNumber(offerData?.orderLimitMin)} {coinCurrency} - {formatNumber(offerData?.orderLimitMax)}{' '}
-          {coinCurrency}
+          {getOrderLimitText(offerData?.orderLimitMin, offerData?.orderLimitMax, coinCurrency)}
         </Typography>
         {expanded ? <ExpandLessIcon style={{ cursor: 'pointer' }} /> : <ExpandMoreIcon style={{ cursor: 'pointer' }} />}
       </div>
@@ -322,7 +331,7 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
 
   return (
     <React.Fragment>
-      <CardWrapper onClick={handleItemClick}>
+      <CardWrapper>
         <CardContent>{OfferItem}</CardContent>
         <Collapse in={expanded} timeout="auto" unmountOnExit className="hidden-item-wrap">
           <CardContent>

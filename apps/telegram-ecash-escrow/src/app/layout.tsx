@@ -1,11 +1,3 @@
-/**
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- *
- */
 'use client';
 
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v13-appRouter';
@@ -30,13 +22,52 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           name="viewport"
           content="width=device-width, initial-scale=1.0, maximum-scale=1.0, interactive-widget=resizes-content"
         />
-        <meta name="application-name" content="Local eCash" />
-        <meta name="description" content="P2P exchange for eCash" />
         <title>Local eCash</title>
+        <meta name="description" content="P2P trading platform with on chain escrow. No middleman." />
+        <meta name="theme-color" content="#04080F" />
+        <meta name="application-name" content="Local eCash" />
+
+        {/* Favicon */}
         <link rel="icon" href="/favicon.ico" />
+        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/favicon.ico" />
+
         <link rel="manifest" href="/manifest.json" />
         <meta name="version" content={process.env.NEXT_PUBLIC_APP_VERSION} />
         <meta name="commit-hash" content={process.env.NEXT_PUBLIC_COMMIT_HASH} />
+
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:locale" content="en_US" />
+        <meta property="og:url" content="https://localecash.com" />
+        <meta property="og:site_name" content="Local eCash" />
+        <meta property="og:title" content="Local eCash" />
+        <meta property="og:description" content="P2P trading platform with on chain escrow. No middleman." />
+        <meta property="og:image" content="https://localecash.com/favicon.ico" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="627" />
+        <meta property="og:image:alt" content="Local eCash" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Local eCash" />
+        <meta name="twitter:description" content="P2P trading platform with on chain escrow. No middleman." />
+        <meta name="twitter:image" content="https://localecash.com/favicon.ico" />
+        <meta name="twitter:image:width" content="1200" />
+        <meta name="twitter:image:height" content="627" />
+        <meta name="twitter:image:alt" content="Local eCash" />
+
+        {/* Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:locale" content="en_US" />
+        <meta property="og:url" content="https://localecash.com" />
+        <meta property="og:site_name" content="Local eCash" />
+        <meta property="og:title" content="Local eCash" />
+        <meta property="og:description" content="P2P trading platform with on chain escrow. No middleman." />
+        <meta property="og:image" content="https://localecash.com/favicon.ico" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="627" />
+        <meta property="og:image:alt" content="Local eCash" />
       </head>
       <body style={{ background: '#04080F', margin: '0' }}>
         <TelegramAuthProvider>

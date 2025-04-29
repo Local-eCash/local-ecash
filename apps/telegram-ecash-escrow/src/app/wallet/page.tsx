@@ -326,7 +326,7 @@ export default function Wallet() {
                                         <Stack spacing={0.5}>
                                           <Typography fontSize="17px" fontWeight={'bold'}>
                                             {item.parsed.incoming ? '+ ' : '- '}
-                                            {formatNumber(parseFloat(item.parsed.xecAmount) ?? 0)} XEC
+                                            {formatNumber(parseFloat(item.parsed.xecAmountIncludeFee) ?? 0)} XEC
                                           </Typography>
                                           <Link
                                             style={{ textAlign: 'right' }}

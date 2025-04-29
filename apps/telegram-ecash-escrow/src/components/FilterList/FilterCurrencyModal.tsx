@@ -2,8 +2,20 @@
 
 import { styled } from '@mui/material/styles';
 
-import { LIST_COIN, NAME_PAYMENT_METHOD, TabType } from '@/src/store/constants';
-import { COIN, LIST_CURRENCIES_USED, PAYMENT_METHOD } from '@bcpros/lixi-models';
+import {
+  AllPaymentMethodIds,
+  AllPaymentMethodIdsFiat,
+  LIST_COIN,
+  NAME_PAYMENT_METHOD,
+  TabType
+} from '@/src/store/constants';
+import { COIN, LIST_CURRENCIES_USED, OfferFilterInput, PAYMENT_METHOD } from '@bcpros/lixi-models';
+import {
+  getOfferFilterConfig,
+  saveOfferFilterConfig,
+  useSliceDispatch as useLixiSliceDispatch,
+  useSliceSelector as useLixiSliceSelector
+} from '@bcpros/redux-store';
 import { ChevronLeft } from '@mui/icons-material';
 import {
   Box,
@@ -59,6 +71,14 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
     '.back-btn': {
       position: 'absolute',
       left: '10px'
+    },
+
+    '.btn-everything': {
+      color: '#FFF',
+      position: 'absolute',
+      right: '10px',
+      fontSize: '12px',
+      padding: '1px 5px'
     }
   },
 
@@ -103,6 +123,9 @@ const FilterCurrencyModal: React.FC<FilterCurrencyModal> = props => {
   const keyFilterTab = 'filter-currency-tab';
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
+  const dispatch = useLixiSliceDispatch();
+
+  const offerFilterConfig = useLixiSliceSelector(getOfferFilterConfig);
 
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -124,12 +147,14 @@ const FilterCurrencyModal: React.FC<FilterCurrencyModal> = props => {
     onDismissModal(false);
   };
 
-  const handleSelectGoodsServices = () => {
-    const filterCurrency: FilterCurrencyType = {
-      paymentMethod: value,
-      value: ''
+  const handleResetFiatOrFilter = (listPaymentMethod: number[]) => {
+    const offerFilterInput: OfferFilterInput = {
+      isBuyOffer: offerFilterConfig?.isBuyOffer ?? false,
+      paymentMethodIds: listPaymentMethod,
+      amount: null
     };
-    setSelectedItem(filterCurrency);
+
+    dispatch(saveOfferFilterConfig(offerFilterInput));
     onDismissModal(false);
   };
 
@@ -153,6 +178,16 @@ const FilterCurrencyModal: React.FC<FilterCurrencyModal> = props => {
       <div className="content-fiat">
         {searchTextField}
         <Box sx={{ mt: 1 }}>
+          {!searchTerm && (
+            <Button
+              onClick={() => handleResetFiatOrFilter(AllPaymentMethodIdsFiat)}
+              variant="text"
+              style={{ textTransform: 'capitalize', fontSize: '1.1rem' }}
+              sx={{ justifyContent: 'flex-start', textAlign: 'left' }}
+            >
+              All currency
+            </Button>
+          )}
           {filteredFiats.map(option => (
             <Button
               key={option?.code}
@@ -261,6 +296,13 @@ const FilterCurrencyModal: React.FC<FilterCurrencyModal> = props => {
             <ChevronLeft />
           </IconButton>
           <Typography style={{ fontSize: '20px', fontWeight: 'bold' }}>Select currency</Typography>
+          <Button
+            variant="contained"
+            className="btn-everything"
+            onClick={() => handleResetFiatOrFilter(AllPaymentMethodIds)}
+          >
+            Clear
+          </Button>
         </DialogTitle>
         <DialogContent>
           <StyledTabs

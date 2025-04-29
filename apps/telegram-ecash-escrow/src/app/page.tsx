@@ -3,26 +3,27 @@
 import Header from '@/src/components/Header/Header';
 import OfferItem from '@/src/components/OfferItem/OfferItem';
 import {
-  PostQueryItem,
+  OfferOrderField,
+  OrderDirection,
   TimelineQueryItem,
-  getCountries,
   getNewPostAvailable,
   getOfferFilterConfig,
-  getPaymenMethods,
   offerApi,
+  openModal,
   setNewPostAvailable,
-  useInfiniteOfferFilterQuery,
-  useInfiniteOffersByScoreQuery,
+  useInfiniteOfferFilterDatabaseQuery,
   useSliceDispatch as useLixiSliceDispatch,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
 import styled from '@emotion/styled';
 import CachedRoundedIcon from '@mui/icons-material/CachedRounded';
+import SortIcon from '@mui/icons-material/Sort';
 import { Badge, Box, CircularProgress, Skeleton, Slide, Typography } from '@mui/material';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import FilterComponent from '../components/FilterOffer/FilterComponent';
 import MobileLayout from '../components/layout/MobileLayout';
+import { isShowAmountOrSortFilter } from '../store/util';
 
 const WrapHome = styled.div``;
 
@@ -81,25 +82,16 @@ export default function Home() {
   const [visible, setVisible] = useState(true);
   const dispatch = useLixiSliceDispatch();
 
-  const { data, hasNext, isFetching, fetchNext, refetch, isLoading } = useInfiniteOffersByScoreQuery(
-    { first: 20 },
-    false
-  );
+  const isShowSortIcon = isShowAmountOrSortFilter(offerFilterConfig);
+
   const {
     data: dataFilter,
     hasNext: hasNextFilter,
     isFetching: isFetchingFilter,
     fetchNext: fetchNextFilter,
-    isLoading: isLoadingFilter
-  } = useInfiniteOfferFilterQuery({ first: 20, offerFilterInput: offerFilterConfig }, false);
-
-  const loadMoreItems = () => {
-    if (hasNext && !isFetching) {
-      fetchNext();
-    } else if (hasNext) {
-      fetchNext();
-    }
-  };
+    isLoading: isLoadingFilter,
+    refetch
+  } = useInfiniteOfferFilterDatabaseQuery({ first: 20, offerFilterInput: offerFilterConfig }, false);
 
   const loadMoreItemsFilter = () => {
     if (hasNextFilter && !isFetchingFilter) {
@@ -121,31 +113,16 @@ export default function Home() {
     dispatch(setNewPostAvailable(false));
   }, []);
 
-  //auto call paymentMethods and countries
-  useEffect(() => {
-    dispatch(getPaymenMethods());
-    dispatch(getCountries());
-  }, []);
+  const openSortDialog = () => {
+    dispatch(openModal('SortOfferModal', {}));
+  };
 
-  useEffect(() => {
-    if (!isFetching) {
-      const offerUnlisted = data.filter(item => (item.data as PostQueryItem).postOffer?.hideFromHome);
-      const offerShowed = data.length - offerUnlisted.length;
-      if (offerShowed < 4) {
-        loadMoreItems();
-      }
-    }
-  }, [data.length]);
-
-  useEffect(() => {
-    if (!isFetchingFilter) {
-      const offerUnlistedFilter = dataFilter.filter(item => (item.data as PostQueryItem).postOffer?.hideFromHome);
-      const offerShowedFilter = dataFilter.length - offerUnlistedFilter.length;
-      if (offerShowedFilter < 4) {
-        loadMoreItemsFilter();
-      }
-    }
-  }, [dataFilter.length]);
+  const isSorted = useMemo(
+    () =>
+      offerFilterConfig?.offerOrder?.direction !== OrderDirection.Desc ||
+      offerFilterConfig?.offerOrder?.field !== OfferOrderField.Relevance,
+    [offerFilterConfig?.offerOrder]
+  );
 
   return (
     <MobileLayout>
@@ -163,48 +140,22 @@ export default function Home() {
           <Section>
             <Typography className="title-offer" variant="body1" component="div">
               <span>Offers</span>
-              <span>
-                {(stateName || countryName || cityName) &&
-                  [cityName, stateName, countryName].filter(Boolean).join(', ')}
-              </span>
+              {isShowSortIcon && (
+                <SortIcon
+                  style={{ cursor: 'pointer', color: `${isSorted ? '#0076C4' : ''}` }}
+                  onClick={openSortDialog}
+                />
+              )}
+              {(stateName || countryName || cityName) && (
+                <span>{[cityName, stateName, countryName].filter(Boolean).join(', ')}</span>
+              )}
             </Typography>
             <div className="offer-list">
-              {offerFilterConfig.countryCode ||
-              offerFilterConfig.stateName ||
-              offerFilterConfig.cityName ||
-              offerFilterConfig.coin ||
-              offerFilterConfig.fiatCurrency ||
-              offerFilterConfig.paymentApp ||
-              offerFilterConfig.isBuyOffer !== undefined ||
-              (offerFilterConfig.paymentMethodIds?.length ?? 0) > 0 ? (
-                !isLoadingFilter ? (
-                  <InfiniteScroll
-                    dataLength={dataFilter.length}
-                    next={loadMoreItemsFilter}
-                    hasMore={hasNextFilter}
-                    loader={
-                      <>
-                        <Skeleton variant="text" />
-                        <Skeleton variant="text" />
-                      </>
-                    }
-                    scrollableTarget="scrollableDiv"
-                    scrollThreshold={'100px'}
-                  >
-                    {dataFilter.map(item => {
-                      return <OfferItem key={item.id} timelineItem={item as TimelineQueryItem} />;
-                    })}
-                  </InfiniteScroll>
-                ) : (
-                  <Box sx={{ height: '50vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <CircularProgress color="primary" />
-                  </Box>
-                )
-              ) : !isLoading ? (
+              {!isLoadingFilter ? (
                 <InfiniteScroll
-                  dataLength={data.length}
-                  next={loadMoreItems}
-                  hasMore={hasNext}
+                  dataLength={dataFilter.length}
+                  next={loadMoreItemsFilter}
+                  hasMore={hasNextFilter}
                   loader={
                     <>
                       <Skeleton variant="text" />
@@ -214,7 +165,7 @@ export default function Home() {
                   scrollableTarget="scrollableDiv"
                   scrollThreshold={'100px'}
                 >
-                  {data.map(item => {
+                  {dataFilter.map(item => {
                     return <OfferItem key={item.id} timelineItem={item as TimelineQueryItem} />;
                   })}
                 </InfiniteScroll>

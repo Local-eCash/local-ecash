@@ -5,6 +5,7 @@ import { BackupModal } from './Common/BackupModal';
 import { RequiredUsernameModal } from './Common/RequiredUsernameModal';
 import ShareSocialModal from './Common/ShareSocialModal';
 import CreateOfferModal from './CreateOfferModal/CreateOfferModal';
+import SortOfferModal from './FilterOffer/SortOfferModal';
 import PlaceAnOrderModal from './PlaceAnOrderModal/PlaceAnOrderModal';
 import { QRcodeModal } from './QRcode/QRcodeModal';
 import ReasonDisputeModal from './ReasonDisputeModal/ReasonDisputeModal';
@@ -18,7 +19,8 @@ const modalComponentLookupTable = {
   BackupModal,
   PlaceAnOrderModal,
   RequiredUsernameModal,
-  ShareSocialModal
+  ShareSocialModal,
+  SortOfferModal
 };
 
 const ModalManager = () => {

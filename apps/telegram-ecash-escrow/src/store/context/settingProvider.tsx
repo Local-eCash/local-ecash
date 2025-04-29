@@ -11,6 +11,7 @@ import { createContext, useEffect, useMemo, useState } from 'react';
 
 export interface SettingContextType {
   setting: Setting | null; // or `Setting | undefined` depending on your preference
+  allSettings: Record<string, Setting>;
   setSetting: React.Dispatch<React.SetStateAction<Setting | null>>; // SetState function type
 }
 
@@ -21,13 +22,16 @@ export function SettingProvider({ children }) {
   const dispatch = useLixiSliceDispatch();
   const selectedAccount = useLixiSliceSelector(getSelectedAccount);
   const [setting, setSetting] = useState<Setting>(null);
+  const [allSettings, setAllSettings] = useState<{
+    id: Setting;
+  }>(null);
   const [token, setToken] = useState<string | null>(sessionStorage.getItem('Authorization'));
 
-  const { getSetting } = settingApi;
+  const { getSetting, getAllSetting } = settingApi;
 
   const contextValue = useMemo(() => {
-    return { setting, setSetting };
-  }, [setting]);
+    return { setting, setSetting, allSettings };
+  }, [setting, allSettings]);
 
   useEffect(() => {
     if (_.isNil(token)) {
@@ -49,6 +53,13 @@ export function SettingProvider({ children }) {
       return () => clearInterval(interval);
     }
   }, [selectedAccount]);
+
+  useEffect(() => {
+    (async () => {
+      const settings = await getAllSetting();
+      setAllSettings(settings);
+    })();
+  }, [setting?.usePublicLocalUserName]);
 
   //get setting
   useEffect(() => {

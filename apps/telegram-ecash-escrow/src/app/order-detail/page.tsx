@@ -9,6 +9,7 @@ import TelegramButton from '@/src/components/TelegramButton/TelegramButton';
 import TickerHeader from '@/src/components/TickerHeader/TickerHeader';
 import CustomToast from '@/src/components/Toast/CustomToast';
 import { COIN_OTHERS } from '@/src/store/constants';
+import { SettingContext } from '@/src/store/context/settingProvider';
 import { UtxoContext } from '@/src/store/context/utxoProvider';
 import {
   ArbiReleaseSignatory,
@@ -23,7 +24,7 @@ import {
   SignOracleSignatory
 } from '@/src/store/escrow';
 import { ACTION } from '@/src/store/escrow/constant';
-import { deserializeTransaction, estimatedFee } from '@/src/store/util';
+import { deserializeTransaction, estimatedFee, formatNumber } from '@/src/store/util';
 import { COIN, coinInfo, PAYMENT_METHOD } from '@bcpros/lixi-models';
 import {
   DisputeStatus,
@@ -54,6 +55,7 @@ import _ from 'lodash';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import React, { useContext, useEffect, useMemo, useState } from 'react';
+import { CopyToClipboard } from 'react-copy-to-clipboard';
 
 const OrderDetailPage = styled('div')(({ theme }) => ({
   minHeight: '100vh',
@@ -102,6 +104,7 @@ const OrderDetail = () => {
   const { socket } = useContext(SocketContext) || {};
 
   const selectedWalletPath = useLixiSliceSelector(getSelectedWalletPath);
+  const { allSettings } = useContext(SettingContext);
   const Wallet = useContext(WalletContextNode);
   const { chronik } = Wallet;
   const { totalValidAmount, totalValidUtxos } = useContext(UtxoContext);
@@ -137,6 +140,7 @@ const OrderDetail = () => {
   const [alreadyCancel, setAlreadyCancel] = useState(false);
   const [buyerDonateOption, setBuyerDonateOption] = useState<number>(null);
   const [sellerDonateOption, setSellerDonateOption] = useState<number>(null);
+  const [openToastCopySuccess, setOpenToastCopySuccess] = useState(false);
   const [donateOption, setDonateOption] = useState<{ label: string; value: number }[]>([
     CLAIM_BACK_WALLET,
     DONATE_LOCAL_ECASH
@@ -534,6 +538,10 @@ const OrderDetail = () => {
     setLoading(false);
   };
 
+  const handleCopyAmount = () => {
+    setOpenToastCopySuccess(true);
+  };
+
   const escrowStatus = () => {
     const isSeller = selectedWalletPath?.hash160 === currentData?.escrowOrder.sellerAccount.hash160;
     const isArbiOrMod =
@@ -542,7 +550,7 @@ const OrderDetail = () => {
 
     if (currentData?.escrowOrder.escrowOrderStatus === EscrowOrderStatus.Cancel) {
       return (
-        <Typography variant="body1" color="#FFBF00" align="center">
+        <Typography variant="body1" color="error" align="center">
           Order has been cancelled
         </Typography>
       );
@@ -550,7 +558,7 @@ const OrderDetail = () => {
 
     if (currentData?.escrowOrder.escrowOrderStatus === EscrowOrderStatus.Complete) {
       return (
-        <Typography variant="body1" color="#FFBF00" align="center">
+        <Typography variant="body1" color="error" align="center">
           Order has been completed
         </Typography>
       );
@@ -558,7 +566,7 @@ const OrderDetail = () => {
 
     if (!currentData?.escrowOrder.dispute && isArbiOrMod) {
       return (
-        <Typography variant="body1" color="#FFBF00" align="center">
+        <Typography variant="body1" color="error" align="center">
           The order is currently in progress.
         </Typography>
       );
@@ -566,15 +574,15 @@ const OrderDetail = () => {
 
     if (currentData?.escrowOrder.escrowOrderStatus === EscrowOrderStatus.Pending) {
       return isSeller ? (
-        <Typography variant="body1" color="#FFBF00" align="center" component={'div'}>
+        <Typography variant="body1" color="error" align="center" component={'div'}>
           {checkSellerEnoughFund() && !notEnoughFund ? (
             <div>
               {isBuyOffer ? (
                 <div>
                   {telegramButton(true)}
                   <p>
-                    Xec in escrow will only be released when you confirm the receipt of money. You can dispute to get it
-                    back if the buyer fail to deliver
+                    {COIN.XEC} in escrow will only be released when you confirm the receipt of money. You can dispute to
+                    get it back if the buyer fail to deliver
                   </p>
                 </div>
               ) : (
@@ -584,7 +592,7 @@ const OrderDetail = () => {
             </div>
           ) : (
             <div>
-              Not enough fund!! Please deposit money to your wallet
+              Not enough funds available for this trade. Please deposit {COIN.XEC} to your wallet.
               {InfoEscrow()}
               {DepositQRCode()}
             </div>
@@ -592,7 +600,7 @@ const OrderDetail = () => {
         </Typography>
       ) : (
         <React.Fragment>
-          <Typography variant="body1" color="#FFBF00" align="center">
+          <Typography variant="body1" color="error" align="center">
             Pending Escrow!
           </Typography>
           <Stack direction="row" spacing={2} justifyContent="center" margin="20px">
@@ -606,7 +614,7 @@ const OrderDetail = () => {
             </Stack>
             <Image width={50} height={50} src="/safebox-close.svg" alt="" />
           </Stack>
-          <Typography variant="body1" color="#FFBF00" align="center">
+          <Typography variant="body1" color="error" align="center">
             Once the order is escrowed, the status will turn green with a closed safe icon. Do not send money or goods
             until the order is escrowed, or you risk losing money.
           </Typography>
@@ -616,11 +624,11 @@ const OrderDetail = () => {
 
     if (currentData?.escrowOrder.dispute && currentData?.escrowOrder.dispute.status === DisputeStatus.Active) {
       return isArbiOrMod ? (
-        <Typography variant="body1" color="#FFBF00" align="center">
+        <Typography variant="body1" color="error" align="center">
           Please resolve the dispute
         </Typography>
       ) : (
-        <Typography variant="body1" color="#FFBF00" align="center">
+        <Typography variant="body1" color="error" align="center">
           Awating arbitrator/moderator to resolve the dispute
         </Typography>
       );
@@ -641,7 +649,7 @@ const OrderDetail = () => {
             <Typography variant="body1" color="#66bb6a" align="center">
               {`${currentData.escrowOrder.amount} XEC has been released.`}
               <br />
-              {`${isSeller ? 'The buyer' : 'You'} can claim the fund now.`}
+              {`${isSeller ? 'The buyer' : 'You'} can claim the funds now.`}
             </Typography>
           </React.Fragment>
         );
@@ -660,15 +668,16 @@ const OrderDetail = () => {
             <Typography variant="body1" color="#66bb6a" align="center">
               {`${currentData.escrowOrder.amount} XEC has been returned.`}
               <br />
-              {`${isSeller ? 'You' : 'The seller'} can now claim the fund.`}
+              {`${isSeller ? 'You' : 'The seller'} can now claim the funds.`}
             </Typography>
           </React.Fragment>
         );
       }
 
       return isSeller ? (
-        <Typography variant="body1" color="#FFBF00" align="center">
-          Only release the escrow when you have received the goods
+        <Typography variant="body1" color="error" align="center">
+          Only release the escrowed funds once you have confirmed that the buyer has completed the payment or
+          goods/services.
         </Typography>
       ) : (
         <React.Fragment>
@@ -874,6 +883,21 @@ const OrderDetail = () => {
     }
   };
 
+  // buyer can't chat with seller when order is pending
+  const disableTelegramButton = () => {
+    const isBuyer = selectedWalletPath?.hash160 === currentData?.escrowOrder.buyerAccount.hash160;
+    const sellerSettings = allSettings[`${currentData?.escrowOrder?.sellerAccount.id.toString()}`];
+    if (
+      isBuyer &&
+      currentData?.escrowOrder?.escrowOrderStatus === EscrowOrderStatus.Pending &&
+      sellerSettings?.usePublicLocalUserName
+    ) {
+      return true;
+    }
+
+    return false;
+  };
+
   const telegramButton = (alwaysShow = false, content?: string) => {
     const isSeller = selectedWalletPath?.hash160 === currentData?.escrowOrder.sellerAccount.hash160;
     const isArbiOrMod =
@@ -913,6 +937,7 @@ const OrderDetail = () => {
                 : currentData?.escrowOrder.sellerAccount.telegramUsername
             }
             content={content ? content : isSeller ? `Chat with buyer` : `Chat with seller`}
+            disabled={disableTelegramButton()}
           />
         </React.Fragment>
       )
@@ -934,7 +959,7 @@ const OrderDetail = () => {
         <QRCode
           address={parseCashAddressToPrefix(COIN.XEC, selectedWalletPath?.cashAddress)}
           amount={Number(totalAmountWithDepositAndEscrowFee().toFixed(2))}
-          width="60%"
+          width="55%"
         />
       )
     );
@@ -967,10 +992,10 @@ const OrderDetail = () => {
 
   const InfoEscrow = () => {
     const fee1Percent = calDisputeFee;
-    const totalBalanceFormat = totalValidAmount.toLocaleString('de-DE');
+    const totalBalanceFormat = formatNumber(totalValidAmount);
 
     return (
-      <div style={{ color: 'white' }}>
+      <div style={{ color: 'white', marginBottom: '10px' }}>
         {currentData?.escrowOrder.buyerDepositTx && (
           <Typography style={{ fontWeight: 'bold' }}>
             *Buyer deposited the fee ({calDisputeFee} {COIN.XEC})
@@ -980,15 +1005,21 @@ const OrderDetail = () => {
           Your wallet: {totalBalanceFormat} {COIN.XEC}
         </Typography>
         <Typography>
-          Security deposit (1%): {fee1Percent.toLocaleString('de-DE')} {COIN.XEC}
+          Security deposit (1%): {formatNumber(fee1Percent)} {COIN.XEC}
         </Typography>
         <Typography>
-          Withdraw fee: {estimatedFee(currentData?.escrowOrder.escrowScript).toLocaleString('de-DE')} {COIN.XEC}
+          Withdraw fee: {formatNumber(estimatedFee(currentData?.escrowOrder.escrowScript))} {COIN.XEC}
         </Typography>
-        <Typography style={{ fontWeight: 'bold' }}>
-          Total: {totalAmountWithDepositAndEscrowFee().toLocaleString('de-DE')} {COIN.XEC}
-          <span style={{ fontSize: '14px', color: 'gray' }}> (Excluding miner&apos;s fees)</span>
-        </Typography>
+        <CopyToClipboard text={totalAmountWithDepositAndEscrowFee()} onCopy={handleCopyAmount}>
+          <div>
+            <Typography
+              style={{ fontWeight: 'bold', fontStyle: 'italic', textDecoration: 'underline', cursor: 'pointer' }}
+            >
+              Total: {formatNumber(totalAmountWithDepositAndEscrowFee())} {COIN.XEC}
+            </Typography>
+            <span style={{ fontSize: '12px', color: 'gray' }}> (Excluding miner&apos;s fees)</span>
+          </div>
+        </CopyToClipboard>
       </div>
     );
   };
@@ -1029,7 +1060,9 @@ const OrderDetail = () => {
             {escrowStatus()}
             <br />
             {escrowActionButtons()}
-            {telegramButton()}
+            {disableTelegramButton()
+              ? telegramButton(true, 'You can only chat with seller when they accept your order')
+              : telegramButton()}
           </OrderDetailContent>
         ) : (
           <div style={{ display: 'flex', justifyContent: 'center', height: '100vh' }}>
@@ -1117,6 +1150,13 @@ const OrderDetail = () => {
                 ? `${coinInfo[COIN.XEC].blockExplorerUrl}/tx/${currentData?.escrowOrder.releaseTxid}`
                 : `${coinInfo[COIN.XEC].blockExplorerUrl}/tx/${currentData?.escrowOrder.returnTxid}`
             }
+          />
+
+          <CustomToast
+            isOpen={openToastCopySuccess}
+            handleClose={() => setOpenToastCopySuccess(false)}
+            content="Copy amount to clipboard"
+            type="info"
           />
         </Stack>
       </OrderDetailPage>

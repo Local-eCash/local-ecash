@@ -11,8 +11,8 @@
   },
   "dependencies": {
     "@bcpros/counter": "workspace:*",
-    "@bcpros/lixi-models": "1.2.56",
-    "@bcpros/redux-store": "1.2.56",
+    "@bcpros/lixi-models": "1.2.59",
+    "@bcpros/redux-store": "1.2.59",
     "@emotion/cache": "^11.11.0",
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.5",
@@ -51,6 +51,7 @@
     "react-hook-form": "^7.52.1",
     "react-infinite-scroll-component": "^6.1.0",
     "react-intl-universal": "^2.11.1",
+    "react-number-format": "^5.4.3",
     "react-outside-call": "^0.2.0",
     "react-redux": "^9.1.2",
     "react-share": "^5.1.2",

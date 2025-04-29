@@ -3,7 +3,8 @@
 import OfferDetailInfo from '@/src/components/DetailInfo/OfferDetailInfo';
 import Header from '@/src/components/Header/Header';
 import MobileLayout from '@/src/components/layout/MobileLayout';
-import { accountsApi, PostQueryItem, useInfiniteActiveOfferByAccountIdQuery } from '@bcpros/redux-store';
+import { SettingContext } from '@/src/store/context/settingProvider';
+import { accountsApi, PostQueryItem, useInfiniteActiveOfferByAccountIdDatabaseQuery } from '@bcpros/redux-store';
 import { ChevronLeft } from '@mui/icons-material';
 import AccountCircleRoundedIcon from '@mui/icons-material/AccountCircleRounded';
 import { IconButton, Skeleton, Typography } from '@mui/material';
@@ -11,6 +12,7 @@ import { styled } from '@mui/material/styles';
 import * as _ from 'lodash';
 import moment from 'moment';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useContext } from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
 
 const ProfileDetaillPage = styled('div')(({ theme }) => ({
@@ -70,6 +72,8 @@ const StyledAvatar = styled('div')(({ theme }) => ({
 
 const ProfileDetail = () => {
   const search = useSearchParams();
+  const { setSetting, allSettings } = useContext(SettingContext);
+
   const addressAccount = search!.get('address');
   const { useGetAccountByAddressQuery } = accountsApi;
   const {
@@ -91,7 +95,7 @@ const ProfileDetail = () => {
     hasNext: hasNextOfferActive,
     isFetching: isFetchingOfferActive,
     fetchNext: fetchNextOfferActive
-  } = useInfiniteActiveOfferByAccountIdQuery({
+  } = useInfiniteActiveOfferByAccountIdDatabaseQuery({
     first: 20,
     accountId: accountQueryData?.getAccountByAddress?.id
   });
@@ -171,7 +175,11 @@ const ProfileDetail = () => {
               <AccountCircleRoundedIcon className="account-avatar-default" fontSize="large" />
             )}
             <div>
-              <Typography>{accountQueryData?.getAccountByAddress?.telegramUsername}</Typography>
+              <Typography>
+                {allSettings?.[`${accountQueryData?.getAccountByAddress?.id.toString()}`]?.usePublicLocalUserName
+                  ? accountQueryData?.getAccountByAddress?.anonymousUsernameLocalecash
+                  : accountQueryData?.getAccountByAddress?.telegramUsername}
+              </Typography>
               <Typography className="info-item">
                 Joined: {loadingInfo(moment(accountQueryData?.getAccountByAddress?.createdAt).format('DD/MM/YYYY'))}
               </Typography>

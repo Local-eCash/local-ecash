@@ -3,7 +3,7 @@
 import { openModal, PostQueryItem, useSliceDispatch as useLixiSliceDispatch } from '@bcpros/redux-store';
 import { ChevronLeft } from '@mui/icons-material';
 import ShareIcon from '@mui/icons-material/Share';
-import { Button, IconButton, Typography } from '@mui/material';
+import { IconButton, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -101,11 +101,6 @@ const TickerHeader: React.FC<TickerHeaderProps> = ({
       <Typography variant="h4">
         {iconHeader && <IconButton className="icon-header">{iconHeader}</IconButton>}
         {title}{' '}
-        {showBtnCreateOffer && (
-          <Button className="btn-create-offer" variant="contained" color="info" onClick={handleOpenCreateOffer}>
-            Create
-          </Button>
-        )}{' '}
       </Typography>
       {showShareIcon && (
         <IconButton

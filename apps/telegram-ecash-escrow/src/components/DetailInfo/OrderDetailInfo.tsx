@@ -1,6 +1,7 @@
 'use client';
 
 import { COIN_OTHERS, COIN_USD_STABLECOIN_TICKER } from '@/src/store/constants';
+import { SettingContext } from '@/src/store/context/settingProvider';
 import { COIN, PAYMENT_METHOD, coinInfo } from '@bcpros/lixi-models';
 import {
   DisputeStatus,
@@ -15,7 +16,7 @@ import {
 import { Button, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { usePathname, useRouter } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 
 const OrderDetailWrap = styled('div')(({ theme }) => ({
   display: 'flex',
@@ -98,6 +99,7 @@ const OrderDetailInfo = ({
 
   const router = useRouter();
   const pathname = usePathname();
+  const { setSetting, allSettings } = useContext(SettingContext);
 
   const [rateData, setRateData] = useState(null);
   const [marginCurrentPrice, setMarginCurrentPrice] = useState(0);
@@ -293,13 +295,17 @@ const OrderDetailInfo = ({
         {order?.sellerAccount.id === selectedAccount?.id && (
           <React.Fragment>
             <span className="prefix">{order.escrowOffer.type === OfferType.Buy ? 'Offered' : 'Ordered'} by: </span>
-            {order?.buyerAccount.telegramUsername}
+            {allSettings[`${order?.buyerAccount.id.toString()}`]?.usePublicLocalUserName
+              ? order?.buyerAccount.anonymousUsernameLocalecash
+              : order?.buyerAccount.telegramUsername}
           </React.Fragment>
         )}
         {order?.buyerAccount.id === selectedAccount?.id && (
           <React.Fragment>
             <span className="prefix">{order.escrowOffer.type === OfferType.Buy ? 'Ordered' : 'Offered'} by: </span>
-            {order?.sellerAccount.telegramUsername}
+            {allSettings[`${order?.sellerAccount.id.toString()}`]?.usePublicLocalUserName
+              ? order?.sellerAccount.anonymousUsernameLocalecash
+              : order?.sellerAccount.telegramUsername}
           </React.Fragment>
         )}
       </Typography>

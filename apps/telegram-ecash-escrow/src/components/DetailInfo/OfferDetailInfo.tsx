@@ -2,7 +2,7 @@
 
 import { COIN_OTHERS } from '@/src/store/constants';
 import { SettingContext } from '@/src/store/context/settingProvider';
-import { formatNumber } from '@/src/store/util';
+import { getOrderLimitText } from '@/src/store/util';
 import { PAYMENT_METHOD } from '@bcpros/lixi-models';
 import {
   OfferStatus,
@@ -61,7 +61,8 @@ const OfferDetailWrap = styled('div')(({ theme }) => ({
     '.payment-group-btns': {
       display: 'flex',
       flexWrap: 'wrap',
-      gap: '5px'
+      gap: '5px',
+      pointerEvents: 'none'
     }
   }
 }));
@@ -114,6 +115,7 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
       };
       if (!seedBackupTime || isGreaterThanOneMonth) {
         dispatch(openModal('BackupModal', backupModalProps));
+
         return;
       }
       dispatch(openModal('PlaceAnOrderModal', { post: post }));
@@ -135,7 +137,7 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
           <span className="prefix">Headline: </span>
           {offerData?.message}
         </Typography>
-        {offerData?.status === OfferStatus.Active && isItemTimeline && (
+        {isItemTimeline && (
           <IconButton onClick={e => handleClickAction(e)}>
             <MoreHorizIcon />
           </IconButton>
@@ -150,8 +152,7 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
         )}
       <Typography variant="body1">
         <span className="prefix">Min-max: </span>
-        {formatNumber(offerData?.orderLimitMin)} {getCoinCurrency()} - {''}
-        {formatNumber(offerData?.orderLimitMax)} {getCoinCurrency()}
+        {getOrderLimitText(offerData?.orderLimitMin, offerData?.orderLimitMax, getCoinCurrency())}
       </Typography>
       {(stateName || countryName) && (
         <Typography variant="body2">
@@ -167,42 +168,52 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
       )}
 
       <div className="action-section">
-        <div className="payment-group-btns">
-          <Button size="small" color="info" variant="outlined">
+        {postData?.postOffer.status === OfferStatus.Archive ? (
+          <Button size="small" color="info" variant="contained" fullWidth disabled>
             <Typography variant="body1" style={{ fontWeight: 'bold' }}>
-              <span style={{ fontSize: '14px' }}>{offerData?.hideFromHome ? 'Unlisted' : 'Listed'}</span>
+              <span style={{ fontSize: '14px' }}>Archived</span>
             </Typography>
           </Button>
-          <Button size="small" color="info" variant="outlined">
-            <Typography variant="body1" style={{ fontWeight: 'bold' }}>
-              <span style={{ fontSize: '14px' }}>{offerData?.type == OfferType.Buy ? 'Buy' : 'Sell'}</span>
-            </Typography>
-          </Button>
-          {offerData?.paymentMethods &&
-            offerData.paymentMethods?.length > 0 &&
-            offerData.paymentMethods.map(item => {
-              return (
-                <Button size="small" color="success" variant="outlined" key={item.paymentMethod.name}>
-                  {item.paymentMethod.name}
+        ) : (
+          <>
+            <div className="payment-group-btns">
+              <Button size="small" color="info" variant="outlined">
+                <Typography variant="body1" style={{ fontWeight: 'bold' }}>
+                  <span style={{ fontSize: '14px' }}>{offerData?.hideFromHome ? 'Unlisted' : 'Listed'}</span>
+                </Typography>
+              </Button>
+              <Button size="small" color="info" variant="outlined">
+                <Typography variant="body1" style={{ fontWeight: 'bold' }}>
+                  <span style={{ fontSize: '14px' }}>{offerData?.type == OfferType.Buy ? 'Buy' : 'Sell'}</span>
+                </Typography>
+              </Button>
+              {offerData?.paymentMethods &&
+                offerData.paymentMethods?.length > 0 &&
+                offerData.paymentMethods.map(item => {
+                  return (
+                    <Button size="small" color="success" variant="outlined" key={item.paymentMethod.name}>
+                      {item.paymentMethod.name}
+                    </Button>
+                  );
+                })}
+              {offerData?.coinOthers && (
+                <Button size="small" color="success" variant="outlined">
+                  {offerData.coinOthers}
                 </Button>
-              );
-            })}
-          {offerData?.coinOthers && (
-            <Button size="small" color="success" variant="outlined">
-              {offerData.coinOthers}
-            </Button>
-          )}
-          {offerData?.paymentApp && (
-            <Button size="small" color="success" variant="outlined">
-              {offerData.paymentApp}
-            </Button>
-          )}
-        </div>
-        {isShowBuyButton && (
-          <BuyButtonStyled style={{ height: 'fit-content' }} variant="contained" onClick={e => handleBuyClick(e)}>
-            {offerData?.type === OfferType.Buy ? 'Sell' : 'Buy'}
-            <Image width={25} height={25} src="/eCash.svg" alt="" />
-          </BuyButtonStyled>
+              )}
+              {offerData?.paymentApp && (
+                <Button size="small" color="success" variant="outlined">
+                  {offerData.paymentApp}
+                </Button>
+              )}
+            </div>
+            {isShowBuyButton && (
+              <BuyButtonStyled style={{ height: 'fit-content' }} variant="contained" onClick={e => handleBuyClick(e)}>
+                {offerData?.type === OfferType.Buy ? 'Sell' : 'Buy'}
+                <Image width={25} height={25} src="/eCash.svg" alt="" />
+              </BuyButtonStyled>
+            )}
+          </>
         )}
       </div>
     </OfferDetailWrap>

@@ -8,7 +8,7 @@ import { TabType } from '@/src/store/constants';
 import {
   OfferStatus,
   openModal,
-  useInfiniteMyOffersQuery,
+  useInfiniteMyOffersDatabaseQuery,
   useSliceDispatch as useLixiSliceDispatch
 } from '@bcpros/redux-store';
 import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
@@ -76,7 +76,7 @@ export default function MyOffer() {
     isFetching: isFetchingOfferActive,
     isLoading: isLoadingOfferActive,
     fetchNext: fetchNextOfferActive
-  } = useInfiniteMyOffersQuery({
+  } = useInfiniteMyOffersDatabaseQuery({
     first: 20,
     offerStatus: OfferStatus.Active
   });
@@ -96,7 +96,7 @@ export default function MyOffer() {
     isFetching: isFetchingOfferArchive,
     isLoading: isLoadingOfferArchive,
     fetchNext: fetchNextOfferArchive
-  } = useInfiniteMyOffersQuery({
+  } = useInfiniteMyOffersDatabaseQuery({
     first: 20,
     offerStatus: OfferStatus.Archive
   });
@@ -111,7 +111,9 @@ export default function MyOffer() {
 
   const handleOpenCreateOffer = () => {
     if (data?.user?.name.startsWith('@')) {
-      dispatch(openModal('CreateOfferModal', {}));
+      const isFirstOffer = totalCountOfferActive === 0 && totalCountOfferArchive === 0;
+
+      dispatch(openModal('CreateOfferModal', { isFirstOffer }));
     } else {
       dispatch(openModal('RequiredUsernameModal', {}));
     }
@@ -152,42 +154,54 @@ export default function MyOffer() {
                   <CircularProgress />
                 ) : (
                   dataOfferActive && (
-                    <InfiniteScroll
-                      dataLength={dataOfferActive.length}
-                      next={loadMoreItemsOfferActive}
-                      hasMore={hasNextOfferActive}
-                      endMessage={
-                        // Need to improve! (just for pilot this time)
-                        // Issue: All custom useInfinite hooks have a mismatch between loading state and data.
-                        // When loading state is false, data should have but it not available shortly afterward,
-                        // leading to a delay in synchronization.
-                        // use totalCount because data is not available immediately
-                        totalCountOfferActive === 0 && totalCountOfferArchive === 0 ? (
-                          <Typography className="end-message" component={'div'}>
-                            <Typography> You haven't created any offer yet</Typography>
-                            <Button variant="contained" onClick={() => handleOpenCreateOffer()}>
-                              Create my first offer
-                            </Button>
-                          </Typography>
-                        ) : (
-                          <Typography style={{ textAlign: 'center', marginTop: '2rem' }}>
-                            No active offer here
-                          </Typography>
-                        )
-                      }
-                      loader={
-                        <>
-                          <Skeleton variant="text" />
-                          <Skeleton variant="text" />
-                        </>
-                      }
-                      scrollableTarget="scrollableDiv"
-                      scrollThreshold={'100px'}
-                    >
-                      {dataOfferActive.map(item => {
-                        return <OfferDetailInfo timelineItem={item} key={item.id} />;
-                      })}
-                    </InfiniteScroll>
+                    <>
+                      {(totalCountOfferActive > 0 || totalCountOfferArchive > 0) && (
+                        <Button
+                          fullWidth
+                          variant="contained"
+                          onClick={() => handleOpenCreateOffer()}
+                          style={{ marginBottom: '1rem' }}
+                        >
+                          Create
+                        </Button>
+                      )}
+                      <InfiniteScroll
+                        dataLength={dataOfferActive.length}
+                        next={loadMoreItemsOfferActive}
+                        hasMore={hasNextOfferActive}
+                        endMessage={
+                          // Need to improve! (just for pilot this time)
+                          // Issue: All custom useInfinite hooks have a mismatch between loading state and data.
+                          // When loading state is false, data should have but it not available shortly afterward,
+                          // leading to a delay in synchronization.
+                          // use totalCount because data is not available immediately
+                          totalCountOfferActive === 0 && totalCountOfferArchive === 0 ? (
+                            <Typography className="end-message" component={'div'}>
+                              <Typography> You haven't created any offer yet</Typography>
+                              <Button variant="contained" onClick={() => handleOpenCreateOffer()}>
+                                Create my first offer
+                              </Button>
+                            </Typography>
+                          ) : (
+                            <Typography style={{ textAlign: 'center', marginTop: '2rem' }}>
+                              No more active offers here
+                            </Typography>
+                          )
+                        }
+                        loader={
+                          <>
+                            <Skeleton variant="text" />
+                            <Skeleton variant="text" />
+                          </>
+                        }
+                        scrollableTarget="scrollableDiv"
+                        scrollThreshold={'100px'}
+                      >
+                        {dataOfferActive.map(item => {
+                          return <OfferDetailInfo timelineItem={item} key={item.id} />;
+                        })}
+                      </InfiniteScroll>
+                    </>
                   )
                 )}
               </div>
@@ -204,7 +218,7 @@ export default function MyOffer() {
                       hasMore={hasNextOfferArchive}
                       endMessage={
                         <Typography style={{ textAlign: 'center', marginTop: '2rem' }}>
-                          No archived offer here
+                          No more archived offers here
                         </Typography>
                       }
                       loader={

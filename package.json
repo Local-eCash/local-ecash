@@ -52,9 +52,10 @@
       "cookie": "^0.7.0",
       "micromatch": "^4.0.8",
       "ws": "8.17.1",
-      "axios": "0.28.0",
-      "elliptic": "6.5.7",
-      "cross-spawn": "7.0.5"
+      "axios": "0.30.0",
+      "elliptic": "6.6.1",
+      "cross-spawn": "7.0.5",
+      "next": "14.2.25"
     }
   }
 }

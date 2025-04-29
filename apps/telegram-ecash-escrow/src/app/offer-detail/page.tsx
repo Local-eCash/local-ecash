@@ -10,6 +10,7 @@ import {
   EscrowOrderQueryItem,
   EscrowOrderStatus,
   getSelectedAccount,
+  OfferStatus,
   useInfiniteEscrowOrderByOfferIdQuery,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
@@ -212,7 +213,11 @@ const OfferDetail = () => {
   return (
     <MobileLayout>
       <OfferDetailPage>
-        <TickerHeader title="Offer Detail" showShareIcon={true} postData={currentData?.post} />
+        <TickerHeader
+          title="Offer Detail"
+          showShareIcon={currentData?.post.postOffer.status !== OfferStatus.Archive}
+          postData={currentData?.post}
+        />
         {currentData?.post?.postOffer ? (
           <React.Fragment>
             <OfferDetailInfo

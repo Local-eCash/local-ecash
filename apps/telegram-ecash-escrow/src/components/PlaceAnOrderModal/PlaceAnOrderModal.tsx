@@ -2,9 +2,16 @@
 
 import { COIN_OTHERS, COIN_USD_STABLECOIN_TICKER } from '@/src/store/constants';
 import { LIST_BANK } from '@/src/store/constants/list-bank';
+import { SettingContext } from '@/src/store/context/settingProvider';
 import { UtxoContext } from '@/src/store/context/utxoProvider';
 import { Escrow, buyerDepositFee, splitUtxos } from '@/src/store/escrow';
-import { convertXECToSatoshi, estimatedFee } from '@/src/store/util';
+import {
+  convertXECToSatoshi,
+  estimatedFee,
+  formatNumber,
+  getNumberFromFormatNumber,
+  getOrderLimitText
+} from '@/src/store/util';
 import { BankInfoInput, COIN, CreateEscrowOrderInput, PAYMENT_METHOD, coinInfo } from '@bcpros/lixi-models';
 import {
   OfferType,
@@ -53,6 +60,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
+import { NumericFormat } from 'react-number-format';
 import { FormControlWithNativeSelect } from '../FilterOffer/FilterOfferModal';
 import CustomToast from '../Toast/CustomToast';
 import ConfirmDepositModal from './ConfirmDepositModal';
@@ -269,6 +277,7 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
   const isBuyOffer = post.postOffer.type === OfferType.Buy;
   const { data } = useSession();
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
+  const { setSetting, allSettings } = useContext(SettingContext);
   const Wallet = useContext(WalletContextNode);
   const { totalValidAmount, totalValidUtxos } = useContext(UtxoContext);
   const { chronik, XPI } = Wallet;
@@ -356,6 +365,7 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
     };
 
     const { amount, message }: { amount: string; message: string } = data;
+    const parseAmount = getNumberFromFormatNumber(amount);
     const offerAccountId = post.accountId;
     const moderatorId = moderatorCurrentData.getModeratorAccount.id;
     const arbitratorId = arbitratorCurrentData.getRandomArbitratorAccount.id;
@@ -406,7 +416,7 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
 
       const data: CreateEscrowOrderInput = {
         amount: amountXEC,
-        amountCoinOrCurrency: parseFloat(amount),
+        amountCoinOrCurrency: parseAmount,
         offerAccountId,
         arbitratorId,
         moderatorId,
@@ -631,13 +641,13 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
       const latestRateCoin = rateArrayCoin?.rate;
       const latestRateXec = rateArrayXec?.rate;
       const rateCoinPerXec = latestRateCoin / latestRateXec;
-      amountXEC = Number(amountValue ?? '0') * rateCoinPerXec;
+      amountXEC = getNumberFromFormatNumber(amountValue) * rateCoinPerXec;
       amountCoinOrCurrency = (latestRateXec * textAmountPer1MXEC) / latestRateCoin;
     } else {
       //convert from currency to XEC
       const rateArrayXec = rateData.find(item => item.coin === 'xec');
       const latestRateXec = rateArrayXec?.rate;
-      amountXEC = Number(amountValue ?? '0') / latestRateXec;
+      amountXEC = getNumberFromFormatNumber(amountValue) / latestRateXec;
       amountCoinOrCurrency = textAmountPer1MXEC * latestRateXec;
     }
 
@@ -743,7 +753,7 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
     if (showMargin()) {
       convertToAmountXEC();
     } else {
-      setAmountXEC(Number(amountValue) ?? 0);
+      setAmountXEC(getNumberFromFormatNumber(amountValue) ?? 0);
     }
   }, [amountValue]);
 
@@ -778,7 +788,7 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
         <Typography className="offer-info" variant="body2">
           <Typography component="span" variant="body1">{`Offer Id: ${post.id}`}</Typography>
           <br />
-          <Typography component="span">{`By: ${post.account.telegramUsername} • posted on: ${new Date(post.createdAt).toLocaleString('vi-VN')}`}</Typography>
+          <Typography component="span">{`By: ${allSettings[`${post.account.id.toString()}`]?.usePublicLocalUserName ? post.account.anonymousUsernameLocalecash : post.account.telegramUsername} • posted on: ${new Date(post.createdAt).toLocaleString('vi-VN')}`}</Typography>
         </Typography>
         <DialogContent>
           <PlaceAnOrderWrap>
@@ -793,30 +803,38 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
                       value: true,
                       message: 'Amount is required!'
                     },
-                    pattern: {
-                      value: /^-?[0-9]\d*\.?\d*$/,
-                      message: 'Amount is invalid!'
-                    },
                     validate: value => {
-                      const numberValue = parseFloat(value);
-                      const minValue = post.postOffer.orderLimitMin;
-                      const maxValue = post.postOffer.orderLimitMax;
+                      const numberValue = getNumberFromFormatNumber(value);
+                      const minValue = post?.postOffer?.orderLimitMin;
+                      const maxValue = post?.postOffer?.orderLimitMax;
                       if (numberValue < 0) return 'XEC amount must be greater than 0!';
-                      if (numberValue < minValue || numberValue > maxValue)
-                        return `Amount must between ${minValue}-${maxValue}`;
                       if (amountXEC < 5.46) return `You need to buy amount greater than 5.46 XEC`;
+
+                      if (minValue || maxValue) {
+                        if (numberValue < minValue || numberValue > maxValue)
+                          return `Amount must between ${formatNumber(minValue)} - ${formatNumber(maxValue)}`;
+                      }
 
                       return true;
                     }
                   }}
                   render={({ field: { onChange, onBlur, value, name, ref } }) => (
-                    <TextField
+                    <NumericFormat
+                      allowLeadingZeros={false}
+                      allowNegative={false}
+                      thousandSeparator={true}
+                      decimalScale={2}
+                      customInput={TextField}
                       onChange={onChange}
                       onBlur={onBlur}
                       value={value}
                       name={name}
                       inputRef={ref}
-                      placeholder={post.postOffer.orderLimitMin + ' - ' + post.postOffer.orderLimitMax}
+                      placeholder={getOrderLimitText(
+                        post?.postOffer?.orderLimitMin,
+                        post?.postOffer?.orderLimitMax,
+                        ''
+                      )}
                       className="form-input"
                       id="amount"
                       label="Amount"
@@ -843,7 +861,7 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
                     : showMargin() && (
                         <div>
                           You will {isBuyOffer ? 'send' : 'receive'}{' '}
-                          <span className="amount-receive">{amountXEC.toLocaleString('de-DE')}</span> XEC{' '}
+                          <span className="amount-receive">{formatNumber(amountXEC)}</span> XEC{' '}
                           {isBuyOffer && '(estimated)'}
                           <div>Price: {textAmountPer1MXEC}</div>
                         </div>

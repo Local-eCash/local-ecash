@@ -1,10 +1,15 @@
 import {
+  ALL,
   ALL_CURRENCIES,
   AllPaymentMethodIds,
   AllPaymentMethodIdsFiat,
+  COIN_OTHERS,
+  COIN_USD_STABLECOIN_TICKER,
+  LIST_USD_STABLECOIN,
   NAME_PAYMENT_METHOD
 } from '@/src/store/constants';
 import { FilterCurrencyType } from '@/src/store/type/types';
+import { getNumberFromFormatNumber, isShowAmountOrSortFilter } from '@/src/store/util';
 import { COIN, PAYMENT_METHOD } from '@bcpros/lixi-models';
 import {
   OfferFilterInput,
@@ -14,9 +19,20 @@ import {
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
 import { ArrowDropDown, Close } from '@mui/icons-material';
-import { Button, IconButton, InputAdornment, TextField } from '@mui/material';
+import {
+  Button,
+  IconButton,
+  InputAdornment,
+  MenuItem,
+  Select,
+  SelectChangeEvent,
+  TextField,
+  Typography
+} from '@mui/material';
 import { styled } from '@mui/material/styles';
-import React, { useEffect, useState } from 'react';
+import { debounce } from 'lodash';
+import React, { useCallback, useEffect, useState } from 'react';
+import { NumericFormat } from 'react-number-format';
 import FilterCurrencyModal from '../FilterList/FilterCurrencyModal';
 import FilterFiatPaymentMethodModal from '../FilterList/FilterFiatPaymentMethodModal';
 
@@ -24,14 +40,34 @@ const WrapFilter = styled('div')(({ theme }) => ({
   marginBottom: '16px',
 
   '.filter-buy-sell': {
-    padding: '10px',
-    background: theme.custom.bgQuaternary,
+    padding: '10px 0 10px',
+    display: 'flex',
+    gap: '10px',
+    justifyContent: 'space-between',
 
     '.group-btn': {
+      width: '100%',
       display: 'flex',
-      gap: '10px',
+
+      '.type-buy-btn': {
+        borderTopRightRadius: 0,
+        borderBottomRightRadius: 0
+      },
+
+      '.type-sell-btn': {
+        borderTopLeftRadius: 0,
+        borderBottomLeftRadius: 0
+      },
+
       button: {
         width: '50%'
+      }
+    },
+
+    '.select-coin': {
+      '.MuiSelect-select': {
+        paddingTop: 0,
+        paddingBottom: 0
       }
     },
 
@@ -59,11 +95,24 @@ const WrapFilter = styled('div')(({ theme }) => ({
     display: 'flex',
     justifyContent: 'space-between',
     gap: '16px',
-    padding: '10px',
-    background: theme.custom.bgTertiary,
+    padding: '10px 0 10px',
 
     '.filter-currency, .filter-payment-method': {
       width: '50%'
+    },
+
+    '.filter-currency': {
+      '.btn-currency': {
+        minWidth: '45px',
+        width: 'fit-content',
+        padding: '5px 1px',
+        borderRadius: '5px',
+        marginRight: '-8px'
+      },
+
+      input: {
+        marginRight: '3px'
+      }
     },
 
     '.MuiInputBase-root': {
@@ -103,11 +152,26 @@ const FilterComponent = () => {
     return false;
   };
 
+  const showTickerCryptoUSDStablecoin =
+    offerFilterConfig?.paymentMethodIds.length === 1 &&
+    offerFilterConfig?.paymentMethodIds[0] === PAYMENT_METHOD.CRYPTO &&
+    offerFilterConfig?.coin === COIN_USD_STABLECOIN_TICKER;
+
   const handleSetBuyOffer = (isBuyOffer: boolean) => {
     setIsBuyOffer(isBuyOffer);
     const offerFilterInput: OfferFilterInput = {
       ...offerFilterConfig,
       isBuyOffer: isBuyOffer
+    };
+
+    dispatch(saveOfferFilterConfig(offerFilterInput));
+  };
+
+  const handleFilterUSDStablecoin = (e: SelectChangeEvent<string>) => {
+    const ticker = e?.target?.value;
+    const offerFilterInput: OfferFilterInput = {
+      ...offerFilterConfig,
+      coinOthers: ticker === ALL ? null : ticker
     };
 
     dispatch(saveOfferFilterConfig(offerFilterInput));
@@ -123,14 +187,16 @@ const FilterComponent = () => {
         offerFilterInput = {
           isBuyOffer: offerFilterConfig?.isBuyOffer ?? true,
           fiatCurrency: filterValue?.value ?? '',
-          paymentMethodIds: AllPaymentMethodIdsFiat
+          paymentMethodIds: AllPaymentMethodIdsFiat,
+          amount: offerFilterConfig?.amount ?? null
         };
         break;
       case PAYMENT_METHOD.CRYPTO:
         offerFilterInput = {
           isBuyOffer: offerFilterConfig?.isBuyOffer ?? true,
           coin: filterValue?.value ?? '',
-          paymentMethodIds: [PAYMENT_METHOD.CRYPTO]
+          paymentMethodIds: [PAYMENT_METHOD.CRYPTO],
+          amount: filterValue?.value !== COIN_OTHERS ? offerFilterConfig?.amount : null
         };
         break;
       case PAYMENT_METHOD.GOODS_SERVICES:
@@ -147,7 +213,8 @@ const FilterComponent = () => {
   const handleResetFilterCurrency = () => {
     const offerFilterInput: OfferFilterInput = {
       isBuyOffer: offerFilterConfig?.isBuyOffer ?? false,
-      paymentMethodIds: AllPaymentMethodIds
+      paymentMethodIds: AllPaymentMethodIds,
+      amount: null
     };
 
     dispatch(saveOfferFilterConfig(offerFilterInput));
@@ -166,6 +233,23 @@ const FilterComponent = () => {
     };
 
     dispatch(saveOfferFilterConfig(offerFilterInput));
+  };
+
+  const debouncedHandler = useCallback(
+    debounce(value => {
+      const offerFilterInput: OfferFilterInput = {
+        ...offerFilterConfig,
+        amount: value
+      };
+
+      dispatch(saveOfferFilterConfig(offerFilterInput));
+    }, 500),
+    [offerFilterConfig]
+  );
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    debouncedHandler(value ? getNumberFromFormatNumber(value) : null);
   };
 
   const placeholderCurrency = () => {
@@ -213,6 +297,8 @@ const FilterComponent = () => {
     disablePaymentMethod() ||
     placeholderCurrency() === ALL_CURRENCIES;
 
+  const isShowAmountFilter = isShowAmountOrSortFilter(offerFilterConfig);
+
   // if config not set buy or not have payment-methods, set default
   useEffect(() => {
     if (offerFilterConfig?.isBuyOffer === undefined || offerFilterConfig?.paymentMethodIds?.length === 0) {
@@ -242,42 +328,93 @@ const FilterComponent = () => {
               Sell {COIN.XEC}
             </Button>
           </div>
+          {/* <div className="select-coin">
+            <Select
+              variant="filled"
+              inputProps={null}
+              value={COIN.XEC}
+              style={{
+                height: '40px'
+              }}
+            >
+              <MenuItem value={COIN.XEC}>{COIN.XEC}</MenuItem>
+            </Select>
+          </div> */}
         </div>
         <div className="filter-label">
-          <Button variant="contained" color="warning">
+          <Button variant="contained" color="success">
             {isBuyOffer ? 'For' : 'With'}
           </Button>
         </div>
         <div className="filter-detail">
           <div className="filter-currency">
-            <TextField
-              variant="outlined"
-              placeholder={placeholderCurrency()}
-              value={offerFilterConfig?.fiatCurrency ?? offerFilterConfig?.coin ?? ''}
-              onClick={() => setOpenCurrencyList(true)}
-              InputProps={{
-                endAdornment: isResetCurrency ? (
-                  <InputAdornment position="end">
-                    <IconButton
-                      style={{ padding: 0, width: '13px' }}
-                      onClick={e => {
-                        e.stopPropagation();
-                        handleResetFilterCurrency();
-                      }}
+            {isShowAmountFilter ? (
+              <NumericFormat
+                allowLeadingZeros={false}
+                allowNegative={false}
+                thousandSeparator={true}
+                decimalScale={2}
+                customInput={TextField}
+                onChange={handleAmountChange}
+                value={offerFilterConfig?.amount ?? ''}
+                className="form-input"
+                id="amount"
+                placeholder="Amount"
+                variant="outlined"
+                InputProps={{
+                  endAdornment: (
+                    <Button
+                      className="btn-currency"
+                      color="success"
+                      variant="contained"
+                      onClick={() => setOpenCurrencyList(true)}
                     >
-                      <Close />
-                    </IconButton>
-                  </InputAdornment>
-                ) : (
-                  <InputAdornment position="end">
-                    <IconButton style={{ padding: 0, width: '13px' }}>
-                      <ArrowDropDown />
-                    </IconButton>
-                  </InputAdornment>
-                ),
-                readOnly: true
-              }}
-            />
+                      <Typography
+                        noWrap
+                        sx={{
+                          overflow: 'hidden',
+                          textOverflow: 'clip',
+                          display: 'block',
+                          fontSize: '12px',
+                          color: 'white'
+                        }}
+                      >
+                        {offerFilterConfig?.fiatCurrency ?? offerFilterConfig?.coin}
+                      </Typography>{' '}
+                    </Button>
+                  )
+                }}
+              />
+            ) : (
+              <TextField
+                variant="outlined"
+                placeholder={placeholderCurrency()}
+                value={offerFilterConfig?.fiatCurrency ?? offerFilterConfig?.coin ?? ''}
+                onClick={() => setOpenCurrencyList(true)}
+                InputProps={{
+                  endAdornment: isResetCurrency ? (
+                    <InputAdornment position="end">
+                      <IconButton
+                        style={{ padding: 0, width: '13px' }}
+                        onClick={e => {
+                          e.stopPropagation();
+                          handleResetFilterCurrency();
+                        }}
+                      >
+                        <Close />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : (
+                    <InputAdornment position="end">
+                      <IconButton style={{ padding: 0, width: '13px' }}>
+                        <ArrowDropDown />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                  readOnly: true
+                }}
+              />
+            )}
           </div>
           {!disablePaymentMethod() && (
             <div className="filter-payment-method">
@@ -316,6 +453,30 @@ const FilterComponent = () => {
                 }}
               />
             </div>
+          )}
+
+          {showTickerCryptoUSDStablecoin && (
+            <Select
+              className="form-input"
+              variant="outlined"
+              onChange={e => handleFilterUSDStablecoin(e)}
+              value={offerFilterConfig?.coinOthers ?? ALL}
+              placeholder="All"
+              id="coinOthers"
+              labelId="coinOthers-label"
+              style={{ width: '50%' }}
+            >
+              <MenuItem key={ALL} value={ALL}>
+                ALL
+              </MenuItem>
+              {LIST_USD_STABLECOIN.map(item => {
+                return (
+                  <MenuItem key={item.id} value={item.name}>
+                    {item.name}
+                  </MenuItem>
+                );
+              })}
+            </Select>
           )}
         </div>
       </WrapFilter>

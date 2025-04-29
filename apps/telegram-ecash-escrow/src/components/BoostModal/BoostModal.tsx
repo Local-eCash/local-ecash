@@ -128,14 +128,23 @@ const BoostModal: React.FC<BoostModalProps> = ({ post }: BoostModalProps) => {
       const myPk = fromHex(selectedWallet?.publicKey);
       const mySk = fromHex(selectedWallet?.privateKey);
       const GNCAddress = process.env.NEXT_PUBLIC_ADDRESS_GNC;
-      const { hash: hashXEC } = cashaddr.decode(GNCAddress, false);
+      const { hash: hashXEC, type: typeXEC } = cashaddr.decode(GNCAddress, false);
       const GNCHash = Buffer.from(hashXEC).toString('hex');
 
       const amount = BOOST_AMOUNT;
       if (totalValidAmount < amount) {
         setNotEnoughMoney(true);
       }
-      const txBuild = withdrawFund(totalValidUtxos, mySk, myPk, GNCHash, 'P2SH', amount, undefined, 0);
+      const txBuild = withdrawFund(
+        totalValidUtxos,
+        mySk,
+        myPk,
+        GNCHash,
+        typeXEC.toUpperCase() as 'P2PKH' | 'P2SH',
+        amount,
+        undefined,
+        0
+      );
 
       //create boost
       const createBoostInput: CreateBoostInput = {
