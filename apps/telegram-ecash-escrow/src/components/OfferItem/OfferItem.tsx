@@ -277,7 +277,7 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
       <Typography variant="body2">
         <span className="prefix">{isBuyOffer ? 'Buyer' : 'Seller'}: </span>{' '}
         <span className="username" onClick={handleUserNameClick}>
-          {settingContext?.allSettings[`${post?.account?.id.toString()}`]?.usePublicLocalUserName
+          {settingContext?.allSettings?.[`${post?.account?.id.toString()}`]?.usePublicLocalUserName
             ? post?.account?.anonymousUsernameLocalecash
             : post?.account?.telegramUsername}
         </span>
