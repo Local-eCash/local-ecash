@@ -836,7 +836,7 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
                         ''
                       )}
                       className="form-input"
-                      id="amount"
+                      id="amount-place-order"
                       label="Amount"
                       variant="outlined"
                       error={errors.amount ? true : false}
