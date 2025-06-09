@@ -144,6 +144,10 @@ const ProfileDetail = () => {
     return <Typography>Invalid address account</Typography>;
   }
 
+  const useAvatar = () =>
+    !allSettings?.[`${accountQueryData?.getAccountByAddress?.id.toString()}`]?.usePublicLocalUserName &&
+    avatarPath?.getLocaleCashAvatar;
+
   return (
     <MobileLayout>
       <ProfileDetaillPage>
@@ -165,7 +169,7 @@ const ProfileDetail = () => {
         </div>
         <div className="profile-info">
           <div className="basic-info">
-            {avatarPath?.getLocaleCashAvatar ? (
+            {useAvatar() ? (
               <StyledAvatar>
                 <picture>
                   <img src={avatarPath.getLocaleCashAvatar} alt="" />

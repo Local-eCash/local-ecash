@@ -274,7 +274,7 @@ export default function Backup() {
         )}
         <CustomToast
           isOpen={finished}
-          content="Congratulation!! Please store these seed in a secure place"
+          content="Congratulation! Please store these seed in a secure place"
           handleClose={() => setFinished(false)}
           type="success"
         />
