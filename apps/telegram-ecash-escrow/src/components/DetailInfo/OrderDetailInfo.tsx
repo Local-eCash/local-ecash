@@ -184,7 +184,9 @@ const OrderDetailInfo = ({
         maximumFractionDigits: 2
       });
 
-      const amountWithPercentage = amountCoinOrCurrency * (1 + order?.escrowOffer?.marginPercentage / 100);
+      const amountWithPercentage = isBuyOffer
+        ? amountCoinOrCurrency * (1 - order?.escrowOffer?.marginPercentage / 100)
+        : amountCoinOrCurrency * (1 + order?.escrowOffer?.marginPercentage / 100);
       const amountFormatted =
         amountWithPercentage < 1
           ? amountWithPercentage.toFixed(5)

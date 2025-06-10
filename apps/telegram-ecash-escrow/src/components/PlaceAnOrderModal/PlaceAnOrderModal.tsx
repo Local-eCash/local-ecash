@@ -677,7 +677,9 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
       maximumFractionDigits: 2
     });
 
-    const amountWithPercentage = amountCoinOrCurrency * (1 + post?.postOffer?.marginPercentage / 100);
+    const amountWithPercentage = isBuyOffer
+      ? amountCoinOrCurrency * (1 - post?.postOffer?.marginPercentage / 100)
+      : amountCoinOrCurrency * (1 + post?.postOffer?.marginPercentage / 100);
     const amountFormatted =
       amountWithPercentage < 1 ? amountWithPercentage.toFixed(5) : compactNumberFormatter.format(amountWithPercentage);
     setTextAmountPer1MXEC(

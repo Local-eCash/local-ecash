@@ -228,7 +228,9 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
       compactDisplay: 'short'
     });
 
-    const amountWithPercentage = amountCoinOrCurrency * (1 + post?.postOffer?.marginPercentage / 100);
+    const amountWithPercentage = isBuyOffer
+      ? amountCoinOrCurrency * (1 - post?.postOffer?.marginPercentage / 100)
+      : amountCoinOrCurrency * (1 + post?.postOffer?.marginPercentage / 100);
     const amountFormatted = compactNumberFormatter.format(amountWithPercentage);
     setAmountPer1MXEC(amountFormatted);
   };
