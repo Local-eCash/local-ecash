@@ -2,7 +2,7 @@
 
 import { COIN_OTHERS } from '@/src/store/constants';
 import { SettingContext } from '@/src/store/context/settingProvider';
-import { getOrderLimitText } from '@/src/store/util';
+import { getMinusOrPlusNumberPrice, getOrderLimitText } from '@/src/store/util';
 import { PAYMENT_METHOD } from '@bcpros/lixi-models';
 import {
   OfferStatus,
@@ -89,6 +89,7 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
   const countryName = offerData?.location?.country;
   const stateName = offerData?.location?.adminNameAscii;
   const cityName = offerData?.location?.cityAscii;
+  const isBuyOffer = offerData?.type === OfferType.Buy;
 
   const handleClickAction = e => {
     e.stopPropagation();
@@ -147,7 +148,8 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
         offerData?.coinPayment !== COIN_OTHERS && (
           <Typography variant="body1">
             <span className="prefix">Price: </span>
-            Market price +{offerData?.marginPercentage}%
+            Market price {getMinusOrPlusNumberPrice(isBuyOffer)}
+            {offerData?.marginPercentage}%
           </Typography>
         )}
       <Typography variant="body1">

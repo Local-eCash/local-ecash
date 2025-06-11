@@ -76,3 +76,7 @@ export const getOrderLimitText = (min: number | null, max: number | null, ticket
   }
   return 'No limit';
 };
+
+export const getMinusOrPlusNumberPrice = (isBuyOffer: boolean) => {
+  return isBuyOffer ? '-' : '+';
+};

@@ -2,7 +2,7 @@
 
 import { COIN_OTHERS, COIN_USD_STABLECOIN, COIN_USD_STABLECOIN_TICKER } from '@/src/store/constants';
 import { SettingContext } from '@/src/store/context/settingProvider';
-import { getOrderLimitText } from '@/src/store/util';
+import { getMinusOrPlusNumberPrice, getOrderLimitText } from '@/src/store/util';
 import { PAYMENT_METHOD } from '@bcpros/lixi-models';
 import {
   OfferStatus,
@@ -366,7 +366,8 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
                   </span>
                 </span>
               )}{' '}
-              ( Market price +{post?.postOffer?.marginPercentage ?? 0}% )
+              ( Market price {getMinusOrPlusNumberPrice(isBuyOffer)}
+              {post?.postOffer?.marginPercentage ?? 0}% )
             </Typography>
           ) : (
             <Typography variant="body2">
