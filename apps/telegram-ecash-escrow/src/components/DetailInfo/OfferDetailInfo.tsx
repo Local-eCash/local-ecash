@@ -1,15 +1,15 @@
 'use client';
 
-import { COIN_OTHERS } from '@/src/store/constants';
 import { SettingContext } from '@/src/store/context/settingProvider';
-import { getMinusOrPlusNumberPrice, getOrderLimitText } from '@/src/store/util';
-import { PAYMENT_METHOD } from '@bcpros/lixi-models';
+import { getOrderLimitText, showPriceInfo } from '@/src/store/util';
+import { getTickerText } from '@bcpros/lixi-models';
 import {
   OfferStatus,
   OfferType,
   PostQueryItem,
   TimelineQueryItem,
   getSeedBackupTime,
+  getSelectedAccountId,
   openActionSheet,
   openModal,
   useSliceDispatch as useLixiSliceDispatch,
@@ -21,7 +21,7 @@ import { styled } from '@mui/material/styles';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useContext } from 'react';
+import React, { useContext, useMemo } from 'react';
 import useAuthorization from '../Auth/use-authorization.hooks';
 import { BackupModalProps } from '../Common/BackupModal';
 import { BuyButtonStyled } from '../OfferItem/OfferItem';
@@ -80,6 +80,7 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
   const { status } = useSession();
   const askAuthorization = useAuthorization();
 
+  const selectedAccountId = useLixiSliceSelector(getSelectedAccountId);
   const lastSeedBackupTimeOnDevice = useLixiSliceSelector(getSeedBackupTime);
   const settingContext = useContext(SettingContext);
   const seedBackupTime = settingContext?.setting?.lastSeedBackupTime ?? lastSeedBackupTimeOnDevice ?? '';
@@ -89,7 +90,8 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
   const countryName = offerData?.location?.country;
   const stateName = offerData?.location?.adminNameAscii;
   const cityName = offerData?.location?.cityAscii;
-  const isBuyOffer = offerData?.type === OfferType.Buy;
+
+  const isOwner = (postData ?? post)?.accountId === selectedAccountId;
 
   const handleClickAction = e => {
     e.stopPropagation();
@@ -123,13 +125,22 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
     }
   };
 
-  const getCoinCurrency = () => {
-    return (
-      offerData?.localCurrency ??
-      (offerData?.coinPayment?.includes(COIN_OTHERS) ? 'XEC' : offerData?.coinPayment) ??
-      'XEC'
+  const showPrice = useMemo(() => {
+    return showPriceInfo(
+      offerData?.paymentMethods[0]?.paymentMethod?.id,
+      post?.postOffer?.coinPayment,
+      post?.postOffer?.priceCoinOthers
     );
-  };
+  }, [post?.postOffer]);
+
+  const coinCurrency = useMemo(() => {
+    return getTickerText(
+      post?.postOffer?.localCurrency,
+      post?.postOffer?.coinPayment,
+      post?.postOffer?.coinOthers,
+      post?.postOffer?.priceCoinOthers
+    );
+  }, [post?.postOffer]);
 
   return (
     <OfferDetailWrap onClick={() => router.push(`/offer-detail?id=${offerData.postId}`)}>
@@ -144,17 +155,15 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
           </IconButton>
         )}
       </div>
-      {offerData?.paymentMethods[0]?.paymentMethod?.id !== PAYMENT_METHOD.GOODS_SERVICES &&
-        offerData?.coinPayment !== COIN_OTHERS && (
-          <Typography variant="body1">
-            <span className="prefix">Price: </span>
-            Market price {getMinusOrPlusNumberPrice(isBuyOffer)}
-            {offerData?.marginPercentage}%
-          </Typography>
-        )}
+      {showPrice && (
+        <Typography variant="body1">
+          <span className="prefix">Price: </span>
+          Market price +{offerData?.marginPercentage}%
+        </Typography>
+      )}
       <Typography variant="body1">
         <span className="prefix">Min-max: </span>
-        {getOrderLimitText(offerData?.orderLimitMin, offerData?.orderLimitMax, getCoinCurrency())}
+        {getOrderLimitText(offerData?.orderLimitMin, offerData?.orderLimitMax, coinCurrency)}
       </Typography>
       {(stateName || countryName) && (
         <Typography variant="body2">
@@ -179,16 +188,20 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
         ) : (
           <>
             <div className="payment-group-btns">
-              <Button size="small" color="info" variant="outlined">
-                <Typography variant="body1" style={{ fontWeight: 'bold' }}>
-                  <span style={{ fontSize: '14px' }}>{offerData?.hideFromHome ? 'Unlisted' : 'Listed'}</span>
-                </Typography>
-              </Button>
-              <Button size="small" color="info" variant="outlined">
-                <Typography variant="body1" style={{ fontWeight: 'bold' }}>
-                  <span style={{ fontSize: '14px' }}>{offerData?.type == OfferType.Buy ? 'Buy' : 'Sell'}</span>
-                </Typography>
-              </Button>
+              {isOwner && (
+                <React.Fragment>
+                  <Button size="small" color="info" variant="outlined">
+                    <Typography variant="body1" style={{ fontWeight: 'bold' }}>
+                      <span style={{ fontSize: '14px' }}>{offerData?.hideFromHome ? 'Unlisted' : 'Listed'}</span>
+                    </Typography>
+                  </Button>
+                  <Button size="small" color="info" variant="outlined">
+                    <Typography variant="body1" style={{ fontWeight: 'bold' }}>
+                      <span style={{ fontSize: '14px' }}>{offerData?.type == OfferType.Buy ? 'Buy' : 'Sell'}</span>
+                    </Typography>
+                  </Button>
+                </React.Fragment>
+              )}
               {offerData?.paymentMethods &&
                 offerData.paymentMethods?.length > 0 &&
                 offerData.paymentMethods.map(item => {

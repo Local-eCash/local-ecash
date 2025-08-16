@@ -4,7 +4,14 @@ import { COIN_OTHERS, COIN_USD_STABLECOIN_TICKER, LIST_COIN } from '@/src/store/
 import { LIST_PAYMENT_APP } from '@/src/store/constants/list-payment-app';
 import { SettingContext } from '@/src/store/context/settingProvider';
 import { formatNumber, getNumberFromFormatNumber } from '@/src/store/util';
-import { LIST_CURRENCIES_USED, Location, PAYMENT_METHOD, UpdateSettingCommand } from '@bcpros/lixi-models';
+import {
+  COIN,
+  Country,
+  LIST_CURRENCIES_USED,
+  Location,
+  PAYMENT_METHOD,
+  UpdateSettingCommand
+} from '@bcpros/lixi-models';
 import {
   Coin,
   CreateOfferInput,
@@ -20,6 +27,7 @@ import {
   getSelectedAccountId,
   offerApi,
   settingApi,
+  showToast,
   useSliceDispatch as useLixiSliceDispatch,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
@@ -39,7 +47,6 @@ import {
   InputLabel,
   MenuItem,
   NativeSelect,
-  Portal,
   Radio,
   RadioGroup,
   Select,
@@ -52,14 +59,22 @@ import {
 import { styled } from '@mui/material/styles';
 import { TransitionProps } from '@mui/material/transitions';
 import React, { useContext, useEffect, useRef, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import {
+  Control,
+  Controller,
+  FieldErrors,
+  UseFormClearErrors,
+  UseFormGetValues,
+  UseFormSetValue,
+  useForm
+} from 'react-hook-form';
 import { NumericFormat } from 'react-number-format';
 import FilterListLocationModal from '../FilterList/FilterListLocationModal';
 import FilterListModal from '../FilterList/FilterListModal';
 import { FormControlWithNativeSelect } from '../FilterOffer/FilterOfferModal';
-import CustomToast from '../Toast/CustomToast';
 import ConfirmOfferAnonymousModal from './ConfirmOfferAnonymousModal';
 
+// Styled components
 const StyledDialog = styled(Dialog)(({ theme }) => ({
   '.MuiPaper-root': {
     background: theme.palette.background.default,
@@ -228,12 +243,39 @@ const OrderLimitWrap = styled('div')(() => ({
   }
 }));
 
+// Types and interfaces
 interface CreateOfferModalProps {
   offer?: OfferQueryItem;
   isEdit?: boolean;
   isFirstOffer?: boolean;
 }
 
+interface OfferFormValues {
+  message: string;
+  min: string;
+  max: string;
+  option: string | number;
+  currency: string | null;
+  paymentApp: string;
+  coin: string | null;
+  coinOthers: string;
+  priceCoinOthers: number | null;
+  percentage: number;
+  note: string;
+  country: Country | null;
+  state: Location | null;
+  city: Location | null;
+}
+
+interface FormControlProps {
+  control: Control<OfferFormValues>;
+  errors: FieldErrors<OfferFormValues>;
+  getValues: UseFormGetValues<OfferFormValues>;
+  setValue: UseFormSetValue<OfferFormValues>;
+  clearErrors: UseFormClearErrors<OfferFormValues>;
+}
+
+// Helper components
 const Transition = React.forwardRef(function Transition(
   props: TransitionProps & {
     children: React.ReactElement;
@@ -243,43 +285,45 @@ const Transition = React.forwardRef(function Transition(
   return <Slide direction="up" ref={ref} {...props} />;
 });
 
+// Main component
 const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
   const { isEdit = false, offer, isFirstOffer = false } = props;
-
   const dispatch = useLixiSliceDispatch();
-  const { useCreateOfferMutation, useUpdateOfferMutation } = offerApi;
-  const [createOfferTrigger] = useCreateOfferMutation();
-  const [updateOfferTrigger] = useUpdateOfferMutation();
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
+  const dialogContentRef = useRef<HTMLDivElement>(null);
 
+  // Context
   const settingContext = useContext(SettingContext);
   const { setSetting } = settingContext;
 
+  // Redux selectors and API
   const selectedAccountId = useLixiSliceSelector(getSelectedAccountId);
-
   const paymentMethods = useLixiSliceSelector(getAllPaymentMethods);
   const countries = useLixiSliceSelector(getAllCountries);
+  const { useCreateOfferMutation, useUpdateOfferMutation } = offerApi;
+  const [createOfferTrigger] = useCreateOfferMutation();
+  const [updateOfferTrigger] = useUpdateOfferMutation();
+
+  // State for location data
   const [listStates, setListStates] = useState<Location[]>([]);
   const [listCities, setListCities] = useState<Location[]>([]);
 
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState(false);
+  // UI state
   const [loading, setLoading] = useState(false);
-  const [activeStep, setActiveStep] = React.useState(isEdit ? 2 : 1);
-  const [coinCurrency, setCoinCurrency] = useState('XEC');
+  const [activeStep, setActiveStep] = useState(isEdit ? 2 : 1);
+  const [coinCurrency, setCoinCurrency] = useState<string>(COIN.XEC);
   const [fixAmount, setFixAmount] = useState(1000);
+  const [isBuyOffer, setIsBuyOffer] = useState(offer?.type ? offer?.type === OfferType.Buy : true);
+  const [isHiddenOffer, setIsHiddenOffer] = useState(true);
 
+  // Modal state
   const [openCountryList, setOpenCountryList] = useState(false);
   const [openStateList, setOpenStateList] = useState(false);
   const [openCityList, setOpenCityList] = useState(false);
   const [openConfirmAnonymousOffer, setOpenConfirmAnonymousOffer] = useState(false);
 
-  const [isBuyOffer, setIsBuyOffer] = useState(offer?.type ? offer?.type === OfferType.Buy : true);
-  const [isHiddenOffer, setIsHiddenOffer] = useState(true);
-
-  const dialogContentRef = useRef<HTMLDivElement>(null);
-
+  // Form handling
   const {
     handleSubmit,
     control,
@@ -289,7 +333,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
     getValues,
     clearErrors,
     formState: { errors }
-  } = useForm({
+  } = useForm<OfferFormValues>({
     defaultValues: {
       message: offer?.message ?? '',
       min: `${offer?.orderLimitMin ?? ''}`,
@@ -299,6 +343,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       paymentApp: '',
       coin: offer?.coinPayment ?? null,
       coinOthers: offer?.coinOthers ?? '',
+      priceCoinOthers: offer?.priceCoinOthers ?? null,
       percentage: offer?.marginPercentage ?? 0,
       note: offer?.noteOffer ?? '',
       country: null,
@@ -307,20 +352,25 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
     }
   });
 
+  // Watched form values
   const option = Number(watch('option'));
   const percentageValue = watch('percentage');
   const currencyValue = watch('currency');
   const coinValue = watch('coin');
 
-  const handleNext = () => {
-    setActiveStep(prevActiveStep => prevActiveStep + 1);
+  // Navigation handlers
+  const handleNext = () => setActiveStep(prevStep => prevStep + 1);
+  const handleBack = () => setActiveStep(prevStep => prevStep - 1);
+  const handleCloseModal = () => {
+    reset();
+    dispatch(closeModal());
   };
 
-  const handleBack = () => {
-    setActiveStep(prevActiveStep => prevActiveStep - 1);
-  };
+  // Helper function to check if margin should be shown
+  const showMarginComponent = () => option !== PAYMENT_METHOD.GOODS_SERVICES;
 
-  const handleCreateOffer = async (data, isHidden) => {
+  // Handler for creating/updating offers
+  const handleCreateOffer = async (data: OfferFormValues, isHidden: boolean) => {
     setLoading(true);
     const minNum = getNumberFromFormatNumber(data.min) || null;
     const maxNum = getNumberFromFormatNumber(data.max) || null;
@@ -331,6 +381,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       paymentMethodIds: [option],
       coinPayment: data?.coin ? data.coin.split(':')[0] : null,
       coinOthers: data?.coinOthers ? data.coinOthers : null,
+      priceCoinOthers: data?.priceCoinOthers ? Number(data.priceCoinOthers) : 0,
       localCurrency: data?.currency ? data.currency.split(':')[0] : null,
       paymentApp: data?.paymentApp ? data.paymentApp : null,
       marginPercentage: Number(data?.percentage ?? 0),
@@ -340,44 +391,58 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       hideFromHome: isHidden
     };
 
-    // Just have location when paymentmethods is 1
+    // Just have location when paymentmethod is CASH_IN_PERSON
     if (option !== PAYMENT_METHOD.CASH_IN_PERSON) {
       input.locationId = null;
     }
 
-    if (isEdit) {
-      const inputUpdateOffer: UpdateOfferInput = {
-        message: data.message,
-        marginPercentage: Number(data.percentage),
-        noteOffer: data.note,
-        orderLimitMin: minNum,
-        orderLimitMax: maxNum,
-        id: offer?.postId
-      };
-      await updateOfferTrigger({ input: inputUpdateOffer })
-        .unwrap()
-        .then(() => setSuccess(true))
-        .catch(err => {
-          setError(true);
-        });
-    } else {
-      const inputCreateOffer: CreateOfferInput = {
-        ...input,
-        price: '',
-        coin: Coin.Xec,
-        type: isBuyOffer ? OfferType.Buy : OfferType.Sell
-      };
-      await createOfferTrigger({ input: inputCreateOffer })
-        .unwrap()
-        .then(() => setSuccess(true))
-        .catch(err => {
-          setError(true);
-        });
+    try {
+      if (isEdit) {
+        const inputUpdateOffer: UpdateOfferInput = {
+          message: data.message,
+          marginPercentage: Number(data.percentage),
+          noteOffer: data.note,
+          orderLimitMin: minNum,
+          orderLimitMax: maxNum,
+          priceCoinOthers: Number(data.priceCoinOthers),
+          id: offer?.postId
+        };
+        await updateOfferTrigger({ input: inputUpdateOffer }).unwrap();
+        dispatch(
+          showToast('success', {
+            message: 'Success',
+            description: 'Offer updated successfully!'
+          })
+        );
+      } else {
+        const inputCreateOffer: CreateOfferInput = {
+          ...input,
+          price: '',
+          coin: Coin.Xec,
+          type: isBuyOffer ? OfferType.Buy : OfferType.Sell
+        };
+        await createOfferTrigger({ input: inputCreateOffer }).unwrap();
+        dispatch(
+          showToast('success', {
+            message: 'Success',
+            description: 'Offer created successfully!'
+          })
+        );
+      }
+    } catch (error) {
+      console.error('Error creating/updating offer:', error);
+      dispatch(
+        showToast('error', {
+          message: 'Error',
+          description: `${isEdit ? 'Update' : 'Create'} offer failed!`
+        })
+      );
     }
   };
 
+  // Main form submission handler
   const handleCreateUpdate = () => {
-    // first offer scenario
+    // First offer scenario
     if (isFirstOffer && !isEdit) {
       setOpenConfirmAnonymousOffer(true);
       return;
@@ -385,29 +450,86 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
 
     // Determine whether offer should be hidden based on context
     const hiddenStatus = isEdit ? false : isHiddenOffer;
-
-    handleSubmit(data => {
-      handleCreateOffer(data, hiddenStatus);
-    })();
+    handleSubmit(data => handleCreateOffer(data, hiddenStatus))();
   };
 
-  const handleIncrease = value => {
-    setValue('percentage', Math.min(30, value + 1));
+  // Margin adjustment handlers
+  const handleIncrease = (value: number) => setValue('percentage', Math.min(30, value + 1));
+  const handleDecrease = (value: number) => setValue('percentage', Math.max(0, value - 1));
+
+  // Helper function for offer note placeholder text
+  const getPlaceholderOfferNote = (): string => {
+    switch (option) {
+      case PAYMENT_METHOD.CASH_IN_PERSON:
+        return 'A public note attached to your offer. For example: "Exchanging XEC to cash, only meeting in public places at daytime!"';
+      case PAYMENT_METHOD.BANK_TRANSFER:
+      case PAYMENT_METHOD.PAYMENT_APP:
+        return 'A public note attached to your offer. For example: "Bank transfer in Vietnam only. Available from 9AM to 5PM workdays."';
+      case PAYMENT_METHOD.CRYPTO:
+        return 'A public note attached to your offer. For example: "Accepting USDT on TRX and ETH network."';
+      case PAYMENT_METHOD.GOODS_SERVICES:
+        return 'A public note attached to your offer. For example: "Exchanging XEC for a logo design. Send your proposal along with a proposed price.';
+      default:
+        return 'Input offer note';
+    }
   };
 
-  const handleDecrease = value => {
-    setValue('percentage', Math.max(0, value - 1));
+  // Location detection
+  const getLocation = async () => {
+    if (!navigator.geolocation) {
+      console.error('Geolocation is not supported by this browser.');
+      return;
+    }
+
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true });
+      });
+
+      const { latitude, longitude } = position.coords;
+      const locations = await countryApi.getCoordinate(latitude.toString(), longitude.toString());
+
+      if (locations.length > 0) {
+        const countryDetected = countries.find(item => item.iso2 === locations[0].iso2);
+        if (countryDetected) {
+          setValue('country', countryDetected);
+          const states = await countryApi.getStates(countryDetected?.iso2 ?? '');
+          setListStates(states);
+
+          // Set currency based on detected country
+          const currencyDetected = LIST_CURRENCIES_USED.find(item => item.country === countryDetected?.iso2);
+          if (currencyDetected) {
+            setValue('currency', `${currencyDetected?.code}:${currencyDetected?.fixAmount}`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Geolocation error:', error);
+    }
   };
 
-  const handleCloseModal = () => {
-    dispatch(closeModal());
-  };
+  // Effect to get location on component mount
+  useEffect(() => {
+    if (isEdit && !offer?.locationId) return;
+    getLocation();
+  }, []);
 
-  const showMargin = () => {
-    return option !== PAYMENT_METHOD.GOODS_SERVICES && !coinValue?.includes(COIN_OTHERS);
-  };
+  // Effect to update coinCurrency when related form values change
+  useEffect(() => {
+    const currency = currencyValue?.split(':')[0];
+    const coin = coinValue?.split(':')[0];
 
-  const marginComponent = (
+    setCoinCurrency(currency ?? (coin?.includes(COIN_OTHERS) ? getValues('coinOthers') : coin) ?? COIN.XEC);
+  }, [currencyValue, coinValue, getValues('coinOthers')]);
+
+  // Effect to load payment methods and countries on component mount
+  useEffect(() => {
+    dispatch(getPaymentMethods());
+    dispatch(getCountries());
+  }, []);
+
+  // UI Components for the steps
+  const MarginComponent = () => (
     <Grid item xs={12}>
       <div className="margin-component">
         <Typography variant="body2" className="label">
@@ -419,7 +541,6 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
           rules={{
             validate: value => {
               if (value > 30) return 'Margin is between 0 - 30%';
-
               return true;
             }
           }}
@@ -445,9 +566,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
             </PercentInputWrap>
           )}
         />
-        {errors && errors?.percentage && (
-          <FormHelperText error={true}>{errors.percentage.message as string}</FormHelperText>
-        )}
+        {errors?.percentage && <FormHelperText error={true}>{errors.percentage.message}</FormHelperText>}
         <Typography className="example-value" component="div">
           {isBuyOffer ? (
             <div>
@@ -483,9 +602,11 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
     </Grid>
   );
 
-  const stepContent1 = (
+  // Step 1: Basic settings (type, payment method)
+  const Step1Content = () => (
     <div className="container-step1">
       <Grid container spacing={2}>
+        {/* Buy/Sell buttons */}
         <Grid item xs={12} className="type-btn-group">
           <Button
             className={`type-buy-btn ${isBuyOffer ? 'active' : 'inactive'}`}
@@ -504,6 +625,8 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
             Sell
           </Button>
         </Grid>
+
+        {/* Description */}
         <Grid item xs={12}>
           <Typography fontStyle={'italic'} className="heading" variant="body2">
             {isBuyOffer
@@ -512,6 +635,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
           </Typography>
         </Grid>
 
+        {/* Payment method */}
         <Grid item xs={12}>
           <Typography variant="body2" className="label">
             Payment method
@@ -540,24 +664,23 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                 onBlur={onBlur}
                 ref={ref}
               >
-                {paymentMethods.map(item => {
-                  return (
-                    <div key={item.id}>
-                      <FormControlLabel
-                        checked={option === item.id}
-                        value={item.id}
-                        control={<Radio />}
-                        label={item.name}
-                      />
-                    </div>
-                  );
-                })}
+                {paymentMethods.map(item => (
+                  <div key={item.id}>
+                    <FormControlLabel
+                      checked={option === item.id}
+                      value={item.id}
+                      control={<Radio />}
+                      label={item.name}
+                    />
+                  </div>
+                ))}
               </RadioGroup>
             )}
           />
-          {errors && errors?.option && <FormHelperText error={true}>{errors.option.message as string}</FormHelperText>}
+          {errors?.option && <FormHelperText error={true}>{errors.option.message}</FormHelperText>}
         </Grid>
 
+        {/* Payment app specific fields - Only show when option is Bank transfer or Payment app */}
         {option != 0 && option < 4 && (
           <>
             {option === PAYMENT_METHOD.PAYMENT_APP && (
@@ -572,11 +695,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                     name="paymentApp"
                     control={control}
                     rules={{
-                      validate: value => {
-                        if (!value) return 'payment-app is required';
-
-                        return true;
-                      }
+                      validate: value => (!value ? 'payment-app is required' : true)
                     }}
                     render={({ field: { onChange, onBlur, value, ref } }) => (
                       <FormControlWithNativeSelect>
@@ -598,18 +717,15 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                             const nameB = b.name.toLowerCase();
                             if (nameA < nameB) return -1;
                             if (nameA > nameB) return 1;
-
                             return 0;
-                          }).map(item => {
-                            return (
-                              <option key={item.id} value={`${item.name}`}>
-                                {item.name}
-                              </option>
-                            );
-                          })}
+                          }).map(item => (
+                            <option key={item.id} value={`${item.name}`}>
+                              {item.name}
+                            </option>
+                          ))}
                         </NativeSelect>
-                        {errors && errors?.paymentApp && (
-                          <FormHelperText error={true}>{errors.paymentApp.message as string}</FormHelperText>
+                        {errors?.paymentApp && (
+                          <FormHelperText error={true}>{errors.paymentApp.message}</FormHelperText>
                         )}
                       </FormControlWithNativeSelect>
                     )}
@@ -617,6 +733,8 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                 </Grid>
               </>
             )}
+
+            {/* Currency selection for non-crypto options */}
             <Grid item xs={12}>
               <Typography variant="body2" className="label">
                 Select currency
@@ -627,11 +745,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                 name="currency"
                 control={control}
                 rules={{
-                  validate: value => {
-                    if (!value) return 'Currency is required';
-
-                    return true;
-                  }
+                  validate: value => (!value ? 'Currency is required' : true)
                 }}
                 render={({ field: { onChange, onBlur, value, ref } }) => (
                   <FormControlWithNativeSelect>
@@ -653,26 +767,23 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                       {LIST_CURRENCIES_USED.sort((a, b) => {
                         if (a.name < b.name) return -1;
                         if (a.name > b.name) return 1;
-
                         return 0;
-                      }).map(item => {
-                        return (
-                          <option key={item.code} value={`${item.code}:${item.fixAmount}`}>
-                            {item.name} ({item.code})
-                          </option>
-                        );
-                      })}
+                      }).map(item => (
+                        <option key={item.code} value={`${item.code}:${item.fixAmount}`}>
+                          {item.name} ({item.code})
+                        </option>
+                      ))}
                     </NativeSelect>
-                    {errors && errors?.currency && (
-                      <FormHelperText error={true}>{errors.currency.message as string}</FormHelperText>
-                    )}
+                    {errors?.currency && <FormHelperText error={true}>{errors.currency.message}</FormHelperText>}
                   </FormControlWithNativeSelect>
                 )}
               />
             </Grid>
           </>
         )}
-        {option == 4 && (
+
+        {/* Crypto option */}
+        {option == PAYMENT_METHOD.CRYPTO && (
           <>
             <Grid item xs={12}>
               <Typography variant="body2" className="label">
@@ -684,12 +795,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                 name="coin"
                 control={control}
                 rules={{
-                  validate: value => {
-                    // if (!value && !coinState) return 'Coin is required';
-                    if (!value) return 'Coin is required';
-
-                    return true;
-                  }
+                  validate: value => (!value ? 'Coin is required' : true)
                 }}
                 render={({ field: { onChange, onBlur, value, ref } }) => (
                   <FormControlWithNativeSelect>
@@ -709,8 +815,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                     >
                       <option aria-label="None" value="" />
                       {LIST_COIN.map(item => {
-                        if (item.ticker === 'XEC') return;
-
+                        if (item.ticker === 'XEC') return null;
                         return (
                           <option key={item.ticker} value={`${item.ticker}:${item.fixAmount}`}>
                             {item.name} {item.isDisplayTicker && `(${item.ticker})`}
@@ -718,57 +823,94 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                         );
                       })}
                     </NativeSelect>
-                    {errors && errors?.coin && (
-                      <FormHelperText error={true}>{errors.coin.message as string}</FormHelperText>
-                    )}
+                    {errors?.coin && <FormHelperText error={true}>{errors.coin.message}</FormHelperText>}
                   </FormControlWithNativeSelect>
                 )}
               />
             </Grid>
 
+            {/* Custom coin inputs */}
             {coinValue?.includes(COIN_OTHERS) && (
-              <Grid item xs={4}>
-                <Controller
-                  name="coinOthers"
-                  control={control}
-                  rules={{
-                    required: {
-                      value: true,
-                      message: 'Ticker is required!'
-                    }
-                  }}
-                  render={({ field: { onChange, onBlur, value, name, ref } }) => (
-                    <FormControl fullWidth={true}>
-                      <TextField
-                        className="form-input"
-                        onChange={onChange}
-                        onBlur={onBlur}
-                        value={value}
-                        name={name}
-                        inputRef={ref}
-                        id="coinOthers"
-                        label="Ticker"
-                        error={errors.coinOthers && true}
-                        helperText={errors.coinOthers && (errors.coinOthers?.message as string)}
-                        placeholder="E.g. PEPE"
-                        variant="standard"
-                        inputProps={{
-                          maxLength: 12
-                        }}
-                      />
-                    </FormControl>
-                  )}
-                />
-              </Grid>
+              <React.Fragment>
+                <Grid item xs={12}>
+                  <Controller
+                    name="coinOthers"
+                    control={control}
+                    rules={{
+                      required: {
+                        value: true,
+                        message: 'Ticker is required!'
+                      }
+                    }}
+                    render={({ field: { onChange, onBlur, value, name, ref } }) => (
+                      <FormControl style={{ width: '35%' }}>
+                        <TextField
+                          className="form-input"
+                          onChange={onChange}
+                          onBlur={onBlur}
+                          value={value}
+                          name={name}
+                          inputRef={ref}
+                          id="coinOthers"
+                          label="Ticker"
+                          error={!!errors.coinOthers}
+                          helperText={errors.coinOthers?.message}
+                          placeholder="E.g. PEPE"
+                          variant="standard"
+                          inputProps={{
+                            maxLength: 12
+                          }}
+                        />
+                      </FormControl>
+                    )}
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Controller
+                    name="priceCoinOthers"
+                    control={control}
+                    rules={{
+                      required: {
+                        value: true,
+                        message: 'Price is required!'
+                      }
+                    }}
+                    render={({ field: { onChange, onBlur, value, name, ref } }) => (
+                      <FormControl style={{ width: '35%' }}>
+                        <NumericFormat
+                          allowLeadingZeros={false}
+                          allowNegative={false}
+                          thousandSeparator={true}
+                          decimalScale={8}
+                          customInput={TextField}
+                          onChange={onChange}
+                          onBlur={onBlur}
+                          value={value}
+                          name={name}
+                          inputRef={ref}
+                          className="form-input"
+                          id="priceCoinOthers"
+                          placeholder={`E.g. 1`}
+                          error={!!errors.priceCoinOthers}
+                          helperText={errors.priceCoinOthers?.message}
+                          variant="standard"
+                        />
+                      </FormControl>
+                    )}
+                  />
+                </Grid>
+              </React.Fragment>
             )}
 
+            {/* USD stablecoins */}
             {coinValue?.includes(COIN_USD_STABLECOIN_TICKER) && (
               <Grid item xs={4}>
                 <Controller
                   name="coinOthers"
                   control={control}
                   render={({ field: { onChange, onBlur, value, name, ref } }) => (
-                    <FormControl fullWidth={true} variant="standard" error={errors.coinOthers && true}>
+                    <FormControl fullWidth={true} variant="standard" error={!!errors.coinOthers}>
                       <InputLabel id="coinOthers-label">Ticker</InputLabel>
                       <Select
                         className="form-input"
@@ -785,7 +927,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                         <MenuItem value="USDT">USDT</MenuItem>
                         <MenuItem value="USDC">USDC</MenuItem>
                       </Select>
-                      {errors.coinOthers && <FormHelperText>{errors.coinOthers?.message as string}</FormHelperText>}
+                      {errors.coinOthers && <FormHelperText>{errors.coinOthers.message}</FormHelperText>}
                     </FormControl>
                   )}
                 />
@@ -793,6 +935,8 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
             )}
           </>
         )}
+
+        {/* Location fields for cash in person */}
         {option === PAYMENT_METHOD.CASH_IN_PERSON && (
           <>
             <Grid item xs={12}>
@@ -806,16 +950,12 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                 name="country"
                 control={control}
                 rules={{
-                  validate: value => {
-                    if (!value) return 'Country is required';
-
-                    return true;
-                  }
+                  validate: value => (!value ? 'Country is required' : true)
                 }}
                 render={({ field: { onChange, value, onBlur, ref } }) => (
                   <FormControl fullWidth>
                     <TextField
-                      label={option === PAYMENT_METHOD.CASH_IN_PERSON ? 'Country' : ''}
+                      label="Country"
                       variant="outlined"
                       fullWidth
                       onChange={onChange}
@@ -842,9 +982,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                         readOnly: true
                       }}
                     />
-                    {errors && errors?.country && (
-                      <FormHelperText error={true}>{errors.country.message as string}</FormHelperText>
-                    )}
+                    {errors?.country && <FormHelperText error={true}>{errors.country.message}</FormHelperText>}
                   </FormControl>
                 )}
               />
@@ -855,11 +993,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                 name="state"
                 control={control}
                 rules={{
-                  validate: value => {
-                    if (!value) return 'State is required';
-
-                    return true;
-                  }
+                  validate: value => (!value ? 'State is required' : true)
                 }}
                 render={({ field: { onChange, value, onBlur, ref } }) => (
                   <FormControl fullWidth>
@@ -891,9 +1025,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                         readOnly: true
                       }}
                     />
-                    {errors && errors?.state && (
-                      <FormHelperText error={true}>{errors.state.message as string}</FormHelperText>
-                    )}
+                    {errors?.state && <FormHelperText error={true}>{errors.state.message}</FormHelperText>}
                   </FormControl>
                 )}
               />
@@ -905,11 +1037,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                   name="city"
                   control={control}
                   rules={{
-                    validate: value => {
-                      if (!value) return 'City is required';
-
-                      return true;
-                    }
+                    validate: value => (!value ? 'City is required' : true)
                   }}
                   render={({ field: { onChange, value, onBlur, ref } }) => (
                     <FormControl fullWidth>
@@ -923,7 +1051,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                         value={value?.cityAscii ?? ''}
                         inputRef={ref}
                         onClick={() => setOpenCityList(true)}
-                        disabled={!getValues('country') && !getValues('state')}
+                        disabled={!getValues('country') || !getValues('state')}
                         InputProps={{
                           endAdornment: getValues('city') && (
                             <InputAdornment position="end">
@@ -941,9 +1069,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                           readOnly: true
                         }}
                       />
-                      {errors && errors?.city && (
-                        <FormHelperText error={true}>{errors.city.message as string}</FormHelperText>
-                      )}
+                      {errors?.city && <FormHelperText error={true}>{errors.city.message}</FormHelperText>}
                     </FormControl>
                   )}
                 />
@@ -955,26 +1081,11 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
     </div>
   );
 
-  const placeholderOfferNote = () => {
-    switch (option) {
-      case 1:
-        return 'A public note attached to your offer. For example: "Exchanging XEC to cash, only meeting in public places at daytime!"';
-      case 2:
-        return 'A public note attached to your offer. For example: "Bank transfer in Vietnam only. Available from 9AM to 5PM workdays."';
-      case 3:
-        return 'A public note attached to your offer. For example: "Bank transfer in Vietnam only. Available from 9AM to 5PM workdays."';
-      case 4:
-        return 'A public note attached to your offer. For example: "Accepting USDT on TRX and ETH network."';
-      case 5:
-        return 'A public note attached to your offer. For example: "Exchanging XEC for a logo design. Send your proposal along with a proposed price.';
-      default:
-        return 'Input offer note';
-    }
-  };
-
-  const stepContent2 = (
+  // Step 2: Offer details
+  const Step2Content = () => (
     <div className="container-step2">
       <Grid container spacing={2}>
+        {/* Headline */}
         <Grid item xs={12}>
           <Controller
             name="message"
@@ -996,15 +1107,19 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                   inputRef={ref}
                   id="message"
                   label="Headline"
-                  error={errors.message && true}
-                  helperText={errors.message && (errors.message?.message as string)}
+                  error={!!errors.message}
+                  helperText={errors.message?.message}
                   variant="standard"
                 />
               </FormControl>
             )}
           />
         </Grid>
-        {showMargin() && marginComponent}
+
+        {/* Margin */}
+        {showMarginComponent() && <MarginComponent />}
+
+        {/* Order limits */}
         <OrderLimitWrap>
           <Typography variant="body2" className="label">
             {`Order limit (${coinCurrency})`}
@@ -1041,8 +1156,8 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                     className="form-input"
                     id="min"
                     placeholder={`Min: e.g. ${formatNumber(fixAmount)} ${coinCurrency}`}
-                    error={errors.min && true}
-                    helperText={errors.min && (errors.min?.message as string)}
+                    error={!!errors.min}
+                    helperText={errors.min?.message}
                     variant="standard"
                   />
                 </FormControl>
@@ -1080,8 +1195,8 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                     id="max"
                     label=" "
                     placeholder={`Max: e.g. ${formatNumber(fixAmount)} ${coinCurrency}`}
-                    error={errors.max && true}
-                    helperText={errors.max && (errors.max?.message as string)}
+                    error={!!errors.max}
+                    helperText={errors.max?.message}
                     variant="standard"
                   />
                 </FormControl>
@@ -1089,6 +1204,8 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
             />
           </div>
         </OrderLimitWrap>
+
+        {/* Offer note */}
         <Grid item xs={12}>
           <Controller
             name="note"
@@ -1104,13 +1221,13 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                   onChange={onChange}
                   onBlur={() => {
                     dialogContentRef.current.style.paddingBottom = '20px';
-                    onBlur;
+                    onBlur();
                   }}
                   value={value}
                   name={name}
                   inputRef={ref}
                   id="note"
-                  placeholder={placeholderOfferNote()}
+                  placeholder={getPlaceholderOfferNote()}
                   variant="filled"
                   multiline
                   minRows={3}
@@ -1125,158 +1242,181 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
     </div>
   );
 
-  const stepContent3 = (
-    <div className="container-step3">
-      <Grid container spacing={2}>
-        <Grid item xs={12}>
-          <Typography fontStyle={'italic'} className="heading" variant="body1">
-            {isBuyOffer ? '*You are buying XEC' : '*You are selling XEC'}
-          </Typography>
-        </Grid>
-        <Grid item xs={12} className="offer-type-wrap" style={{ marginTop: '0' }}>
-          <RadioGroup
-            value={isHiddenOffer}
-            onChange={e => {
-              if (e.target.value === 'true') {
-                setIsHiddenOffer(true);
-              } else {
-                setIsHiddenOffer(false);
-              }
-            }}
-          >
-            <FormControlLabel
-              checked={isHiddenOffer === false}
-              value={false}
-              control={<Radio />}
-              label={`Listed: Your offer is listed on Marketplace and visible to everyone.`}
+  // Step 3: Review and confirmation
+  const Step3Content = () => {
+    const renderPricePreview = () => {
+      if (isEdit) {
+        return (
+          <Grid item xs={12} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span>Price: </span>
+            <Controller
+              name="priceCoinOthers"
+              control={control}
+              rules={{
+                required: {
+                  value: true,
+                  message: 'Price is required!'
+                }
+              }}
+              render={({ field: { onChange, onBlur, value, name, ref } }) => (
+                <FormControl style={{ width: '35%' }}>
+                  <NumericFormat
+                    allowLeadingZeros={false}
+                    allowNegative={false}
+                    thousandSeparator={true}
+                    decimalScale={8}
+                    customInput={TextField}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    value={value}
+                    name={name}
+                    inputRef={ref}
+                    className="form-input"
+                    id="priceCoinOthers"
+                    placeholder={`E.g. 1`}
+                    error={!!errors.priceCoinOthers}
+                    helperText={errors.priceCoinOthers?.message}
+                    variant="standard"
+                    InputProps={{
+                      endAdornment: 'USD'
+                    }}
+                  />
+                </FormControl>
+              )}
             />
-            <FormControlLabel
-              checked={isHiddenOffer === true}
-              value={true}
-              control={<Radio />}
-              label={`Unlisted: Your offer is not listed on Marketplace. Only you can see it.`}
-            />
-          </RadioGroup>
-        </Grid>
-
-        {option === PAYMENT_METHOD.CASH_IN_PERSON && (
+          </Grid>
+        );
+      } else {
+        return (
           <Grid item xs={12}>
             <Typography variant="body1">
-              <span className="prefix">Location: </span>
-              {offer?.location
-                ? [offer?.location?.cityAscii, offer?.location?.adminNameAscii, offer?.location?.country]
-                    .filter(Boolean)
-                    .join(', ')
-                : [getValues('city')?.cityAscii, getValues('city')?.adminNameAscii, getValues('city')?.country]
-                    .filter(Boolean)
-                    .join(', ')}
+              <span className="prefix">Price: </span> {getValues('priceCoinOthers')} USD
             </Typography>
           </Grid>
-        )}
-        <Grid item xs={12}>
-          <div className="payment-wrap">
-            <div className="payment-method">
-              <Typography>Payment method</Typography>
-              <Button variant="outlined" color="success">
-                <Typography>{paymentMethods[Number(option ?? '1') - 1]?.name}</Typography>
-              </Button>
+        );
+      }
+    };
+
+    return (
+      <div className="container-step3">
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <Typography fontStyle={'italic'} className="heading" variant="body1">
+              {isBuyOffer ? '*You are buying XEC' : '*You are selling XEC'}
+            </Typography>
+          </Grid>
+
+          {/* Offer visibility selection */}
+          {!isEdit && (
+            <Grid item xs={12} className="offer-type-wrap" style={{ marginTop: '0' }}>
+              <RadioGroup value={isHiddenOffer} onChange={e => setIsHiddenOffer(e.target.value === 'true')}>
+                <FormControlLabel
+                  checked={isHiddenOffer === false}
+                  value={false}
+                  control={<Radio />}
+                  label={`Listed: Your offer is listed on Marketplace and visible to everyone.`}
+                />
+                <FormControlLabel
+                  checked={isHiddenOffer === true}
+                  value={true}
+                  control={<Radio />}
+                  label={`Unlisted: Your offer is not listed on Marketplace. Only you can see it.`}
+                />
+              </RadioGroup>
+            </Grid>
+          )}
+
+          {/* Location preview */}
+          {option === PAYMENT_METHOD.CASH_IN_PERSON && (
+            <Grid item xs={12}>
+              <Typography variant="body1">
+                <span className="prefix">Location: </span>
+                {offer?.location
+                  ? [offer?.location?.cityAscii, offer?.location?.adminNameAscii, offer?.location?.country]
+                      .filter(Boolean)
+                      .join(', ')
+                  : [getValues('city')?.cityAscii, getValues('city')?.adminNameAscii, getValues('city')?.country]
+                      .filter(Boolean)
+                      .join(', ')}
+              </Typography>
+            </Grid>
+          )}
+
+          {/* Payment method and currency summary */}
+          <Grid item xs={12}>
+            <div className="payment-wrap">
+              <div className="payment-method">
+                <Typography>Payment method</Typography>
+                <Button variant="outlined" color="success">
+                  <Typography>{paymentMethods[Number(option ?? '1') - 1]?.name}</Typography>
+                </Button>
+              </div>
+              <div className="payment-currency">
+                <Typography>Payment currency</Typography>
+                <Button variant="outlined" color="warning">
+                  <Typography>{coinCurrency}</Typography>
+                </Button>
+              </div>
             </div>
-            <div className="payment-currency">
-              <Typography>Payment currency</Typography>
-              <Button variant="outlined" color="warning">
-                <Typography>{coinCurrency}</Typography>
-              </Button>
-            </div>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <Typography variant="body1">
-            <span className="prefix">Headline: </span> {getValues('message')}
-          </Typography>
-        </Grid>
-        {showMargin() && (
-          <Grid item xs={12}>
-            <Typography variant="body1">
-              <span className="prefix">Price: </span> {percentageValue}% on top of market price
-            </Typography>
           </Grid>
-        )}
-        {(getValues('min') || getValues('max')) && (
-          <Grid item xs={12}>
-            <Typography variant="body1">
-              <span className="prefix">Order limit ({coinCurrency}): </span> {getValues('min')} {coinCurrency} -{' '}
-              {getValues('max')} {coinCurrency}
-            </Typography>
-          </Grid>
-        )}
 
-        {getValues('note') && (
+          {/* Payment app if applicable */}
+          {getValues('paymentApp') && (
+            <Grid item xs={12}>
+              <Typography variant="body1">
+                <span className="prefix">Payment-App: </span> {getValues('paymentApp')}
+              </Typography>
+            </Grid>
+          )}
+
+          {/* Headline */}
           <Grid item xs={12}>
             <Typography variant="body1">
-              <span className="prefix">Offer note: </span> {getValues('note')}
+              <span className="prefix">Headline: </span> {getValues('message')}
             </Typography>
           </Grid>
-        )}
-      </Grid>
-    </div>
-  );
 
+          {/* Margin */}
+          {showMarginComponent() && (
+            <Grid item xs={12}>
+              <Typography variant="body1">
+                <span className="prefix">Price: </span> {percentageValue}% on top of market price
+              </Typography>
+            </Grid>
+          )}
+
+          {/* Order limits */}
+          {(getValues('min') || getValues('max')) && (
+            <Grid item xs={12}>
+              <Typography variant="body1">
+                <span className="prefix">Order limit ({coinCurrency}): </span> {getValues('min')} {coinCurrency} -{' '}
+                {getValues('max')} {coinCurrency}
+              </Typography>
+            </Grid>
+          )}
+
+          {/* Price for custom coins */}
+          {getValues('priceCoinOthers') !== null && renderPricePreview()}
+
+          {/* Offer note */}
+          {getValues('note') && (
+            <Grid item xs={12}>
+              <Typography variant="body1">
+                <span className="prefix">Offer note: </span> {getValues('note')}
+              </Typography>
+            </Grid>
+          )}
+        </Grid>
+      </div>
+    );
+  };
+
+  // Step mapping
   const stepContents = {
-    stepContent1: stepContent1,
-    stepContent2: stepContent2,
-    stepContent3: stepContent3
+    stepContent1: <Step1Content />,
+    stepContent2: <Step2Content />,
+    stepContent3: <Step3Content />
   };
-
-  const getLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        position => {
-          const latitude = position.coords.latitude;
-          const longitude = position.coords.longitude;
-
-          (async () => {
-            const locations = await countryApi.getCoordinate(latitude.toString(), longitude.toString());
-
-            if (locations.length > 0) {
-              const countryDetected = countries.find(item => item.iso2 === locations[0].iso2);
-              setValue('country', countryDetected);
-              const states = await countryApi.getStates(countryDetected?.iso2 ?? '');
-              setListStates(states);
-
-              // set currency
-              const currencyDetected = LIST_CURRENCIES_USED.find(item => item.country === countryDetected?.iso2);
-              if (currencyDetected) setValue('currency', `${currencyDetected?.code}:${currencyDetected?.fixAmount}`);
-            }
-          })();
-        },
-        error => {
-          console.error('Geolocation error:', error);
-        },
-        {
-          enableHighAccuracy: true
-        }
-      );
-    } else {
-      console.error('Geolocation is not supported by this browser.');
-    }
-  };
-
-  useEffect(() => {
-    if (isEdit && !offer?.locationId) return;
-    getLocation();
-  }, []);
-
-  useEffect(() => {
-    const currency = currencyValue?.split(':')[0];
-    const coin = coinValue?.split(':')[0];
-
-    setCoinCurrency(currency ?? (coin?.includes(COIN_OTHERS) ? 'XEC' : coin) ?? 'XEC');
-  }, [currencyValue, coinValue]);
-
-  useEffect(() => {
-    dispatch(getPaymentMethods());
-    dispatch(getCountries());
-  }, []);
 
   return (
     <StyledDialog
@@ -1291,7 +1431,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       <DialogTitle textAlign={'center'}>
         <b>{isEdit ? 'Edit offer' : 'Create a new offer'}</b>
       </DialogTitle>
-      <IconButton className="back-btn" onClick={() => handleCloseModal()}>
+      <IconButton className="back-btn" onClick={handleCloseModal}>
         <Close />
       </IconButton>
       <DialogContent ref={dialogContentRef}>{stepContents[`stepContent${activeStep}`]}</DialogContent>
@@ -1300,7 +1440,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
           <Button
             className="button-back"
             variant="contained"
-            onClick={() => handleBack()}
+            onClick={handleBack}
             disabled={isEdit ? activeStep === 2 : activeStep === 1}
           >
             Back
@@ -1309,7 +1449,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
             className="button-create"
             variant="contained"
             color="success"
-            onClick={activeStep !== 3 ? handleSubmit(handleNext) : () => handleCreateUpdate()}
+            onClick={activeStep !== 3 ? handleSubmit(handleNext) : handleCreateUpdate}
             disabled={loading}
           >
             {activeStep === 1 && 'Next'}
@@ -1319,30 +1459,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
         </div>
       </DialogActions>
 
-      <Portal>
-        <CustomToast
-          isOpen={success}
-          handleClose={() => {
-            reset();
-            setLoading(false);
-            setActiveStep(1);
-            setSuccess(false);
-            handleCloseModal();
-          }}
-          content={`Offer ${isEdit ? 'updated' : 'created'} successfully!`}
-          type="success"
-          autoHideDuration={3000}
-        />
-        <CustomToast
-          isOpen={error}
-          handleClose={() => {
-            setError(false);
-          }}
-          content={`${isEdit ? 'Update' : 'Create'} offer failed!`}
-          type="error"
-          autoHideDuration={3000}
-        />
-      </Portal>
+      {/* Location selection modals */}
       <FilterListModal
         isOpen={openCountryList}
         onDismissModal={value => setOpenCountryList(value)}
@@ -1379,20 +1496,18 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
         }}
       />
 
+      {/* Anonymous offer confirmation */}
       <ConfirmOfferAnonymousModal
         isOpen={openConfirmAnonymousOffer}
         isLoading={loading}
         onDismissModal={value => setOpenConfirmAnonymousOffer(value)}
         createOffer={async (usePublicLocalUserName: boolean) => {
-          // update setting and create offer
-
           const updateSettingCommand: UpdateSettingCommand = {
             accountId: selectedAccountId,
-            usePublicLocalUserName: usePublicLocalUserName
+            usePublicLocalUserName
           };
 
           if (selectedAccountId) {
-            //setting on server
             const updatedSetting = await settingApi.updateSetting(updateSettingCommand);
             setSetting(updatedSetting);
           }

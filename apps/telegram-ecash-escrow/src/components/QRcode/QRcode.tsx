@@ -1,12 +1,12 @@
 'use client';
 
+import { showToast, useSliceDispatch as useLixiSliceDispatch } from '@bcpros/redux-store';
 import styled from '@emotion/styled';
 import { CopyAllOutlined } from '@mui/icons-material';
-import { Button, Portal, Stack, Typography } from '@mui/material';
+import { Button, Stack, Typography } from '@mui/material';
 import RawQRCode from 'qrcode.react';
-import React, { useState } from 'react';
+import React from 'react';
 import CopyToClipboard from 'react-copy-to-clipboard';
-import CustomToast from '../Toast/CustomToast';
 
 export const StyledRawQRCode = styled(RawQRCode)`
   cursor: pointer;
@@ -20,7 +20,7 @@ interface QRCodeProps {
 }
 
 const QRCode: React.FC<QRCodeProps> = ({ address, amount, width }) => {
-  const [copy, setCopy] = useState(false);
+  const dispatch = useLixiSliceDispatch();
   const formatAddress = (address: string) => {
     if (!address) return;
 
@@ -39,19 +39,20 @@ const QRCode: React.FC<QRCodeProps> = ({ address, amount, width }) => {
       />
       <Typography variant="body1" align="center">
         {formatAddress(address)}
-        <CopyToClipboard text={address} onCopy={() => setCopy(true)}>
+        <CopyToClipboard
+          text={address}
+          onCopy={() => {
+            dispatch(
+              showToast('info', {
+                message: 'info',
+                description: 'Address copied to clipboard'
+              })
+            );
+          }}
+        >
           <Button className="no-border-btn" endIcon={<CopyAllOutlined />} />
         </CopyToClipboard>
       </Typography>
-
-      <Portal>
-        <CustomToast
-          isOpen={copy}
-          content="Address copied to clipboard"
-          handleClose={() => setCopy(false)}
-          type="success"
-        />
-      </Portal>
     </Stack>
   );
 };

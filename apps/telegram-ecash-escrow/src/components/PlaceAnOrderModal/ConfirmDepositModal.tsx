@@ -2,6 +2,7 @@
 
 import { styled } from '@mui/material/styles';
 
+import { securityDepositPercentage } from '@/src/store/constants';
 import { formatNumber } from '@/src/store/util';
 import { COIN } from '@bcpros/lixi-models';
 import { ChevronLeft } from '@mui/icons-material';
@@ -21,6 +22,10 @@ import React from 'react';
 interface ConfirmDepositModalProps {
   isOpen: boolean;
   depositSecurity: number;
+  escrowCalculations: {
+    feeBuyerDepositFee: number;
+    totalAmount: number;
+  };
   isLoading: boolean;
   onDismissModal?: (value: boolean) => void;
   depositFee?: (isDeposit: boolean) => void;
@@ -105,7 +110,13 @@ const ConfirmDepositModal: React.FC<ConfirmDepositModalProps> = props => {
             returned if there is no dispute.
           </Typography>
           <Typography variant="body1" sx={{ marginTop: '10px', fontWeight: 'bold' }}>
-            Security deposit (1%): {formatNumber(props.depositSecurity)} {COIN.XEC}
+            Security deposit ({securityDepositPercentage}%): {formatNumber(props.depositSecurity)} {COIN.XEC}
+          </Typography>
+          <Typography variant="body1" sx={{ marginTop: '5px', fontWeight: 'bold' }}>
+            Withdraw fee: {formatNumber(props.escrowCalculations.feeBuyerDepositFee)} {COIN.XEC}
+          </Typography>
+          <Typography variant="body1" sx={{ marginTop: '5px', fontWeight: 'bold' }}>
+            Total: {formatNumber(props.escrowCalculations.totalAmount)} {COIN.XEC}
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -131,7 +142,7 @@ const ConfirmDepositModal: React.FC<ConfirmDepositModalProps> = props => {
             disabled={props.isLoading}
             autoFocus
           >
-            Deposit {formatNumber(props.depositSecurity)} {COIN.XEC}
+            Deposit {formatNumber(props.escrowCalculations.totalAmount)} {COIN.XEC}
           </Button>
         </DialogActions>
       </StyledDialog>

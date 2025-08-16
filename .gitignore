@@ -133,3 +133,14 @@ packages/lixi-bot-db/prisma/dev.db
 packages/lixi-bot-db/prisma/dev.db-journal
 
 bot
+
+# Playwright
+
+# Authentication files
+data-auth/
+seeds.json
+
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/

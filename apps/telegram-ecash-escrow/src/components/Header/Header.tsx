@@ -7,19 +7,20 @@ import {
   getSelectedAccount,
   getSelectedWalletPath,
   parseCashAddressToPrefix,
+  showToast,
+  useSliceDispatch as useLixiSliceDispatch,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
 import { CopyAllOutlined, SettingsOutlined, Wallet } from '@mui/icons-material';
 import AccountCircleRoundedIcon from '@mui/icons-material/AccountCircleRounded';
 import Person2Icon from '@mui/icons-material/Person2';
-import { Button, IconButton, Popover, Portal, Typography } from '@mui/material';
+import { Button, IconButton, Popover, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import React, { useContext, useState } from 'react';
 import CopyToClipboard from 'react-copy-to-clipboard';
 import useAuthorization from '../Auth/use-authorization.hooks';
-import CustomToast from '../Toast/CustomToast';
 
 const StyledHeader = styled('div')(({ theme }) => ({
   display: 'flex',
@@ -82,6 +83,7 @@ const StyledAvatar = styled('div')(({ theme }) => ({
 }));
 
 export default function Header() {
+  const dispatch = useLixiSliceDispatch();
   const router = useRouter();
   const { data, status } = useSession();
   const askAuthorization = useAuthorization();
@@ -96,7 +98,6 @@ export default function Header() {
   );
 
   const [address, setAddress] = useState(parseCashAddressToPrefix(COIN.XEC, selectedWalletPath?.cashAddress));
-  const [copy, setCopy] = useState(false);
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
   const open = Boolean(anchorEl);
 
@@ -118,13 +119,30 @@ export default function Header() {
 
   const contentMoreAction = (
     <PopoverStyled>
+      <Typography
+        onClick={() => router.push(`/profile?address=${selectedAccount?.address}`)}
+        className="heading-profile"
+      >
+        <span>Profile</span>
+        <Button className="no-border-btn" endIcon={<Person2Icon />} />
+      </Typography>
       <Typography onClick={() => router.push('/wallet')} className="heading-profile">
         <span>Wallet</span>
         <Button className="no-border-btn" endIcon={<Wallet />} />
       </Typography>
       <Typography variant="body1" align="center" className="item-address">
         <span className="address-amount"> {formatAddress(address)}</span>
-        <CopyToClipboard text={address} onCopy={() => setCopy(true)}>
+        <CopyToClipboard
+          text={address}
+          onCopy={() => {
+            dispatch(
+              showToast('info', {
+                message: 'info',
+                description: 'Address copied to clipboard'
+              })
+            );
+          }}
+        >
           <Button className="no-border-btn" endIcon={<CopyAllOutlined />} />
         </CopyToClipboard>
       </Typography>
@@ -136,13 +154,6 @@ export default function Header() {
       <Typography onClick={() => router.push('/settings')} className="heading-profile">
         <span>Settings</span>
         <Button className="no-border-btn" endIcon={<SettingsOutlined />} />
-      </Typography>
-      <Typography
-        onClick={() => router.push(`/profile?address=${selectedAccount?.address}`)}
-        className="heading-profile"
-      >
-        <span>Profile</span>
-        <Button className="no-border-btn" endIcon={<Person2Icon />} />
       </Typography>
     </PopoverStyled>
   );
@@ -184,14 +195,6 @@ export default function Header() {
           {contentMoreAction}
         </Popover>
       </div>
-      <Portal>
-        <CustomToast
-          isOpen={copy}
-          content="Address copied to clipboard"
-          handleClose={() => setCopy(false)}
-          type="success"
-        />
-      </Portal>
     </StyledHeader>
   );
 }

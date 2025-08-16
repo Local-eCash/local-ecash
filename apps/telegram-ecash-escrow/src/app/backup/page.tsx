@@ -1,5 +1,4 @@
 'use client';
-import CustomToast from '@/src/components/Toast/CustomToast';
 import MobileLayout from '@/src/components/layout/MobileLayout';
 import { SettingContext } from '@/src/store/context/settingProvider';
 import { UpdateSettingCommand } from '@bcpros/lixi-models';
@@ -7,6 +6,7 @@ import {
   getSelectedAccountId,
   getWalletMnemonic,
   settingApi,
+  showToast,
   updateSeedBackupTime,
   useSliceDispatch as useLixiSliceDispatch,
   useSliceSelector as useLixiSliceSelector
@@ -92,7 +92,6 @@ export default function Backup() {
   const [countWord, setCountWord] = useState(0);
   const [libWord, setLibWord] = useState<string[]>([]);
   const [randomListFinal, setRandomListFinal] = useState<string[]>([]);
-  const [finished, setFinished] = useState(false);
   const [disableButton, setDisableButton] = useState(false);
 
   const router = useRouter();
@@ -116,7 +115,12 @@ export default function Backup() {
       console.log('err when update setting: ', err);
     }
 
-    setFinished(true);
+    dispatch(
+      showToast('success', {
+        message: 'success',
+        description: 'Congratulation!! Please store these seed in a secure place'
+      })
+    );
     setDisableButton(true);
     //router after 2s
     setTimeout(() => {
@@ -272,12 +276,6 @@ export default function Backup() {
             Back
           </Button>
         )}
-        <CustomToast
-          isOpen={finished}
-          content="Congratulation! Please store these seed in a secure place"
-          handleClose={() => setFinished(false)}
-          type="success"
-        />
       </ContainerBackupGame>
     </MobileLayout>
   );

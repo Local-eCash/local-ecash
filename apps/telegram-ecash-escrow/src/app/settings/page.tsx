@@ -1,6 +1,5 @@
 'use client';
 import ConfirmSignoutModal from '@/src/components/Settings/ConfirmSignoutModal';
-import CustomToast from '@/src/components/Toast/CustomToast';
 import MobileLayout from '@/src/components/layout/MobileLayout';
 import { SettingContext } from '@/src/store/context/settingProvider';
 import { UpdateSettingCommand } from '@bcpros/lixi-models';
@@ -15,6 +14,7 @@ import {
   setCurrentThemes,
   setIsSystemThemes,
   settingApi,
+  showToast,
   useSliceDispatch as useLixiSliceDispatch,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
@@ -93,8 +93,6 @@ export default function Setting() {
     { skip: !selectedWallet?.xAddress }
   );
 
-  const [openToastCopySuccess, setOpenToastCopySuccess] = useState(false);
-  const [openToastChangeIdentity, setOpenToastChangeIdentity] = useState(false);
   const [openSignoutModal, setOpenSignoutModal] = useState(false);
 
   const themeOptions = [
@@ -129,7 +127,12 @@ export default function Setting() {
   ];
 
   const handleOnCopy = () => {
-    setOpenToastCopySuccess(true);
+    dispatch(
+      showToast('info', {
+        message: 'info',
+        description: 'Copy to clipboard'
+      })
+    );
   };
 
   const handleSignOut = () => {
@@ -156,7 +159,12 @@ export default function Setting() {
       //setting on server
       const updatedSetting = await settingApi.updateSetting(updateSettingCommand);
       setSetting(updatedSetting);
-      setOpenToastChangeIdentity(true);
+      dispatch(
+        showToast('success', {
+          message: 'success',
+          description: 'Identity changed successfully!'
+        })
+      );
     }
   };
 
@@ -285,35 +293,7 @@ export default function Setting() {
               </AccordionDetails>
             </Accordion>
           </div>
-
-          {/*TODO: delete account*/}
-          {/* <div className="setting-item">
-          <p className="title">Delete account</p>
-          <Alert icon={<CheckCircleOutline className="ico-alert" fontSize="inherit" />} severity="error">
-            Delete your account in platform. You can import it later by seed phrase have been stored.
-          </Alert>
-          <Accordion className="collapse-backup-seed">
-            <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel1a-content" id="panel1a-header">
-              <p>Click to delete account</p>
-            </AccordionSummary>
-            <AccordionDetails>
-              <Button onClick={handleDeleteAccount}>Delete</Button>
-            </AccordionDetails>
-          </Accordion>
-        </div> */}
         </div>
-        <CustomToast
-          isOpen={openToastCopySuccess}
-          handleClose={() => setOpenToastCopySuccess(false)}
-          content="Copy to clipboard"
-          type="info"
-        />
-        <CustomToast
-          isOpen={openToastChangeIdentity}
-          handleClose={() => setOpenToastChangeIdentity(false)}
-          content="Identity changed successfully!"
-          type="success"
-        />
       </ContainerSetting>
       <ConfirmSignoutModal
         isOpen={openSignoutModal}

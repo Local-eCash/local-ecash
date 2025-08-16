@@ -2,8 +2,8 @@
 
 import { COIN_OTHERS, COIN_USD_STABLECOIN, COIN_USD_STABLECOIN_TICKER } from '@/src/store/constants';
 import { SettingContext } from '@/src/store/context/settingProvider';
-import { getMinusOrPlusNumberPrice, getOrderLimitText } from '@/src/store/util';
-import { PAYMENT_METHOD } from '@bcpros/lixi-models';
+import { convertXECAndCurrency, formatAmountFor1MXEC, getOrderLimitText, showPriceInfo } from '@/src/store/util';
+import { COIN, getTickerText } from '@bcpros/lixi-models';
 import {
   OfferStatus,
   OfferType,
@@ -26,7 +26,7 @@ import { styled } from '@mui/material/styles';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
 import useAuthorization from '../Auth/use-authorization.hooks';
 import { BackupModalProps } from '../Common/BackupModal';
 
@@ -142,7 +142,7 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
     { skip: !selectedWalletPath }
   );
 
-  const [coinCurrency, setCoinCurrency] = useState('XEC');
+  const [coinCurrency, setCoinCurrency] = useState<string>(COIN.XEC);
   const [rateData, setRateData] = useState(null);
   const [amountPer1MXEC, setAmountPer1MXEC] = useState('');
 
@@ -205,43 +205,34 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
 
   const convertXECToAmount = async () => {
     if (!rateData) return 0;
-    let amountXEC = 1000000;
-    let amountCoinOrCurrency = 0;
-    //if payment is crypto, we convert from coin => USD
-    if (post?.postOffer?.coinPayment && post?.postOffer?.coinPayment !== COIN_USD_STABLECOIN_TICKER) {
-      const coinPayment = post.postOffer.coinPayment.toLowerCase();
-      const rateArrayCoin = rateData.find(item => item.coin === coinPayment);
-      const rateArrayXec = rateData.find(item => item.coin === 'xec');
-      const latestRateCoin = rateArrayCoin?.rate;
-      const latestRateXec = rateArrayXec?.rate;
 
-      amountCoinOrCurrency = (latestRateXec * amountXEC) / latestRateCoin; //1M XEC (USD) / rateCoin (USD)
-    } else {
-      //convert from currency to XEC
-      const rateArrayXec = rateData.find(item => item.coin === 'xec');
-      const latestRateXec = rateArrayXec?.rate;
-      amountCoinOrCurrency = amountXEC * latestRateXec;
-    }
-
-    const compactNumberFormatter = new Intl.NumberFormat('en-GB', {
-      notation: 'compact',
-      compactDisplay: 'short'
+    const { amountCoinOrCurrency } = convertXECAndCurrency({
+      rateData: rateData,
+      paymentInfo: post?.postOffer,
+      inputAmount: 0
     });
 
-    const amountWithPercentage = isBuyOffer
-      ? amountCoinOrCurrency * (1 - post?.postOffer?.marginPercentage / 100)
-      : amountCoinOrCurrency * (1 + post?.postOffer?.marginPercentage / 100);
-    const amountFormatted = compactNumberFormatter.format(amountWithPercentage);
-    setAmountPer1MXEC(amountFormatted);
+    setAmountPer1MXEC(formatAmountFor1MXEC(amountCoinOrCurrency, post?.postOffer?.marginPercentage, coinCurrency));
   };
+
+  const showPrice = useMemo(() => {
+    return showPriceInfo(
+      offerData?.paymentMethods[0]?.paymentMethod?.id,
+      post?.postOffer?.coinPayment,
+      post?.postOffer?.priceCoinOthers
+    );
+  }, [post?.postOffer]);
 
   useEffect(() => {
     setCoinCurrency(
-      post?.postOffer?.localCurrency ??
-        (post?.postOffer?.coinPayment?.includes(COIN_OTHERS) ? 'XEC' : post?.postOffer?.coinPayment) ??
-        'XEC'
+      getTickerText(
+        post?.postOffer?.localCurrency,
+        post?.postOffer?.coinPayment,
+        post?.postOffer?.coinOthers,
+        post?.postOffer?.priceCoinOthers
+      )
     );
-  }, []);
+  }, [post?.postOffer]);
 
   //convert to XEC
   useEffect(() => {
@@ -354,20 +345,15 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
         <CardContent>{OfferItemPaymentMethod}</CardContent>
 
         <Typography component={'div'} className="action-section">
-          {offerData?.paymentMethods[0]?.paymentMethod?.id !== PAYMENT_METHOD.GOODS_SERVICES &&
-          offerData?.coinPayment !== COIN_OTHERS ? (
+          {showPrice ? (
             <Typography variant="body2">
               <span className="prefix">Price: </span>
-              {coinCurrency !== 'XEC' && (
+              {coinCurrency !== COIN.XEC && (
                 <span>
-                  ~{' '}
-                  <span style={{ fontWeight: 'bold' }}>
-                    {amountPer1MXEC} {coinCurrency} / 1M XEC
-                  </span>
+                  ~ <span style={{ fontWeight: 'bold' }}>{amountPer1MXEC}</span>
                 </span>
               )}{' '}
-              ( Market price {getMinusOrPlusNumberPrice(isBuyOffer)}
-              {post?.postOffer?.marginPercentage ?? 0}% )
+              ( Market price +{post?.postOffer?.marginPercentage ?? 0}% )
             </Typography>
           ) : (
             <Typography variant="body2">

@@ -8,10 +8,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  FormControlLabel,
   IconButton,
-  Radio,
-  RadioGroup,
   Slide,
   Typography
 } from '@mui/material';
@@ -86,7 +83,7 @@ interface ConfirmReleaseModalProps {
   disputeFee: number;
   onDismissModal?: (value: boolean) => void;
   onConfirmClick?: () => void;
-  returnAction: (value: boolean) => void;
+  returnAction: () => void;
 }
 
 const Transition = React.forwardRef(function Transition(
@@ -99,23 +96,12 @@ const Transition = React.forwardRef(function Transition(
 });
 
 const ConfirmReleaseModal: React.FC<ConfirmReleaseModalProps> = (props: ConfirmReleaseModalProps) => {
-  const [optionDonate, setOptionDonate] = useState(null);
   const [verified, setVerified] = useState(false);
-  const OptionDonate = [
-    {
-      label: '💼 Claim my security deposit back to my wallet',
-      value: false
-    },
-    {
-      label: `💙 Donate my security deposit to Local eCash`,
-      value: true
-    }
-  ];
 
   const { handleSubmit } = useForm();
 
   const handleReleaseConfirm = data => {
-    props.returnAction(optionDonate);
+    props.returnAction();
     props.onDismissModal!(false);
   };
 
@@ -135,34 +121,6 @@ const ConfirmReleaseModal: React.FC<ConfirmReleaseModalProps> = (props: ConfirmR
                 goods & services.
               </Typography>
             </div>
-            {verified && (
-              <React.Fragment>
-                <Typography sx={{ fontSize: '16px', marginTop: '10px' }}>
-                  Your order will be completed without a dispute. You will now be able to claim back your security
-                  deposit ({props.disputeFee} XEC).
-                </Typography>
-                <RadioGroup style={{ marginTop: '10px' }} sx={{ gap: '8px' }}>
-                  {OptionDonate.map(item => {
-                    return (
-                      <FormControlLabel
-                        onClick={() => {
-                          setOptionDonate(item.value);
-                        }}
-                        key={item.label}
-                        value={item.value}
-                        control={<Radio />}
-                        label={item.label}
-                        checked={item.value === optionDonate}
-                      />
-                    );
-                  })}
-                </RadioGroup>
-                <Typography sx={{ fontSize: '12px', marginTop: '10px' }} fontStyle="italic">
-                  Optional: This service has been brought to you free of charge. We would appreciate a donation to
-                  continue maintaining it.
-                </Typography>
-              </React.Fragment>
-            )}
           </ActionStatusRelease>
         </DialogContent>
         {verified && (
@@ -172,7 +130,6 @@ const ConfirmReleaseModal: React.FC<ConfirmReleaseModalProps> = (props: ConfirmR
               style={{ backgroundColor: '#66bb6a' }}
               variant="contained"
               onClick={handleSubmit(handleReleaseConfirm)}
-              disabled={optionDonate === null}
               autoFocus
               fullWidth
             >

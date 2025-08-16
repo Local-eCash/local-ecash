@@ -8,6 +8,8 @@ import {
   getSelectedWalletPath,
   isValidCoinAddress,
   parseCashAddressToPrefix,
+  showToast,
+  useSliceDispatch as useLixiSliceDispatch,
   useSliceSelector as useLixiSliceSelector
 } from '@bcpros/redux-store';
 import styled from '@emotion/styled';
@@ -18,7 +20,6 @@ import cashaddr from 'ecashaddrjs';
 import React, { useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import ScanQRcode from '../QRcode/ScanQRcode';
-import CustomToast from '../Toast/CustomToast';
 
 const WrapComponent = styled.div`
   .address-input {
@@ -56,6 +57,7 @@ interface SendComponentProps {
 }
 
 const SendComponent: React.FC<SendComponentProps> = props => {
+  const dispatch = useLixiSliceDispatch();
   const { totalValidAmount, totalValidUtxos } = props;
 
   const selectedWallet = useLixiSliceSelector(getSelectedWalletPath);
@@ -88,8 +90,6 @@ const SendComponent: React.FC<SendComponentProps> = props => {
   );
 
   const [openScan, setOpenScan] = useState(false);
-  const [openToastSendSuccess, setOpenToastSendSuccess] = useState(false);
-  const [linkSend, setLinkSend] = useState('');
 
   const handleSendCoin = async data => {
     const { address, amount } = data;
@@ -113,8 +113,17 @@ const SendComponent: React.FC<SendComponentProps> = props => {
       const txid = (await chronik.broadcastTx(txBuild)).txid;
       const link = `${coinInfo[COIN.XEC].blockExplorerUrl}/tx/${txid}`;
       if (link) {
-        setLinkSend(link);
-        setOpenToastSendSuccess(true);
+        dispatch(
+          showToast(
+            'success',
+            {
+              message: 'success',
+              description: 'Transaction successful. Click to view in block explorer.'
+            },
+            true,
+            link
+          )
+        );
         reset();
       }
     } catch (err) {
@@ -233,15 +242,6 @@ const SendComponent: React.FC<SendComponentProps> = props => {
         setAddress={value => {
           setValue('address', value);
         }}
-      />
-
-      <CustomToast
-        isOpen={openToastSendSuccess}
-        handleClose={() => setOpenToastSendSuccess(false)}
-        content="Transaction successful. Click to view in block explorer."
-        isLink={true}
-        linkDescription={linkSend}
-        type="success"
       />
     </WrapComponent>
   );

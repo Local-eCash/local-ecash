@@ -1,11 +1,13 @@
 'use client';
+import { EscrowAddressLink } from '@/src/components/DetailInfo/OrderDetailInfo';
 import MobileLayout from '@/src/components/layout/MobileLayout';
 import { TabPanel } from '@/src/components/Tab/Tab';
 import TickerHeader from '@/src/components/TickerHeader/TickerHeader';
-import CustomToast from '@/src/components/Toast/CustomToast';
 import { TabType } from '@/src/store/constants';
-import { SignOracleSignatory } from '@/src/store/escrow';
+import { buildArbModTakeFeeTx } from '@/src/store/escrow';
 import { ACTION } from '@/src/store/escrow/constant';
+import { ArbTakeFeeSignatory, SignOracleSignatory } from '@/src/store/escrow/signatory';
+import { hexEncode, hexToUint8Array } from '@/src/store/util';
 import { COIN, coinInfo } from '@bcpros/lixi-models';
 import {
   disputeApi,
@@ -14,6 +16,7 @@ import {
   escrowOrderApi,
   EscrowOrderStatus,
   getSelectedWalletPath,
+  showToast,
   SocketContext,
   useSliceDispatch as useLixiSliceDispatch,
   useSliceSelector as useLixiSliceSelector,
@@ -31,7 +34,6 @@ import {
   DialogTitle,
   IconButton,
   Slide,
-  Stack,
   Tab,
   Tabs,
   TextField,
@@ -41,12 +43,12 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { TransitionProps } from '@mui/material/transitions';
-import { fromHex, shaRmd160 } from 'ecash-lib';
+import { fromHex, Script, shaRmd160 } from 'ecash-lib';
 import _ from 'lodash';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
 import SwipeableViews from 'react-swipeable-views';
 
 const DisputeDetailInfoWrap = styled('div')(({ theme }) => ({
@@ -217,7 +219,6 @@ export default function DisputeDetail() {
     { id: disputeQueryData?.dispute.escrowOrder.id },
     { skip: !disputeQueryData?.dispute.escrowOrder.id }
   );
-  const { escrowOrder } = { ...escrowOrderQueryData };
   const [updateOrderTrigger] = useUpdateEscrowOrderStatusMutation();
   const [updateEscrowOrderSignatoryTrigger] = useUpdateEscrowOrderSignatoryMutation();
   const [updateDisputeTrigger] = useUpdateDisputeMutation();
@@ -225,8 +226,8 @@ export default function DisputeDetail() {
 
   useEffect(() => {
     if (
-      escrowOrder?.escrowOrderStatus !== EscrowOrderStatus.Complete &&
-      escrowOrder?.escrowOrderStatus !== EscrowOrderStatus.Cancel
+      escrowOrderQueryData?.escrowOrder?.escrowOrderStatus !== EscrowOrderStatus.Complete &&
+      escrowOrderQueryData?.escrowOrder?.escrowOrderStatus !== EscrowOrderStatus.Cancel
     ) {
       // Handle the beforeunload event
       const handleBeforeUnload = e => {
@@ -248,7 +249,7 @@ export default function DisputeDetail() {
         window.removeEventListener('beforeunload', handleBeforeUnload);
       };
     }
-  }, [escrowOrder?.escrowOrderStatus]);
+  }, [escrowOrderQueryData?.escrowOrder?.escrowOrderStatus]);
 
   const handleChange = (event: React.SyntheticEvent, newValue: number) => {
     setValueTab(newValue);
@@ -258,133 +259,178 @@ export default function DisputeDetail() {
     setValueTab(index);
   };
 
-  const handleArbModRelease = async () => {
+  const showError = () => {
+    dispatch(
+      showToast('error', {
+        message: 'Error',
+        description: "Order's status update failed."
+      })
+    );
+  };
+
+  // Common helper function for both release and return operations
+  const handleDisputeResolution = async (isRelease: boolean) => {
     setLoading(true);
 
-    const nonce = escrowOrder.nonce as string;
-    const isArbi = selectedWalletPath?.hash160 === escrowOrder.arbitratorAccount.hash160;
-
-    const arbiModSk = fromHex(selectedWalletPath?.privateKey);
-    const arbiModPk = fromHex(selectedWalletPath?.publicKey);
-    const arbiModPkh = shaRmd160(arbiModPk);
-
     try {
-      if (isArbi) {
-        const arbiSignatory = SignOracleSignatory(arbiModSk, ACTION.ARBI_RELEASE, nonce);
+      const escrowOrder = escrowOrderQueryData?.escrowOrder;
+      const wallet = selectedWalletPath;
 
-        await updateEscrowOrderSignatoryTrigger({
-          input: {
-            orderId: escrowOrder.id!,
-            action: EscrowOrderAction.Release,
-            signatory: Buffer.from(arbiSignatory).toString('hex'),
-            signatoryOwnerHash160: Buffer.from(arbiModPkh).toString('hex')
-          }
-        }).unwrap();
-      } else {
-        const modSignatory = SignOracleSignatory(arbiModSk, ACTION.MOD_RELEASE, nonce);
-
-        await updateEscrowOrderSignatoryTrigger({
-          input: {
-            orderId: escrowOrder.id!,
-            action: EscrowOrderAction.Release,
-            signatory: Buffer.from(modSignatory).toString('hex'),
-            signatoryOwnerHash160: Buffer.from(arbiModPkh).toString('hex')
-          }
-        }).unwrap();
+      if (!escrowOrder || !wallet) {
+        throw new Error('Missing required data');
       }
 
-      await updateDisputeTrigger({ input: { id: id!, escrowOrderId: escrowOrder.id!, status: DisputeStatus.Resolved } })
-        .unwrap()
-        .then(() => setReleaseByArb(true));
-    } catch (e) {
-      console.log(e);
-      setError(true);
-    }
+      // Extract wallet data once
+      const walletData = {
+        sk: fromHex(wallet.privateKey),
+        pk: fromHex(wallet.publicKey),
+        pkh: shaRmd160(fromHex(wallet.publicKey))
+      };
 
-    setOpenReleaseModal(false);
-    setLoading(false);
+      const isArbi = wallet.hash160 === escrowOrder.arbitratorAccount.hash160;
+      const arbModP2pkh = Script.p2pkh(walletData.pkh);
+
+      // Different scripts based on operation type
+      const escrowFeeScript = new Script(
+        hexToUint8Array(isRelease ? escrowOrder.escrowFeeScript : escrowOrder.escrowBuyerDepositFeeScript)
+      );
+
+      // Handle fee collection
+      // If release, arb take fee of seller, else if return arb take fee of buyer (if have)
+      const isReturnAndHaveBuyerDeposit = !isRelease && Boolean(escrowOrder.buyerDepositTx);
+      if (isRelease || isReturnAndHaveBuyerDeposit) {
+        const isBuyerDeposit = isReturnAndHaveBuyerDeposit;
+        const arbTakeFeeSig = ArbTakeFeeSignatory(walletData.sk, walletData.pk);
+        const txBuild = buildArbModTakeFeeTx(
+          escrowOrder.escrowTxids[0],
+          calDisputeFee,
+          escrowFeeScript,
+          arbTakeFeeSig,
+          arbModP2pkh,
+          isBuyerDeposit
+        );
+
+        const { txid } = await chronik.broadcastTx(txBuild);
+
+        if (txid) {
+          const link = `${coinInfo[COIN.XEC].blockExplorerUrl}/tx/${txid}`;
+          const description = isRelease
+            ? 'Order was released to the buyer successfully, and the fee has been collected!'
+            : 'Order was returned to the seller successfully, and the fee has been collected!';
+
+          dispatch(
+            showToast(
+              'success',
+              {
+                message: 'success',
+                description
+              },
+              true,
+              link
+            )
+          );
+        }
+      }
+
+      // Update signatory based on role and operation
+      const action = isArbi
+        ? isRelease
+          ? ACTION.ARBI_RELEASE
+          : ACTION.ARBI_RETURN
+        : isRelease
+          ? ACTION.MOD_RELEASE
+          : ACTION.MOD_RETURN;
+
+      const signatory = SignOracleSignatory(walletData.sk, action, escrowOrder.nonce);
+      const arbModHash = hexEncode(walletData.pkh);
+
+      await updateEscrowOrderSignatoryTrigger({
+        input: {
+          orderId: escrowOrder.id,
+          action: isRelease ? EscrowOrderAction.Release : EscrowOrderAction.Return,
+          signatory: hexEncode(signatory),
+          signatoryOwnerHash160: arbModHash,
+          // signatoryOwner of fee: if release, release fee for buyer, else return fee for seller
+          ...(isRelease
+            ? { signatoryOwnerBuyerDepositFeeHash160: arbModHash }
+            : { signatoryOwnerFeeHash160: arbModHash })
+        }
+      }).unwrap();
+
+      // Update dispute status
+      await updateDisputeTrigger({
+        input: {
+          id: id!,
+          escrowOrderId: escrowOrder.id,
+          status: DisputeStatus.Resolved
+        }
+      }).unwrap();
+    } catch (error) {
+      console.error(isRelease ? 'Release failed:' : 'Return failed:', error);
+      showError();
+    } finally {
+      setOpenReleaseModal(false);
+      setLoading(false);
+    }
+  };
+
+  const handleArbModRelease = async () => {
+    await handleDisputeResolution(true);
   };
 
   const handleArbModReturn = async () => {
-    setLoading(true);
-
-    const nonce = escrowOrder.nonce as string;
-    const isArbi = selectedWalletPath?.hash160 === escrowOrder.arbitratorAccount.hash160;
-
-    const arbiModSk = fromHex(selectedWalletPath?.privateKey);
-    const arbiModPk = fromHex(selectedWalletPath?.publicKey);
-    const arbiModPkh = shaRmd160(arbiModPk);
-
-    try {
-      if (isArbi) {
-        const arbiSignatory = SignOracleSignatory(arbiModSk, ACTION.ARBI_RETURN, nonce);
-
-        await updateEscrowOrderSignatoryTrigger({
-          input: {
-            orderId: escrowOrder.id!,
-            action: EscrowOrderAction.Return,
-            signatory: Buffer.from(arbiSignatory).toString('hex'),
-            signatoryOwnerHash160: Buffer.from(arbiModPkh).toString('hex')
-          }
-        })
-          .unwrap()
-          .then(() => setReturnByArb(true));
-      } else {
-        const modSignatory = SignOracleSignatory(arbiModSk, ACTION.MOD_RETURN, nonce);
-
-        await updateEscrowOrderSignatoryTrigger({
-          input: {
-            orderId: escrowOrder.id!,
-            action: EscrowOrderAction.Return,
-            signatory: Buffer.from(modSignatory).toString('hex'),
-            signatoryOwnerHash160: Buffer.from(arbiModPkh).toString('hex')
-          }
-        }).unwrap();
-      }
-
-      await updateDisputeTrigger({
-        input: { id: id!, escrowOrderId: escrowOrder.id!, status: DisputeStatus.Resolved }
-      })
-        .unwrap()
-        .then(() => setReleaseByArb(true));
-    } catch (e) {
-      console.log(e);
-      setError(true);
-    }
-
-    setOpenReleaseModal(false);
-    setLoading(false);
+    await handleDisputeResolution(false);
   };
 
   const handleTelegramClick = async (username, publicKey) => {
-    if (username && username.includes('@')) {
-      const url = `https://t.me/${username.substring(1)}`;
-      window.open(url, '_blank');
-    } else {
-      await trigger({ escrowOrderId: escrowOrder?.id, requestChatPublicKey: publicKey })
-        .then(() => setRequest(true))
-        .catch(() => setRequestFail(true));
+    if (username?.includes('@')) {
+      window.open(`https://t.me/${username.substring(1)}`, '_blank');
+      return;
+    }
+
+    try {
+      await trigger({
+        escrowOrderId: escrowOrderQueryData?.escrowOrder?.id,
+        requestChatPublicKey: publicKey
+      });
+
+      dispatch(
+        showToast('info', {
+          message: 'info',
+          description: 'Chat requested!'
+        })
+      );
+    } catch (error) {
+      dispatch(
+        showToast('info', {
+          message: 'info',
+          description: 'Failed to request chat...'
+        })
+      );
     }
   };
 
-  const calDisputeFee = (amount: number) => {
-    const fee1Percent = parseFloat((amount / 100).toFixed(2));
+  const calDisputeFee = useMemo(() => {
+    const amountOrder = escrowOrderQueryData?.escrowOrder.amount;
+
+    const fee1Percent = parseFloat((amountOrder / 100).toFixed(2));
     const dustXEC = coinInfo[COIN.XEC].dustSats / Math.pow(10, coinInfo[COIN.XEC].cashDecimals);
 
     return Math.max(fee1Percent, dustXEC);
-  };
+  }, [escrowOrderQueryData?.escrowOrder.amount]);
 
+  // join room
   useEffect(() => {
-    escrowOrder?.escrowOrderStatus !== EscrowOrderStatus.Complete &&
+    escrowOrderQueryData?.escrowOrder?.escrowOrderStatus !== EscrowOrderStatus.Complete &&
       isEscrowOrderSuccess &&
       socket &&
-      dispatch(userSubcribeEscrowOrderChannel(escrowOrder?.id));
+      dispatch(userSubcribeEscrowOrderChannel(escrowOrderQueryData?.escrowOrder?.id));
   }, [socket, isEscrowOrderSuccess]);
 
   if (
     isEscrowOrderSuccess &&
-    escrowOrder?.arbitratorAccount.hash160 !== selectedWalletPath?.hash160 &&
-    escrowOrder?.moderatorAccount.hash160 !== selectedWalletPath?.hash160
+    escrowOrderQueryData?.escrowOrder?.arbitratorAccount.hash160 !== selectedWalletPath?.hash160 &&
+    escrowOrderQueryData?.escrowOrder?.moderatorAccount.hash160 !== selectedWalletPath?.hash160
   ) {
     return <div style={{ color: 'white' }}>Not allowed to view this dispute</div>;
   }
@@ -401,7 +447,9 @@ export default function DisputeDetail() {
           <DisputeDetailInfoWrap>
             <Typography variant="body1">
               <span className="prefix">Dispute by: </span>
-              {disputeQueryData?.dispute.createdBy === escrowOrder?.sellerAccount.publicKey ? 'Seller' : 'Buyer'}
+              {disputeQueryData?.dispute.createdBy === escrowOrderQueryData?.escrowOrder?.sellerAccount.publicKey
+                ? 'Seller'
+                : 'Buyer'}
             </Typography>
             {disputeQueryData?.dispute?.reason && (
               <Typography variant="body1">
@@ -411,58 +459,50 @@ export default function DisputeDetail() {
             )}
             <Typography variant="body1">
               <span className="prefix">Order Id: </span>
-              {escrowOrder?.id}
+              {escrowOrderQueryData?.escrowOrder?.id}
             </Typography>
             <Typography variant="body1">
               <span className="prefix">Created At: </span>
-              {new Date(escrowOrder?.createdAt).toLocaleString('vi-VN')}
+              {new Date(escrowOrderQueryData?.escrowOrder?.createdAt).toLocaleString('vi-VN')}
             </Typography>
             <Typography variant="body1">
               <span className="prefix">Seller: </span>
-              {escrowOrder?.sellerAccount.telegramUsername}
+              {escrowOrderQueryData?.escrowOrder?.sellerAccount.telegramUsername}
             </Typography>
             <Typography variant="body1">
               <span className="prefix">Buyer: </span>
-              {escrowOrder?.buyerAccount.telegramUsername}
+              {escrowOrderQueryData?.escrowOrder?.buyerAccount.telegramUsername}
             </Typography>
-            <Typography>
-              <span className="prefix">Escrow Address: </span>
-              <a
-                style={{
-                  color: 'cornflowerblue',
-                  wordWrap: 'break-word',
-                  maxWidth: '100%',
-                  display: 'inline-block'
-                }}
-                href={`${coinInfo[COIN.XEC].blockExplorerUrl}/address/${escrowOrder?.escrowAddress}`}
-                target="_blank"
-              >
-                <span>{escrowOrder?.escrowAddress}</span>
-              </a>
-            </Typography>
+            {EscrowAddressLink('Escrow Address', escrowOrderQueryData?.escrowOrder?.escrowAddress)}
+            {EscrowAddressLink('Seller security deposit address', escrowOrderQueryData?.escrowOrder?.escrowFeeAddress)}
+            {escrowOrderQueryData?.escrowOrder?.buyerDepositTx &&
+              EscrowAddressLink(
+                'Buyer security deposit address',
+                escrowOrderQueryData?.escrowOrder?.escrowBuyerDepositFeeAddress
+              )}
             <Typography variant="body1" className="amount-escrowed">
               <span className="prefix">Escrowed amount: </span>
-              {escrowOrder?.amount} {COIN.XEC}
+              {escrowOrderQueryData?.escrowOrder?.amount} {COIN.XEC}
             </Typography>
             <Typography variant="body1" className="amount-seller">
               <span className="prefix">Security fee by seller: </span>
-              {calDisputeFee(escrowOrder?.amount)} {COIN.XEC}
+              {calDisputeFee} {COIN.XEC}
             </Typography>
-            {escrowOrder?.buyerDepositTx && (
+            {escrowOrderQueryData?.escrowOrder?.buyerDepositTx && (
               <Typography variant="body1" className="amount-buyer">
                 <span className="prefix">Security fee by buyer: </span>
-                {calDisputeFee(escrowOrder?.amount)} {COIN.XEC}
+                {calDisputeFee} {COIN.XEC}
               </Typography>
             )}
           </DisputeDetailInfoWrap>
-          {escrowOrder?.dispute.status === DisputeStatus.Resolved ? (
+          {escrowOrderQueryData?.escrowOrder?.dispute.status === DisputeStatus.Resolved ? (
             <Alert icon={<InfoOutlined fontSize="inherit" />} severity="info" sx={{ borderRadius: '8px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 <AlertTitle>
-                  <b>Resolved at: {new Date(escrowOrder?.updatedAt).toLocaleString('vi-VN')}</b>
+                  <b>Resolved at: {new Date(escrowOrderQueryData?.escrowOrder?.updatedAt).toLocaleString('vi-VN')}</b>
                 </AlertTitle>
                 <Typography style={{ fontSize: '15px' }} fontWeight="bold">
-                  {escrowOrder?.escrowOrderStatus === EscrowOrderStatus.Complete
+                  {escrowOrderQueryData?.escrowOrder?.escrowOrderStatus === EscrowOrderStatus.Complete
                     ? 'The funds have been forwarded to the buyer. '
                     : 'The funds have been returned to the seller. '}
                 </Typography>
@@ -470,9 +510,9 @@ export default function DisputeDetail() {
                   target="_blank"
                   rel="noopener"
                   href={
-                    escrowOrder?.releaseTxid
-                      ? `${coinInfo[COIN.XEC].blockExplorerUrl}/tx/${escrowOrder?.releaseTxid}`
-                      : `${coinInfo[COIN.XEC].blockExplorerUrl}/tx/${escrowOrder?.returnTxid}`
+                    escrowOrderQueryData?.escrowOrder?.releaseTxid
+                      ? `${coinInfo[COIN.XEC].blockExplorerUrl}/tx/${escrowOrderQueryData?.escrowOrder?.releaseTxid}`
+                      : `${coinInfo[COIN.XEC].blockExplorerUrl}/tx/${escrowOrderQueryData?.escrowOrder?.returnTxid}`
                   }
                 >
                   <b>View Transaction</b>
@@ -496,7 +536,10 @@ export default function DisputeDetail() {
               color="info"
               variant="contained"
               onClick={() =>
-                handleTelegramClick(escrowOrder?.sellerAccount.telegramUsername, escrowOrder?.sellerAccount.publicKey)
+                handleTelegramClick(
+                  escrowOrderQueryData?.escrowOrder?.sellerAccount.telegramUsername,
+                  escrowOrderQueryData?.escrowOrder?.sellerAccount.publicKey
+                )
               }
               disabled={isLoading || isFetching}
             >
@@ -508,7 +551,10 @@ export default function DisputeDetail() {
               color="info"
               variant="contained"
               onClick={() =>
-                handleTelegramClick(escrowOrder?.buyerAccount.telegramUsername, escrowOrder?.buyerAccount.publicKey)
+                handleTelegramClick(
+                  escrowOrderQueryData?.escrowOrder?.buyerAccount.telegramUsername,
+                  escrowOrderQueryData?.escrowOrder?.buyerAccount.publicKey
+                )
               }
               disabled={isLoading || isFetching}
             >
@@ -557,12 +603,12 @@ export default function DisputeDetail() {
               <TabPanel value={valueTab} index={0}>
                 <div className="buyer-release">
                   <Typography textAlign="center" variant="body1">
-                    Are you sure you want to release {escrowOrder?.amount} XEC to Buyer:{' '}
-                    {escrowOrder?.buyerAccount?.telegramUsername} ?
+                    Are you sure you want to release {escrowOrderQueryData?.escrowOrder?.amount} XEC to Buyer:{' '}
+                    {escrowOrderQueryData?.escrowOrder?.buyerAccount?.telegramUsername} ?
                   </Typography>
                   <TextField
                     id="input-buyer"
-                    placeholder={`Type ${escrowOrder?.buyerAccount?.telegramUsername} to release`}
+                    placeholder={`Type ${escrowOrderQueryData?.escrowOrder?.buyerAccount?.telegramUsername} to release`}
                     onChange={e => {
                       setValidTextToRelease(e?.target?.value);
                     }}
@@ -573,7 +619,10 @@ export default function DisputeDetail() {
                     color="warning"
                     onClick={() => handleArbModRelease()}
                     autoFocus
-                    disabled={loading || validTextToRelease !== escrowOrder?.buyerAccount?.telegramUsername}
+                    disabled={
+                      loading ||
+                      validTextToRelease !== escrowOrderQueryData?.escrowOrder?.buyerAccount?.telegramUsername
+                    }
                   >
                     Release to Buyer
                   </Button>
@@ -582,12 +631,12 @@ export default function DisputeDetail() {
               <TabPanel value={valueTab} index={1}>
                 <div className="seller-release">
                   <Typography textAlign="center" variant="body1">
-                    Are you sure you want to return {escrowOrder?.amount} XEC to Seller:{' '}
-                    {escrowOrder?.sellerAccount?.telegramUsername} ?
+                    Are you sure you want to return {escrowOrderQueryData?.escrowOrder?.amount} XEC to Seller:{' '}
+                    {escrowOrderQueryData?.escrowOrder?.sellerAccount?.telegramUsername} ?
                   </Typography>
                   <TextField
                     id="input-seller"
-                    placeholder={`Type ${escrowOrder?.sellerAccount?.telegramUsername} to return`}
+                    placeholder={`Type ${escrowOrderQueryData?.escrowOrder?.sellerAccount?.telegramUsername} to return`}
                     onChange={e => {
                       setValidTextToReturn(e?.target?.value);
                     }}
@@ -598,7 +647,10 @@ export default function DisputeDetail() {
                     color="info"
                     onClick={() => handleArbModReturn()}
                     autoFocus
-                    disabled={loading || validTextToReturn !== escrowOrder?.sellerAccount?.telegramUsername}
+                    disabled={
+                      loading ||
+                      validTextToReturn !== escrowOrderQueryData?.escrowOrder?.sellerAccount?.telegramUsername
+                    }
                   >
                     Return to Seller
                   </Button>
@@ -608,51 +660,6 @@ export default function DisputeDetail() {
           </ReleaseDisputeWrap>
         </DialogContent>
       </StyledReleaseDialog>
-
-      <Stack zIndex={999}>
-        <CustomToast
-          isOpen={error}
-          content="Order's status update failed"
-          handleClose={() => setError(false)}
-          type="error"
-          autoHideDuration={3500}
-        />
-
-        <CustomToast
-          isOpen={releaseByArb}
-          content="Order release to buyer successfully. Click here to see transaction!"
-          handleClose={() => setReleaseByArb(false)}
-          type="success"
-          autoHideDuration={3500}
-          isLink={true}
-          linkDescription={`${coinInfo[COIN.XEC].blockExplorerUrl}/tx/${escrowOrder?.releaseTxid}`}
-        />
-
-        <CustomToast
-          isOpen={returnByArb}
-          content="Order return to seller successfully. Click here to see transaction!"
-          handleClose={() => setReturnByArb(false)}
-          type="success"
-          autoHideDuration={3500}
-          isLink={true}
-          linkDescription={`${coinInfo[COIN.XEC].blockExplorerUrl}/tx/${escrowOrder?.returnTxid}`}
-        />
-
-        <CustomToast
-          isOpen={request}
-          content="Chat requested!"
-          handleClose={() => setRequest(false)}
-          type="info"
-          autoHideDuration={3500}
-        />
-        <CustomToast
-          isOpen={requestFail}
-          content="Failed to request chat..."
-          handleClose={() => setRequestFail(false)}
-          type="info"
-          autoHideDuration={3500}
-        />
-      </Stack>
     </MobileLayout>
   );
 }

@@ -1,8 +1,9 @@
 'use client';
 
-import { COIN_OTHERS, COIN_USD_STABLECOIN_TICKER } from '@/src/store/constants';
+import { securityDepositPercentage } from '@/src/store/constants';
 import { SettingContext } from '@/src/store/context/settingProvider';
-import { COIN, PAYMENT_METHOD, coinInfo } from '@bcpros/lixi-models';
+import { convertXECAndCurrency, formatAmountFor1MXEC, showPriceInfo } from '@/src/store/util';
+import { COIN, PAYMENT_METHOD, coinInfo, getTickerText } from '@bcpros/lixi-models';
 import {
   DisputeStatus,
   EscrowOrderQueryItem,
@@ -16,7 +17,7 @@ import {
 import { Button, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { usePathname, useRouter } from 'next/navigation';
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
 
 const OrderDetailWrap = styled('div')(({ theme }) => ({
   display: 'flex',
@@ -63,6 +64,12 @@ const OrderDetailWrap = styled('div')(({ theme }) => ({
     cursor: 'pointer'
   },
 
+  '.wrap-order-amount': {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px'
+  },
+
   '.order-id': {
     display: 'inline-block',
     whiteSpace: 'nowrap',
@@ -78,6 +85,24 @@ const OrderDetailWrap = styled('div')(({ theme }) => ({
     pointerEvents: 'none'
   }
 }));
+
+export const EscrowAddressLink = (name, escrowAddress) => (
+  <Typography>
+    <span className="prefix">{name}: </span>
+    <a
+      style={{
+        color: 'cornflowerblue',
+        wordWrap: 'break-word',
+        maxWidth: '100%',
+        display: 'inline-block'
+      }}
+      href={`${coinInfo[COIN.XEC].blockExplorerUrl}/address/${escrowAddress}`}
+      target="_blank"
+    >
+      <span>{escrowAddress}</span>
+    </a>
+  </Typography>
+);
 
 type OrderItemProps = {
   item?: EscrowOrderQueryItem;
@@ -99,7 +124,7 @@ const OrderDetailInfo = ({
 
   const router = useRouter();
   const pathname = usePathname();
-  const { setSetting, allSettings } = useContext(SettingContext);
+  const { allSettings } = useContext(SettingContext);
 
   const [rateData, setRateData] = useState(null);
   const [marginCurrentPrice, setMarginCurrentPrice] = useState(0);
@@ -147,26 +172,14 @@ const OrderDetailInfo = ({
 
   const convertXECToAmount = async () => {
     if (!rateData) return 0;
-    const CONST_AMOUNT_XEC = 1000000;
-    let amountXEC = 0;
-    let amountCoinOrCurrency = 0;
-    //if payment is crypto, we convert from coin => USD
-    if (order?.escrowOffer?.coinPayment && order?.escrowOffer?.coinPayment !== COIN_USD_STABLECOIN_TICKER) {
-      const coinPayment = order?.escrowOffer.coinPayment.toLowerCase();
-      const rateArrayCoin = rateData.find(item => item.coin === coinPayment);
-      const rateArrayXec = rateData.find(item => item.coin === 'xec');
-      const latestRateCoin = rateArrayCoin?.rate;
-      const latestRateXec = rateArrayXec?.rate;
-      const rateCoinPerXec = latestRateCoin / latestRateXec;
-      amountXEC = Number(order.amountCoinOrCurrency ?? '0') * rateCoinPerXec;
-      amountCoinOrCurrency = (latestRateXec * CONST_AMOUNT_XEC) / latestRateCoin; //1M XEC (USD) / rateCoin (USD)
-    } else {
-      //convert from currency to XEC
-      const rateArrayXec = rateData.find(item => item.coin === 'xec');
-      const latestRateXec = rateArrayXec?.rate;
-      amountXEC = Number(order.amountCoinOrCurrency ?? '0') / latestRateXec;
-      amountCoinOrCurrency = CONST_AMOUNT_XEC * latestRateXec;
-    }
+    const { amountXEC: xec, amountCoinOrCurrency: coinOrCurrency } = convertXECAndCurrency({
+      rateData: rateData,
+      paymentInfo: order?.escrowOffer,
+      inputAmount: Number(order.amountCoinOrCurrency ?? '0')
+    });
+
+    let amountXEC = xec;
+    let amountCoinOrCurrency = coinOrCurrency;
 
     //we just need code below in buyOffer
     if (isBuyOffer) {
@@ -178,43 +191,52 @@ const OrderDetailInfo = ({
       const amountXecRounded = parseFloat(amountXEC.toFixed(2));
       amountXecRounded > 0 ? effectiveSetAmountXEC(amountXecRounded) : effectiveSetAmountXEC(0);
 
-      const compactNumberFormatter = new Intl.NumberFormat('en-GB', {
-        notation: 'compact',
-        compactDisplay: 'short',
-        maximumFractionDigits: 2
-      });
-
-      const amountWithPercentage = isBuyOffer
-        ? amountCoinOrCurrency * (1 - order?.escrowOffer?.marginPercentage / 100)
-        : amountCoinOrCurrency * (1 + order?.escrowOffer?.marginPercentage / 100);
-      const amountFormatted =
-        amountWithPercentage < 1
-          ? amountWithPercentage.toFixed(5)
-          : compactNumberFormatter.format(amountWithPercentage);
       effectiveSetTextAmount(
-        `${amountFormatted} ${order?.escrowOffer.coinPayment ?? order?.escrowOffer.localCurrency ?? 'XEC'} / 1M XEC`
+        formatAmountFor1MXEC(amountCoinOrCurrency, order?.escrowOffer?.marginPercentage, coinCurrency)
       );
     }
 
     //calculate marginPrice
-    const compactNumber = order?.price.match(/[\d.]+[BMK]?/);
-    const revertPriceOrder = revertCompactNumber(compactNumber[0]);
+    if (order?.price) {
+      const compactNumber = order?.price.match(/[\d.]+[BMK]?/);
+      const revertPriceOrder = revertCompactNumber(compactNumber[0]);
 
-    //to calculate margin: (b - a) / a * 100
-    const marginMarketPriceAndOrderPrice = ((revertPriceOrder - amountCoinOrCurrency) / amountCoinOrCurrency) * 100;
-    setMarginCurrentPrice(marginMarketPriceAndOrderPrice);
+      //to calculate margin: (b - a) / a * 100
+      const marginMarketPriceAndOrderPrice = ((revertPriceOrder - amountCoinOrCurrency) / amountCoinOrCurrency) * 100;
+      setMarginCurrentPrice(marginMarketPriceAndOrderPrice);
+    }
   };
 
-  const showMargin = () => {
-    return (
-      order?.paymentMethod?.id !== PAYMENT_METHOD.GOODS_SERVICES && order?.escrowOffer?.coinPayment !== COIN_OTHERS
+  const showPrice = useMemo(() => {
+    return showPriceInfo(
+      order?.paymentMethod?.id,
+      order?.escrowOffer?.coinPayment,
+      order?.escrowOffer?.priceCoinOthers
     );
-  };
+  }, [order]);
 
-  const isShowDynamicValue = () => {
+  const coinCurrency = useMemo(() => {
+    return getTickerText(
+      order?.escrowOffer?.localCurrency,
+      order?.escrowOffer?.coinPayment,
+      order?.escrowOffer?.coinOthers,
+      order?.escrowOffer?.priceCoinOthers
+    );
+  }, [order?.escrowOffer]);
+
+  const isShowDynamicValue = useMemo(() => {
     //dynamic value only pending and not for goods/service
-    return isBuyOffer && order?.escrowOrderStatus === EscrowOrderStatus.Pending && showMargin();
-  };
+    return isBuyOffer && order?.escrowOrderStatus === EscrowOrderStatus.Pending && showPrice;
+  }, [showPrice]);
+
+  const calDisputeFee = useMemo(() => {
+    const amountOrder = isShowDynamicValue ? effectiveAmountXEC : order.amount;
+
+    const fee1Percent = parseFloat((amountOrder / 100).toFixed(2));
+    const dustXEC = coinInfo[COIN.XEC].dustSats / Math.pow(10, coinInfo[COIN.XEC].cashDecimals);
+
+    return Math.max(fee1Percent, dustXEC);
+  }, [order.amount, isShowDynamicValue ? effectiveAmountXEC : null]);
 
   const paymentDetailInfo = () => {
     if (isBuyOffer) {
@@ -243,7 +265,7 @@ const OrderDetailInfo = ({
       return 'Escrowed';
     }
     const statusTransformations = {
-      [EscrowOrderStatus.Cancel]: 'Canceled',
+      [EscrowOrderStatus.Cancel]: 'Cancelled',
       [EscrowOrderStatus.Complete]: 'Completed'
     };
 
@@ -268,10 +290,10 @@ const OrderDetailInfo = ({
 
   //convert to XEC
   useEffect(() => {
-    if (showMargin() || (isBuyOffer && showMargin())) {
+    if (showPrice) {
       convertXECToAmount();
     }
-  }, [rateData]);
+  }, [rateData, showPrice]);
 
   return (
     <OrderDetailWrap>
@@ -279,6 +301,41 @@ const OrderDetailInfo = ({
         <div className="wrap-order-id">
           <span className="prefix">No: </span>
           <span className="order-id">{order.id}</span>
+          <span className="prefix">{order?.markAsPaid && '(Mark as paid)'}</span>
+        </div>
+      </Typography>
+      <Typography variant="body1">
+        {order?.sellerAccount.id === selectedAccount?.id && (
+          <React.Fragment>
+            <span className="prefix">{order.escrowOffer.type === OfferType.Buy ? 'Offered' : 'Ordered'} by: </span>
+            {allSettings?.[`${order?.buyerAccount.id.toString()}`]?.usePublicLocalUserName
+              ? order?.buyerAccount.anonymousUsernameLocalecash
+              : order?.buyerAccount.telegramUsername}
+          </React.Fragment>
+        )}
+        {order?.buyerAccount.id === selectedAccount?.id && (
+          <React.Fragment>
+            <span className="prefix">{order.escrowOffer.type === OfferType.Buy ? 'Ordered' : 'Offered'} by: </span>
+            {allSettings?.[`${order?.sellerAccount.id.toString()}`]?.usePublicLocalUserName
+              ? order?.sellerAccount.anonymousUsernameLocalecash
+              : order?.sellerAccount.telegramUsername}
+          </React.Fragment>
+        )}
+      </Typography>
+      <Typography variant="body1">
+        <span className="prefix">Ordered at: </span>
+        {new Date(order?.createdAt).toLocaleString('vi-VN')}
+      </Typography>
+      {showPrice && (
+        <Typography variant="body1">
+          <span className="prefix">Price: </span>
+          {isShowDynamicValue ? effectiveTextAmount : order?.price}
+        </Typography>
+      )}
+      <Typography className="wrap-order-amount" variant="body1" component={'div'}>
+        <div className="order-amount">
+          <span className="prefix">Order amount:</span> {isShowDynamicValue ? effectiveAmountXEC : order?.amount}{' '}
+          {coinInfo[COIN.XEC].ticker}
         </div>
         <div className="order-type">
           {order?.sellerAccount.id === selectedAccount?.id && (
@@ -293,42 +350,19 @@ const OrderDetailInfo = ({
           )}
         </div>
       </Typography>
-      <Typography variant="body1">
-        {order?.sellerAccount.id === selectedAccount?.id && (
-          <React.Fragment>
-            <span className="prefix">{order.escrowOffer.type === OfferType.Buy ? 'Offered' : 'Ordered'} by: </span>
-            {allSettings[`${order?.buyerAccount.id.toString()}`]?.usePublicLocalUserName
-              ? order?.buyerAccount.anonymousUsernameLocalecash
-              : order?.buyerAccount.telegramUsername}
-          </React.Fragment>
-        )}
-        {order?.buyerAccount.id === selectedAccount?.id && (
-          <React.Fragment>
-            <span className="prefix">{order.escrowOffer.type === OfferType.Buy ? 'Ordered' : 'Offered'} by: </span>
-            {allSettings[`${order?.sellerAccount.id.toString()}`]?.usePublicLocalUserName
-              ? order?.sellerAccount.anonymousUsernameLocalecash
-              : order?.sellerAccount.telegramUsername}
-          </React.Fragment>
-        )}
-      </Typography>
-      <Typography variant="body1">
-        <span className="prefix">Ordered at: </span>
-        {new Date(order?.createdAt).toLocaleString('vi-VN')}
-      </Typography>
-      {showMargin() && (
+      {showPrice && (
         <Typography variant="body1">
-          <span className="prefix">Price: </span>
-          {isShowDynamicValue() ? effectiveTextAmount : order?.price}
+          <span className="prefix">Payment amount:</span> {order?.amountCoinOrCurrency} {coinCurrency}
         </Typography>
       )}
       <Typography variant="body1">
-        <span className="prefix">Order amount:</span> {isShowDynamicValue() ? effectiveAmountXEC : order?.amount}{' '}
+        <span className="prefix">Seller security deposit ({securityDepositPercentage}%):</span> {calDisputeFee}{' '}
         {coinInfo[COIN.XEC].ticker}
       </Typography>
-      {showMargin() && (
+      {order?.buyerDepositTx && (
         <Typography variant="body1">
-          <span className="prefix">Payment amount:</span> {order?.amountCoinOrCurrency}{' '}
-          {order?.escrowOffer?.coinPayment ?? order?.escrowOffer?.localCurrency ?? 'XEC'}
+          <span className="prefix">Buyer security deposit ({securityDepositPercentage}%):</span> {calDisputeFee}{' '}
+          {coinInfo[COIN.XEC].ticker}
         </Typography>
       )}
       <Typography className="payment-method-wrap" variant="body1">
@@ -348,7 +382,7 @@ const OrderDetailInfo = ({
         )}
       </Typography>
       {selectedWalletPath?.hash160 === order?.sellerAccount?.hash160 &&
-        showMargin() &&
+        showPrice &&
         ((order?.escrowOrderStatus === EscrowOrderStatus.Pending && !isBuyOffer) ||
           order?.escrowOrderStatus === EscrowOrderStatus.Escrow) && (
           <Typography variant="body1">
@@ -359,21 +393,14 @@ const OrderDetailInfo = ({
         <span className="prefix">Status: </span>
         {orderStatus()}
       </Typography>
-      <Typography>
-        <span className="prefix">Escrow Address: </span>
-        <a
-          style={{
-            color: 'cornflowerblue',
-            wordWrap: 'break-word',
-            maxWidth: '100%',
-            display: 'inline-block'
-          }}
-          href={`${coinInfo[COIN.XEC].blockExplorerUrl}/address/${order?.escrowAddress}`}
-          target="_blank"
-        >
-          <span>{order?.escrowAddress}</span>
-        </a>
-      </Typography>
+      {order?.escrowOrderStatus !== EscrowOrderStatus.Pending && (
+        <React.Fragment>
+          {EscrowAddressLink('Escrow address', order?.escrowAddress)}
+          {EscrowAddressLink('Seller security deposit address', order?.escrowFeeAddress)}
+          {order?.buyerDepositTx &&
+            EscrowAddressLink('Buyer security deposit address', order?.escrowBuyerDepositFeeAddress)}
+        </React.Fragment>
+      )}
       {paymentDetailInfo() !== null && (
         <Typography>
           <span className="prefix">Payment-detail: </span>

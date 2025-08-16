@@ -52,7 +52,8 @@ const TabMenu = styled('div')(({ theme }) => ({
 
   p: {
     color: '#696f74',
-    fontSize: '12px'
+    fontSize: '12px',
+    cursor: 'pointer',
   },
 
   '&.active button': {
@@ -165,20 +166,20 @@ export default function Footer() {
     currentPath !== '/offer-detail' && (
       <StyledSlide direction="up" in={visible} className="Footer-content">
         <Tabs style={{ gridTemplateColumns: isArbiMod ? 'repeat(5, 1fr)' : 'repeat(4, 1fr)' }}>
-          <TabMenu className={`${currentPath === '/' && 'active'}`}>
-            <IconButton onClick={() => handleIconClick('/')}>
+          <TabMenu className={`${currentPath === '/' && 'active'}`} onClick={() => handleIconClick('/')}>
+            <IconButton >
               <SwapHorizIcon />
             </IconButton>
             <Typography variant="body2">P2P Trading</Typography>
           </TabMenu>
-          <TabMenu className={`${currentPath === '/my-offer' && 'active'}`}>
-            <IconButton onClick={() => handleIconClick('/my-offer')}>
+          <TabMenu className={`${currentPath === '/my-offer' && 'active'}`} onClick={() => handleIconClick('/my-offer')}>
+            <IconButton >
               <LocalOfferOutlinedIcon />
             </IconButton>
             <Typography variant="body2">My offers</Typography>
           </TabMenu>
-          <TabMenu className={`${currentPath === '/my-order' && 'active'}`}>
-            <IconButton onClick={() => handleIconClick('/my-order')}>
+          <TabMenu className={`${currentPath === '/my-order' && 'active'}`} onClick={() => handleIconClick('/my-order')}>
+            <IconButton >
               <InventoryOutlinedIcon />
               {newOrder && (
                 <CircleIcon
@@ -189,15 +190,15 @@ export default function Footer() {
             <Typography variant="body2">My orders</Typography>
           </TabMenu>
           {isArbiMod && (
-            <TabMenu className={`${currentPath === '/my-dispute' && 'active'}`}>
-              <IconButton onClick={() => handleIconClick('/my-dispute')}>
+            <TabMenu className={`${currentPath === '/my-dispute' && 'active'}`} onClick={() => handleIconClick('/my-dispute')}>
+              <IconButton >
                 <GavelOutlinedIcon />
               </IconButton>
               <Typography variant="body2">Dispute</Typography>
             </TabMenu>
           )}
-          <TabMenu className={`${currentPath === '/wallet' && 'active'}`}>
-            <IconButton onClick={() => handleIconClick('/wallet')}>
+          <TabMenu className={`${currentPath === '/wallet' && 'active'}`} onClick={() => handleIconClick('/wallet')}>
+            <IconButton>
               <Wallet />
             </IconButton>
             <Typography variant="body2">Wallet</Typography>

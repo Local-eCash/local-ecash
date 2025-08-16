@@ -17,25 +17,19 @@ const ToastNotificationManage = () => {
   const currentToast = useLixiSliceSelector(getToastNotification);
   const currentTheme = useLixiSliceSelector(getCurrentThemes);
   const dispatch = useLixiSliceDispatch();
+
   const [open, setOpen] = useState(false);
   const [type, setType] = useState('');
   const [description, setDescription] = useState('');
   const [duration, setDuration] = useState(DURATION_DEFAULT);
+  const [isLink, setIsLink] = useState(false);
+  const [linkDescription, setLinkDescription] = useState('');
 
   useEffect(() => {
     if (currentToast) {
       const { type, config, isLink, linkDescription } = currentToast;
       if (config && !_.isEmpty(config.description)) {
         const newConfig = _.cloneDeep(config);
-
-        //process link
-        if (isLink) {
-          newConfig.description = (
-            <a href={`${newConfig.description}`} target="_blank" rel="noopener noreferrer">
-              <p>{linkDescription}</p>
-            </a>
-          );
-        }
 
         newConfig.placement = 'topLeft'; //fault of lib (top is topLeft, topLeft is top)
         newConfig.className = `custom-toast-notification ${
@@ -47,6 +41,8 @@ const ToastNotificationManage = () => {
         setType(type);
         setDescription(newConfig?.description as string);
         setDuration(newConfig.duration);
+        setIsLink(isLink || false);
+        setLinkDescription(linkDescription || '');
 
         setOpen(true);
         dispatch(closeToast());
@@ -61,6 +57,8 @@ const ToastNotificationManage = () => {
       handleClose={() => setOpen(false)}
       autoHideDuration={duration * 1000}
       type={type as Exclude<ToastType, 'open' | 'burn'>}
+      isLink={isLink}
+      linkDescription={linkDescription}
     />
   );
 };
