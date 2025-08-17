@@ -128,19 +128,19 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
   const showPrice = useMemo(() => {
     return showPriceInfo(
       offerData?.paymentMethods[0]?.paymentMethod?.id,
-      post?.postOffer?.coinPayment,
-      post?.postOffer?.priceCoinOthers
+      offerData?.coinPayment,
+      offerData?.priceCoinOthers
     );
-  }, [post?.postOffer]);
+  }, [offerData]);
 
   const coinCurrency = useMemo(() => {
     return getTickerText(
-      post?.postOffer?.localCurrency,
-      post?.postOffer?.coinPayment,
-      post?.postOffer?.coinOthers,
-      post?.postOffer?.priceCoinOthers
+      offerData?.localCurrency,
+      offerData?.coinPayment,
+      offerData?.coinOthers,
+      offerData?.priceCoinOthers
     );
-  }, [post?.postOffer]);
+  }, [offerData]);
 
   return (
     <OfferDetailWrap onClick={() => router.push(`/offer-detail?id=${offerData.postId}`)}>
