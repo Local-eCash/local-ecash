@@ -2,7 +2,7 @@
 
 import { securityDepositPercentage } from '@/src/store/constants';
 import { SettingContext } from '@/src/store/context/settingProvider';
-import { convertXECAndCurrency, formatAmountFor1MXEC, showPriceInfo } from '@/src/store/util';
+import { convertXECAndCurrency, formatAmountFor1MXEC, formatNumber, showPriceInfo } from '@/src/store/util';
 import { COIN, PAYMENT_METHOD, coinInfo, getTickerText } from '@bcpros/lixi-models';
 import {
   DisputeStatus,
@@ -334,8 +334,8 @@ const OrderDetailInfo = ({
       )}
       <Typography className="wrap-order-amount" variant="body1" component={'div'}>
         <div className="order-amount">
-          <span className="prefix">Order amount:</span> {isShowDynamicValue ? effectiveAmountXEC : order?.amount}{' '}
-          {coinInfo[COIN.XEC].ticker}
+          <span className="prefix">Order amount:</span>{' '}
+          {formatNumber(isShowDynamicValue ? effectiveAmountXEC : order?.amount)} {coinInfo[COIN.XEC].ticker}
         </div>
         <div className="order-type">
           {order?.sellerAccount.id === selectedAccount?.id && (
@@ -356,13 +356,13 @@ const OrderDetailInfo = ({
         </Typography>
       )}
       <Typography variant="body1">
-        <span className="prefix">Seller security deposit ({securityDepositPercentage}%):</span> {calDisputeFee}{' '}
-        {coinInfo[COIN.XEC].ticker}
+        <span className="prefix">Seller security deposit ({securityDepositPercentage}%):</span>{' '}
+        {formatNumber(calDisputeFee)} {coinInfo[COIN.XEC].ticker}
       </Typography>
       {order?.buyerDepositTx && (
         <Typography variant="body1">
-          <span className="prefix">Buyer security deposit ({securityDepositPercentage}%):</span> {calDisputeFee}{' '}
-          {coinInfo[COIN.XEC].ticker}
+          <span className="prefix">Buyer security deposit ({securityDepositPercentage}%):</span>{' '}
+          {formatNumber(calDisputeFee)} {coinInfo[COIN.XEC].ticker}
         </Typography>
       )}
       <Typography className="payment-method-wrap" variant="body1">

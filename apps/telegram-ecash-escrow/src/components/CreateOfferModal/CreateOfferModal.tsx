@@ -349,7 +349,8 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       country: null,
       state: null,
       city: null
-    }
+    },
+    reValidateMode: 'onBlur'
   });
 
   // Watched form values
@@ -891,10 +892,14 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                           inputRef={ref}
                           className="form-input"
                           id="priceCoinOthers"
+                          label="Price"
                           placeholder={`E.g. 1`}
                           error={!!errors.priceCoinOthers}
                           helperText={errors.priceCoinOthers?.message}
                           variant="standard"
+                          InputProps={{
+                            endAdornment: 'USD'
+                          }}
                         />
                       </FormControl>
                     )}

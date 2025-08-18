@@ -120,7 +120,7 @@ export const convertXECAndCurrency = ({ rateData, paymentInfo, inputAmount }) =>
 
     if (coinPayment === COIN_OTHERS && paymentInfo?.priceCoinOthers) {
       // Convert for custom coin with manual price
-      coinRate = 1 / paymentInfo.priceCoinOthers;
+      coinRate = paymentInfo.priceCoinOthers;
     } else {
       // Convert for standard coin with rate data
       const coinName = coinPayment.toLowerCase();
