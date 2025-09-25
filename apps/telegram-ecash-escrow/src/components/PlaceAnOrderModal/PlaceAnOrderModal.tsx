@@ -10,10 +10,12 @@ import {
   convertXECToSatoshi,
   estimatedFee,
   formatAmountFor1MXEC,
+  formatAmountForGoodsServices,
   formatNumber,
   getNumberFromFormatNumber,
   getOrderLimitText,
   hexEncode,
+  isConvertGoodsServices,
   showPriceInfo
 } from '@/src/store/util';
 import {
@@ -305,6 +307,14 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
   const [nonce, setNonce] = useState<string>(null);
   const [confirm, setConfirm] = useState(false);
   const [openConfirmDeposit, setOpenConfirmDeposit] = useState(false);
+  const [amountXECGoodsServices, setAmountXECGoodsServices] = useState(0);
+  const [amountXECPerUnitGoodsServices, setAmountXECPerUnitGoodsServices] = useState(0);
+  const [isGoodsServices, setIsGoodsServices] = useState(
+    post?.postOffer?.paymentMethods[0]?.paymentMethod?.id === PAYMENT_METHOD.GOODS_SERVICES
+  );
+  const [isGoodsServicesConversion, setIsGoodsServicesConversion] = useState(() =>
+    isConvertGoodsServices(post?.postOffer?.priceGoodsServices, post?.postOffer?.tickerPriceGoodsServices)
+  );
   const selectedWalletPath = useLixiSliceSelector(getSelectedWalletPath);
 
   const { useCreateEscrowOrderMutation, useGetModeratorAccountQuery, useGetRandomArbitratorAccountQuery } =
@@ -448,7 +458,7 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
       );
 
       const data: CreateEscrowOrderInput = {
-        amount: amountXEC,
+        amount: isGoodsServices ? amountXECGoodsServices : amountXEC,
         amountCoinOrCurrency: parseAmount,
         offerAccountId,
         arbitratorId,
@@ -460,7 +470,7 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
         escrowScript: hexEncode(scriptSmartContract.bytecode),
         escrowFeeScript: hexEncode(scriptFeeSmartContract.bytecode),
         escrowBuyerDepositFeeScript: hexEncode(scriptBuyerDepositFeeSmartContract.bytecode),
-        price: textAmountPer1MXEC,
+        price: isGoodsServices ? formatAmountForGoodsServices(amountXECPerUnitGoodsServices) : textAmountPer1MXEC,
         paymentMethodId: post.postOffer.paymentMethods[0].paymentMethod.id,
         postId: post.id,
         message: message,
@@ -692,10 +702,12 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
   const convertToAmountXEC = async () => {
     if (!rateData) return 0;
 
+    const amountNumber = getNumberFromFormatNumber(amountValue);
+
     const { amountXEC: xec, amountCoinOrCurrency: coinOrCurrency } = convertXECAndCurrency({
       rateData: rateData,
       paymentInfo: post?.postOffer,
-      inputAmount: getNumberFromFormatNumber(amountValue)
+      inputAmount: amountNumber
     });
 
     let amountXEC = xec;
@@ -721,6 +733,9 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
     }
     amountXecRounded > 0 ? setAmountXEC(amountXecRounded) : setAmountXEC(0);
 
+    const xecPerUnit = isGoodsServicesConversion ? amountXEC / amountNumber : post?.postOffer?.priceGoodsServices;
+    setAmountXECPerUnitGoodsServices(xecPerUnit);
+    setAmountXECGoodsServices(xecPerUnit * amountNumber);
     setTextAmountPer1MXEC(formatAmountFor1MXEC(amountCoinOrCurrency, post?.postOffer?.marginPercentage, coinCurrency));
   };
 
@@ -771,10 +786,14 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
   };
 
   const showPrice = useMemo(() => {
-    return showPriceInfo(
-      post?.postOffer?.paymentMethods[0]?.paymentMethod?.id,
-      post?.postOffer?.coinPayment,
-      post?.postOffer?.priceCoinOthers
+    return (
+      showPriceInfo(
+        post?.postOffer?.paymentMethods[0]?.paymentMethod?.id,
+        post?.postOffer?.coinPayment,
+        post?.postOffer?.priceCoinOthers,
+        post?.postOffer?.priceGoodsServices,
+        post?.postOffer?.tickerPriceGoodsServices
+      ) || isGoodsServices
     );
   }, [post?.postOffer]);
 
@@ -902,9 +921,20 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
                     : showPrice && (
                         <div>
                           You will {isBuyOffer ? 'send' : 'receive'}{' '}
-                          <span className="amount-receive">{formatNumber(amountXEC)}</span> {COIN.XEC}{' '}
-                          {isBuyOffer && '(estimated)'}
-                          <div>Price: {textAmountPer1MXEC}</div>
+                          <span className="amount-receive">
+                            {formatNumber(isGoodsServices ? amountXECGoodsServices : amountXEC)}
+                          </span>{' '}
+                          {COIN.XEC} {isBuyOffer && '(estimated)'}
+                          <div>
+                            Price:{' '}
+                            {isGoodsServices ? (
+                              // Goods/Services display
+                              <>{formatAmountForGoodsServices(amountXECPerUnitGoodsServices)}</>
+                            ) : (
+                              // Show regular price
+                              <>{textAmountPer1MXEC}</>
+                            )}
+                          </div>
                         </div>
                       )}
                 </Typography>

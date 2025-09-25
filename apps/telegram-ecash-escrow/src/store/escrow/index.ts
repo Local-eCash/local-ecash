@@ -22,8 +22,8 @@ interface TxInput {
   txid: string;
   value: number;
   outIdx: number;
-  feeValue: number;
-  feeOutIdx: number;
+  feeValue?: number;
+  feeOutIdx?: number;
   buyerDepositFeeValue?: number;
   buyerDepositFeeOutIdx?: number;
 }

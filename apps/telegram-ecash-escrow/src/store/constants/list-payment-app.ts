@@ -542,5 +542,9 @@ export const LIST_PAYMENT_APP = [
   {
     id: 136,
     name: 'ZaloPay'
+  },
+  {
+    id: 137,
+    name: 'TNG eWallet'
   }
 ];

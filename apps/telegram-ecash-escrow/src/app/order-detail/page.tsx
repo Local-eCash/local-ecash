@@ -1344,7 +1344,9 @@ const OrderDetail = () => {
     return showPriceInfo(
       currentData?.escrowOrder?.paymentMethod?.id,
       currentData?.escrowOrder?.escrowOffer?.coinPayment,
-      currentData?.escrowOrder?.escrowOffer?.priceCoinOthers
+      currentData?.escrowOrder?.escrowOffer?.priceCoinOthers,
+      currentData?.escrowOrder?.escrowOffer?.priceGoodsServices,
+      currentData?.escrowOrder?.escrowOffer?.tickerPriceGoodsServices
     );
   }, [currentData?.escrowOrder]);
 

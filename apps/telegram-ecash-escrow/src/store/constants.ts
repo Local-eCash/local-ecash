@@ -90,6 +90,18 @@ export const LIST_COIN = [
   }
 ];
 
+export const LIST_TICKER_GOODS_SERVICES = [
+  {
+    id: 1,
+    name: 'XEC'
+  },
+  {
+    id: 2,
+    name: 'USD'
+  }
+];
+export const DEFAULT_TICKER_GOODS_SERVICES = 'XEC';
+
 export const LIST_USD_STABLECOIN = [
   {
     id: 1,

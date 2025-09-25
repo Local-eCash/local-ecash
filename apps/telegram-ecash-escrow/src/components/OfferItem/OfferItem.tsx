@@ -2,8 +2,15 @@
 
 import { COIN_OTHERS, COIN_USD_STABLECOIN, COIN_USD_STABLECOIN_TICKER } from '@/src/store/constants';
 import { SettingContext } from '@/src/store/context/settingProvider';
-import { convertXECAndCurrency, formatAmountFor1MXEC, getOrderLimitText, showPriceInfo } from '@/src/store/util';
-import { COIN, getTickerText } from '@bcpros/lixi-models';
+import {
+  convertXECAndCurrency,
+  formatAmountFor1MXEC,
+  formatNumber,
+  getOrderLimitText,
+  isConvertGoodsServices,
+  showPriceInfo
+} from '@/src/store/util';
+import { COIN, GOODS_SERVICES_UNIT, PAYMENT_METHOD, getTickerText } from '@bcpros/lixi-models';
 import {
   OfferStatus,
   OfferType,
@@ -145,6 +152,13 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
   const [coinCurrency, setCoinCurrency] = useState<string>(COIN.XEC);
   const [rateData, setRateData] = useState(null);
   const [amountPer1MXEC, setAmountPer1MXEC] = useState('');
+  const [amountXECGoodsServices, setAmountXECGoodsServices] = useState(0);
+  const [isGoodsServices, setIsGoodsServices] = useState(
+    offerData?.paymentMethods[0]?.paymentMethod?.id === PAYMENT_METHOD.GOODS_SERVICES
+  );
+  const [isGoodsServicesConversion, setIsGoodsServicesConversion] = useState(() =>
+    isConvertGoodsServices(post?.postOffer?.priceGoodsServices, post?.postOffer?.tickerPriceGoodsServices)
+  );
 
   const { useGetAllFiatRateQuery } = fiatCurrencyApi;
   const { data: fiatData } = useGetAllFiatRateQuery();
@@ -206,12 +220,12 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
   const convertXECToAmount = async () => {
     if (!rateData) return 0;
 
-    const { amountCoinOrCurrency } = convertXECAndCurrency({
+    const { amountXEC, amountCoinOrCurrency } = convertXECAndCurrency({
       rateData: rateData,
       paymentInfo: post?.postOffer,
-      inputAmount: 0
+      inputAmount: 1
     });
-
+    setAmountXECGoodsServices(isGoodsServicesConversion ? amountXEC : post?.postOffer?.priceGoodsServices);
     setAmountPer1MXEC(formatAmountFor1MXEC(amountCoinOrCurrency, post?.postOffer?.marginPercentage, coinCurrency));
   };
 
@@ -219,7 +233,9 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
     return showPriceInfo(
       offerData?.paymentMethods[0]?.paymentMethod?.id,
       post?.postOffer?.coinPayment,
-      post?.postOffer?.priceCoinOthers
+      post?.postOffer?.priceCoinOthers,
+      post?.postOffer?.priceGoodsServices,
+      post?.postOffer?.tickerPriceGoodsServices
     );
   }, [post?.postOffer]);
 
@@ -345,21 +361,26 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
         <CardContent>{OfferItemPaymentMethod}</CardContent>
 
         <Typography component={'div'} className="action-section">
-          {showPrice ? (
-            <Typography variant="body2">
-              <span className="prefix">Price: </span>
-              {coinCurrency !== COIN.XEC && (
+          <Typography variant="body2">
+            <span className="prefix">Price: </span>
+            {isGoodsServices ? (
+              // Goods/Services display
+              <>
+                {formatNumber(amountXECGoodsServices)} XEC / {GOODS_SERVICES_UNIT}
+              </>
+            ) : showPrice ? (
+              // Show detailed price
+              <>
                 <span>
                   ~ <span style={{ fontWeight: 'bold' }}>{amountPer1MXEC}</span>
-                </span>
-              )}{' '}
-              ( Market price +{post?.postOffer?.marginPercentage ?? 0}% )
-            </Typography>
-          ) : (
-            <Typography variant="body2">
-              <span className="prefix">Price: </span>Market price
-            </Typography>
-          )}
+                </span>{' '}
+                ( Market price +{post?.postOffer?.marginPercentage ?? 0}% )
+              </>
+            ) : (
+              // Show simple market price
+              <>Market price</>
+            )}
+          </Typography>
           <BuyButtonStyled variant="contained" onClick={e => handleBuyClick(e)}>
             {offerData?.type === OfferType.Buy ? 'Sell' : 'Buy'}
             <Image width={25} height={25} src="/eCash.svg" alt="" />

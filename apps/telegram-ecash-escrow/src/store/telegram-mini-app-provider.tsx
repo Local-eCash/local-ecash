@@ -79,7 +79,7 @@ export function TelegramMiniAppProvider({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (launchParams && launchParams.startParam) {
-      const [param1, param2, id] = launchParams.startParam.split('__');
+      const [param1, param2, id] = launchParams.startParam.split('_');
       router.push(`/${param1}-${param2}?id=${id}`);
     }
   }, [launchParams]);

@@ -1,8 +1,8 @@
-import { COIN, coinInfo, PAYMENT_METHOD } from '@bcpros/lixi-models';
+import { COIN, coinInfo, GOODS_SERVICES_UNIT, PAYMENT_METHOD } from '@bcpros/lixi-models';
 import { cashMethodsNode, OfferFilterInput } from '@bcpros/redux-store';
 import { Script, Tx } from 'ecash-lib';
 import * as _ from 'lodash';
-import { COIN_OTHERS, COIN_USD_STABLECOIN_TICKER } from './constants';
+import { COIN_OTHERS, COIN_USD_STABLECOIN_TICKER, DEFAULT_TICKER_GOODS_SERVICES } from './constants';
 
 export function serializeTransaction(tx: Tx): string {
   return JSON.stringify(tx, (key, value) => {
@@ -67,7 +67,14 @@ export const capitalizeStr = (str: string) => {
 
 export const getNumberFromFormatNumber = (value: string) => {
   if (!value) return 0;
-  return parseFloat(value.replace(/,/g, ''));
+  if (typeof value === 'number') {
+    return value;
+  }
+  if (value?.includes(',')) {
+    return parseFloat(value.replace(/,/g, ''));
+  } else {
+    return parseFloat(value);
+  }
 };
 
 export const getOrderLimitText = (min: number | null, max: number | null, ticket: string) => {
@@ -77,9 +84,18 @@ export const getOrderLimitText = (min: number | null, max: number | null, ticket
   return 'No limit';
 };
 
-export function showPriceInfo(paymentId: number, coinPayment: string | null, priceCoinOthers: number | null) {
-  // Case 1: If payment method is GOODS_SERVICES, don't show
-  if (paymentId === PAYMENT_METHOD.GOODS_SERVICES) {
+export function showPriceInfo(
+  paymentId: number,
+  coinPayment: string | null,
+  priceCoinOthers: number | null,
+  priceGoodsServices: number | null,
+  tickerPriceGoodsServices: string | null
+) {
+  // Case 1: If payment method is GOODS_SERVICES, ticker is XEC, don't show
+  if (
+    paymentId === PAYMENT_METHOD.GOODS_SERVICES &&
+    !isConvertGoodsServices(priceGoodsServices, tickerPriceGoodsServices)
+  ) {
     return false;
   }
 
@@ -92,6 +108,24 @@ export function showPriceInfo(paymentId: number, coinPayment: string | null, pri
   return true;
 }
 
+export function isConvertGoodsServices(priceGoodsServices: number | null, tickerPriceGoodsServices: string | null) {
+  return (
+    tickerPriceGoodsServices !== DEFAULT_TICKER_GOODS_SERVICES && priceGoodsServices !== null && priceGoodsServices > 0
+  );
+}
+
+const getCoinRate = (isGoodsServicesConversion, coinPayment, priceGoodsServices, priceCoinOthers, rateData) => {
+  if (isGoodsServicesConversion && priceGoodsServices && priceGoodsServices > 0) {
+    return priceGoodsServices;
+  }
+
+  if (coinPayment === COIN_OTHERS && priceCoinOthers && priceCoinOthers > 0) {
+    return priceCoinOthers;
+  }
+
+  return rateData.find(item => item.coin === coinPayment.toLowerCase())?.rate;
+};
+
 /**
  * Converts between XEC and other currencies/coins
  * @param {Object} params - Conversion parameters
@@ -103,10 +137,12 @@ export function showPriceInfo(paymentId: number, coinPayment: string | null, pri
 export const convertXECAndCurrency = ({ rateData, paymentInfo, inputAmount }) => {
   if (!rateData || !paymentInfo) return { amountXEC: 0, amountCoinOrCurrency: 0 };
 
+  const { coinPayment, priceGoodsServices, tickerPriceGoodsServices, priceCoinOthers } = paymentInfo;
+
   const CONST_AMOUNT_XEC = 1000000; // 1M XEC
-  const coinPayment = paymentInfo?.coinPayment;
   let amountXEC = 0;
   let amountCoinOrCurrency = 0;
+  const isGoodsServicesConversion = isConvertGoodsServices(priceGoodsServices, tickerPriceGoodsServices);
 
   // Find XEC rate data
   const rateArrayXec = rateData.find(item => item.coin === 'xec');
@@ -115,20 +151,9 @@ export const convertXECAndCurrency = ({ rateData, paymentInfo, inputAmount }) =>
   if (!latestRateXec) return { amountXEC: 0, amountCoinOrCurrency: 0 };
 
   // If payment is cryptocurrency (not USD stablecoin)
-  if (coinPayment && coinPayment !== COIN_USD_STABLECOIN_TICKER) {
-    let coinRate; // Will hold the exchange rate for the target coin
-
-    if (coinPayment === COIN_OTHERS && paymentInfo?.priceCoinOthers) {
-      // Convert for custom coin with manual price
-      coinRate = paymentInfo.priceCoinOthers;
-    } else {
-      // Convert for standard coin with rate data
-      const coinName = coinPayment.toLowerCase();
-      const rateArrayCoin = rateData?.find(item => item.coin === coinName);
-      coinRate = rateArrayCoin?.rate;
-
-      if (!coinRate) return { amountXEC: 0, amountCoinOrCurrency: 0 };
-    }
+  if (isGoodsServicesConversion || (coinPayment && coinPayment !== COIN_USD_STABLECOIN_TICKER)) {
+    const coinRate = getCoinRate(isGoodsServicesConversion, coinPayment, priceGoodsServices, priceCoinOthers, rateData);
+    if (!coinRate) return { amountXEC: 0, amountCoinOrCurrency: 0 };
 
     // Calculate XEC amount
     const rateCoinPerXec = coinRate / latestRateXec;
@@ -166,6 +191,10 @@ export function formatAmountFor1MXEC(amount, marginPercentage = 0, coinCurrency 
 
   // Return the full formatted text
   return `${formattedAmount} ${coinCurrency} / 1M XEC`;
+}
+
+export function formatAmountForGoodsServices(amount) {
+  return `${formatNumber(amount)} XEC / ${GOODS_SERVICES_UNIT}`;
 }
 
 export function hexToUint8Array(hexString) {

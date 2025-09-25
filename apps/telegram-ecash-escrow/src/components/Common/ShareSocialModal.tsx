@@ -66,7 +66,7 @@ const ShareSocialModal: React.FC<ShareSocialModalProps> = ({ offer }) => {
 
   const sizeIcon = 50;
   const linkWeb = `${process.env.NEXT_PUBLIC_WEB_LINK}/offer-detail?id=${offer?.postId}`;
-  const linkTelegram = `https://t.me/${process.env.NEXT_PUBLIC_BOT_USERNAME}?startapp=offer__detail__${offer?.postId}`;
+  const linkTelegram = `https://t.me/${process.env.NEXT_PUBLIC_BOT_USERNAME}?startapp=offer_detail_${offer?.postId}`;
 
   const shareOptions = [
     {

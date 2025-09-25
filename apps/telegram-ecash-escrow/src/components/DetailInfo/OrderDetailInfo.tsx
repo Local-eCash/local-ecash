@@ -2,7 +2,14 @@
 
 import { securityDepositPercentage } from '@/src/store/constants';
 import { SettingContext } from '@/src/store/context/settingProvider';
-import { convertXECAndCurrency, formatAmountFor1MXEC, formatNumber, showPriceInfo } from '@/src/store/util';
+import {
+  convertXECAndCurrency,
+  formatAmountFor1MXEC,
+  formatAmountForGoodsServices,
+  formatNumber,
+  isConvertGoodsServices,
+  showPriceInfo
+} from '@/src/store/util';
 import { COIN, PAYMENT_METHOD, coinInfo, getTickerText } from '@bcpros/lixi-models';
 import {
   DisputeStatus,
@@ -128,6 +135,10 @@ const OrderDetailInfo = ({
 
   const [rateData, setRateData] = useState(null);
   const [marginCurrentPrice, setMarginCurrentPrice] = useState(0);
+  const [isGoodsServices, setIsGoodsServices] = useState(order?.paymentMethod.id === PAYMENT_METHOD.GOODS_SERVICES);
+  const [isGoodsServicesConversion, setIsGoodsServicesConversion] = useState(() =>
+    isConvertGoodsServices(order?.escrowOffer?.priceGoodsServices, order?.escrowOffer?.tickerPriceGoodsServices)
+  );
 
   // Local state for standalone mode
   const [localAmountXEC, setLocalAmountXEC] = useState(0);
@@ -172,14 +183,16 @@ const OrderDetailInfo = ({
 
   const convertXECToAmount = async () => {
     if (!rateData) return 0;
+    const amountParsed = Number(order.amountCoinOrCurrency ?? '0');
     const { amountXEC: xec, amountCoinOrCurrency: coinOrCurrency } = convertXECAndCurrency({
       rateData: rateData,
       paymentInfo: order?.escrowOffer,
-      inputAmount: Number(order.amountCoinOrCurrency ?? '0')
+      inputAmount: amountParsed
     });
 
     let amountXEC = xec;
     let amountCoinOrCurrency = coinOrCurrency;
+    const xecPerUnit = isGoodsServicesConversion ? amountXEC / amountParsed : order?.escrowOffer?.priceGoodsServices;
 
     //we just need code below in buyOffer
     if (isBuyOffer) {
@@ -189,10 +202,14 @@ const OrderDetailInfo = ({
       //dynamic amountXEC
       amountXEC = amountXEC + amountMargin;
       const amountXecRounded = parseFloat(amountXEC.toFixed(2));
-      amountXecRounded > 0 ? effectiveSetAmountXEC(amountXecRounded) : effectiveSetAmountXEC(0);
+      amountXecRounded > 0
+        ? effectiveSetAmountXEC(isGoodsServices ? xecPerUnit * amountParsed : amountXecRounded)
+        : effectiveSetAmountXEC(0);
 
       effectiveSetTextAmount(
-        formatAmountFor1MXEC(amountCoinOrCurrency, order?.escrowOffer?.marginPercentage, coinCurrency)
+        isGoodsServices
+          ? formatAmountForGoodsServices(xecPerUnit)
+          : formatAmountFor1MXEC(amountCoinOrCurrency, order?.escrowOffer?.marginPercentage, coinCurrency)
       );
     }
 
@@ -211,7 +228,9 @@ const OrderDetailInfo = ({
     return showPriceInfo(
       order?.paymentMethod?.id,
       order?.escrowOffer?.coinPayment,
-      order?.escrowOffer?.priceCoinOthers
+      order?.escrowOffer?.priceCoinOthers,
+      order?.escrowOffer?.priceGoodsServices,
+      order?.escrowOffer?.tickerPriceGoodsServices
     );
   }, [order]);
 

@@ -129,7 +129,9 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
     return showPriceInfo(
       offerData?.paymentMethods[0]?.paymentMethod?.id,
       offerData?.coinPayment,
-      offerData?.priceCoinOthers
+      offerData?.priceCoinOthers,
+      offerData?.priceGoodsServices,
+      offerData?.tickerPriceGoodsServices
     );
   }, [offerData]);
 

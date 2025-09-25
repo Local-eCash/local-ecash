@@ -1,12 +1,19 @@
 'use client';
 
-import { COIN_OTHERS, COIN_USD_STABLECOIN_TICKER, LIST_COIN } from '@/src/store/constants';
+import {
+  COIN_OTHERS,
+  COIN_USD_STABLECOIN_TICKER,
+  DEFAULT_TICKER_GOODS_SERVICES,
+  LIST_COIN,
+  LIST_TICKER_GOODS_SERVICES
+} from '@/src/store/constants';
 import { LIST_PAYMENT_APP } from '@/src/store/constants/list-payment-app';
 import { SettingContext } from '@/src/store/context/settingProvider';
 import { formatNumber, getNumberFromFormatNumber } from '@/src/store/util';
 import {
   COIN,
   Country,
+  GOODS_SERVICES_UNIT,
   LIST_CURRENCIES_USED,
   Location,
   PAYMENT_METHOD,
@@ -59,15 +66,7 @@ import {
 import { styled } from '@mui/material/styles';
 import { TransitionProps } from '@mui/material/transitions';
 import React, { useContext, useEffect, useRef, useState } from 'react';
-import {
-  Control,
-  Controller,
-  FieldErrors,
-  UseFormClearErrors,
-  UseFormGetValues,
-  UseFormSetValue,
-  useForm
-} from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { NumericFormat } from 'react-number-format';
 import FilterListLocationModal from '../FilterList/FilterListLocationModal';
 import FilterListModal from '../FilterList/FilterListModal';
@@ -260,19 +259,13 @@ interface OfferFormValues {
   coin: string | null;
   coinOthers: string;
   priceCoinOthers: number | null;
+  priceGoodsServices?: number | null;
+  tickerPriceGoodsServices?: string | null;
   percentage: number;
   note: string;
   country: Country | null;
   state: Location | null;
   city: Location | null;
-}
-
-interface FormControlProps {
-  control: Control<OfferFormValues>;
-  errors: FieldErrors<OfferFormValues>;
-  getValues: UseFormGetValues<OfferFormValues>;
-  setValue: UseFormSetValue<OfferFormValues>;
-  clearErrors: UseFormClearErrors<OfferFormValues>;
 }
 
 // Helper components
@@ -344,6 +337,8 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
       coin: offer?.coinPayment ?? null,
       coinOthers: offer?.coinOthers ?? '',
       priceCoinOthers: offer?.priceCoinOthers ?? null,
+      priceGoodsServices: offer?.priceGoodsServices ?? null,
+      tickerPriceGoodsServices: offer?.tickerPriceGoodsServices ?? DEFAULT_TICKER_GOODS_SERVICES,
       percentage: offer?.marginPercentage ?? 0,
       note: offer?.noteOffer ?? '',
       country: null,
@@ -359,6 +354,8 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
   const currencyValue = watch('currency');
   const coinValue = watch('coin');
 
+  const isGoodService = option === PAYMENT_METHOD.GOODS_SERVICES;
+
   // Navigation handlers
   const handleNext = () => setActiveStep(prevStep => prevStep + 1);
   const handleBack = () => setActiveStep(prevStep => prevStep - 1);
@@ -367,37 +364,53 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
     dispatch(closeModal());
   };
 
+  const handleCloseModalWithDelay = (second = 1) => {
+    setTimeout(() => {
+      handleCloseModal();
+    }, second * 1000);
+  };
+
   // Helper function to check if margin should be shown
   const showMarginComponent = () => option !== PAYMENT_METHOD.GOODS_SERVICES;
 
   // Handler for creating/updating offers
   const handleCreateOffer = async (data: OfferFormValues, isHidden: boolean) => {
-    setLoading(true);
-    const minNum = getNumberFromFormatNumber(data.min) || null;
-    const maxNum = getNumberFromFormatNumber(data.max) || null;
-
-    const input = {
-      message: data.message,
-      noteOffer: data.note,
-      paymentMethodIds: [option],
-      coinPayment: data?.coin ? data.coin.split(':')[0] : null,
-      coinOthers: data?.coinOthers ? data.coinOthers : null,
-      priceCoinOthers: data?.priceCoinOthers ? Number(data.priceCoinOthers) : 0,
-      localCurrency: data?.currency ? data.currency.split(':')[0] : null,
-      paymentApp: data?.paymentApp ? data.paymentApp : null,
-      marginPercentage: Number(data?.percentage ?? 0),
-      orderLimitMin: minNum,
-      orderLimitMax: maxNum,
-      locationId: data?.city?.id ?? null,
-      hideFromHome: isHidden
-    };
-
-    // Just have location when paymentmethod is CASH_IN_PERSON
-    if (option !== PAYMENT_METHOD.CASH_IN_PERSON) {
-      input.locationId = null;
-    }
-
     try {
+      setLoading(true);
+      const minNum = getNumberFromFormatNumber(data.min) || null;
+      const maxNum = getNumberFromFormatNumber(data.max) || null;
+
+      const input = {
+        message: data.message,
+        noteOffer: data.note,
+        paymentMethodIds: [option],
+        coinPayment: data?.coin ? data.coin.split(':')[0] : null,
+        coinOthers: data?.coinOthers ? data.coinOthers : null,
+        priceCoinOthers: data?.priceCoinOthers
+          ? getNumberFromFormatNumber(data.priceCoinOthers as unknown as string)
+          : 0,
+        priceGoodsServices: data?.priceGoodsServices
+          ? getNumberFromFormatNumber(data.priceGoodsServices as unknown as string)
+          : 0,
+        tickerPriceGoodsServices: data?.tickerPriceGoodsServices ? data.tickerPriceGoodsServices : null,
+        localCurrency: data?.currency ? data.currency.split(':')[0] : null,
+        paymentApp: data?.paymentApp ? data.paymentApp : null,
+        marginPercentage: Number(data?.percentage ?? 0),
+        orderLimitMin: minNum,
+        orderLimitMax: maxNum,
+        locationId: data?.city?.id ?? null,
+        hideFromHome: isHidden
+      };
+
+      // Just have location when paymentmethod is CASH_IN_PERSON
+      if (option !== PAYMENT_METHOD.CASH_IN_PERSON) {
+        input.locationId = null;
+      }
+
+      if (option === PAYMENT_METHOD.GOODS_SERVICES) {
+        input.priceCoinOthers = 0;
+        input.coinOthers = null;
+      }
       if (isEdit) {
         const inputUpdateOffer: UpdateOfferInput = {
           message: data.message,
@@ -405,7 +418,8 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
           noteOffer: data.note,
           orderLimitMin: minNum,
           orderLimitMax: maxNum,
-          priceCoinOthers: Number(data.priceCoinOthers),
+          priceCoinOthers: getNumberFromFormatNumber(data.priceCoinOthers as unknown as string),
+          priceGoodsServices: getNumberFromFormatNumber(data.priceGoodsServices as unknown as string),
           id: offer?.postId
         };
         await updateOfferTrigger({ input: inputUpdateOffer }).unwrap();
@@ -415,6 +429,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
             description: 'Offer updated successfully!'
           })
         );
+        handleCloseModalWithDelay();
       } else {
         const inputCreateOffer: CreateOfferInput = {
           ...input,
@@ -429,6 +444,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
             description: 'Offer created successfully!'
           })
         );
+        handleCloseModalWithDelay();
       }
     } catch (error) {
       console.error('Error creating/updating offer:', error);
@@ -438,6 +454,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
           description: `${isEdit ? 'Update' : 'Create'} offer failed!`
         })
       );
+      setLoading(false);
     }
   };
 
@@ -500,7 +517,12 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
           // Set currency based on detected country
           const currencyDetected = LIST_CURRENCIES_USED.find(item => item.country === countryDetected?.iso2);
           if (currencyDetected) {
-            setValue('currency', `${currencyDetected?.code}:${currencyDetected?.fixAmount}`);
+            // Only set detected currency when the user hasn't selected Goods & Services
+            // to avoid overriding the 'Unit' display for goods/services offers.
+            const currentOption = Number(getValues('option'));
+            if (currentOption !== PAYMENT_METHOD.GOODS_SERVICES) {
+              setValue('currency', `${currencyDetected?.code}:${currencyDetected?.fixAmount}`);
+            }
           }
         }
       }
@@ -517,11 +539,17 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
 
   // Effect to update coinCurrency when related form values change
   useEffect(() => {
+    // If the user selected Goods & Services payment method, show the unit label
+    if (option === PAYMENT_METHOD.GOODS_SERVICES) {
+      setCoinCurrency(GOODS_SERVICES_UNIT);
+      return;
+    }
+
     const currency = currencyValue?.split(':')[0];
     const coin = coinValue?.split(':')[0];
 
-    setCoinCurrency(currency ?? (coin?.includes(COIN_OTHERS) ? getValues('coinOthers') : coin) ?? COIN.XEC);
-  }, [currencyValue, coinValue, getValues('coinOthers')]);
+    setCoinCurrency(currency ?? (coin?.includes(COIN_OTHERS) ? getValues('coinOthers') : coin) ?? GOODS_SERVICES_UNIT);
+  }, [currencyValue, coinValue, getValues('coinOthers'), option]);
 
   // Effect to load payment methods and countries on component mount
   useEffect(() => {
@@ -659,6 +687,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                     setValue('percentage', 0);
                     setValue('coin', null);
                     setValue('currency', null);
+                    setValue('coinOthers', null);
                   }
                   onChange(e);
                 }}
@@ -1124,6 +1153,73 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
         {/* Margin */}
         {showMarginComponent() && <MarginComponent />}
 
+        {/* Price fields for goods and services */}
+        {option === PAYMENT_METHOD.GOODS_SERVICES && (
+          <>
+            <Grid item xs={12}>
+              <Typography variant="body2" className="label">
+                Price
+              </Typography>
+            </Grid>
+
+            <Grid item xs={12} style={{ paddingTop: 0 }}>
+              <Controller
+                name="priceGoodsServices"
+                control={control}
+                rules={{
+                  required: {
+                    value: true,
+                    message: 'Price is required!'
+                  }
+                }}
+                render={({ field: { onChange, onBlur, value, name, ref } }) => (
+                  <FormControl style={{ width: '35%' }}>
+                    <NumericFormat
+                      allowLeadingZeros={false}
+                      allowNegative={false}
+                      thousandSeparator={true}
+                      decimalScale={8}
+                      customInput={TextField}
+                      onChange={onChange}
+                      onBlur={onBlur}
+                      value={value}
+                      name={name}
+                      inputRef={ref}
+                      className="form-input"
+                      id="priceGoodsServices"
+                      placeholder={`E.g. 1`}
+                      error={!!errors.priceGoodsServices}
+                      helperText={errors.priceGoodsServices?.message}
+                      variant="standard"
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <Select
+                              defaultValue={getValues('tickerPriceGoodsServices') ?? DEFAULT_TICKER_GOODS_SERVICES}
+                              onChange={event => {
+                                setValue('tickerPriceGoodsServices', event.target.value);
+                              }}
+                              variant="standard"
+                              disableUnderline
+                              disabled={isEdit}
+                            >
+                              {LIST_TICKER_GOODS_SERVICES.map(item => (
+                                <MenuItem key={item.id} value={item.name}>
+                                  {item.name}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </InputAdornment>
+                        )
+                      }}
+                    />
+                  </FormControl>
+                )}
+              />
+            </Grid>
+          </>
+        )}
+
         {/* Order limits */}
         <OrderLimitWrap>
           <Typography variant="body2" className="label">
@@ -1160,7 +1256,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                     inputRef={ref}
                     className="form-input"
                     id="min"
-                    placeholder={`Min: e.g. ${formatNumber(fixAmount)} ${coinCurrency}`}
+                    placeholder={`Min: e.g. ${isGoodService ? 1 : formatNumber(fixAmount)} ${coinCurrency}`}
                     error={!!errors.min}
                     helperText={errors.min?.message}
                     variant="standard"
@@ -1199,7 +1295,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                     className="form-input"
                     id="max"
                     label=" "
-                    placeholder={`Max: e.g. ${formatNumber(fixAmount)} ${coinCurrency}`}
+                    placeholder={`Max: e.g. ${isGoodService ? 100 : formatNumber(fixAmount)} ${coinCurrency}`}
                     error={!!errors.max}
                     helperText={errors.max?.message}
                     variant="standard"
@@ -1250,12 +1346,12 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
   // Step 3: Review and confirmation
   const Step3Content = () => {
     const renderPricePreview = () => {
-      if (isEdit) {
+      if (isEdit && !isGoodService) {
         return (
           <Grid item xs={12} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span>Price: </span>
             <Controller
-              name="priceCoinOthers"
+              name={isGoodService ? 'priceGoodsServices' : 'priceCoinOthers'}
               control={control}
               rules={{
                 required: {
@@ -1277,13 +1373,13 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                     name={name}
                     inputRef={ref}
                     className="form-input"
-                    id="priceCoinOthers"
+                    id={isGoodService ? 'priceGoodsServices' : 'priceCoinOthers'}
                     placeholder={`E.g. 1`}
-                    error={!!errors.priceCoinOthers}
-                    helperText={errors.priceCoinOthers?.message}
+                    error={!!(isGoodService ? errors.priceGoodsServices : errors.priceCoinOthers)}
+                    helperText={isGoodService ? errors.priceGoodsServices?.message : errors.priceCoinOthers?.message}
                     variant="standard"
                     InputProps={{
-                      endAdornment: 'USD'
+                      endAdornment: isGoodService ? offer?.tickerPriceGoodsServices : 'USD'
                     }}
                   />
                 </FormControl>
@@ -1295,7 +1391,9 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
         return (
           <Grid item xs={12}>
             <Typography variant="body1">
-              <span className="prefix">Price: </span> {getValues('priceCoinOthers')} USD
+              <span className="prefix">Price: </span>{' '}
+              {isGoodService ? getValues('priceGoodsServices') : getValues('priceCoinOthers')}{' '}
+              {isGoodService ? getValues('tickerPriceGoodsServices') : 'USD'}
             </Typography>
           </Grid>
         );
@@ -1359,7 +1457,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
               <div className="payment-currency">
                 <Typography>Payment currency</Typography>
                 <Button variant="outlined" color="warning">
-                  <Typography>{coinCurrency}</Typography>
+                  <Typography>{isGoodService ? 'XEC' : coinCurrency}</Typography>
                 </Button>
               </div>
             </div>
@@ -1401,7 +1499,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
           )}
 
           {/* Price for custom coins */}
-          {getValues('priceCoinOthers') !== null && renderPricePreview()}
+          {(getValues('priceCoinOthers') || getValues('priceGoodsServices')) !== null && renderPricePreview()}
 
           {/* Offer note */}
           {getValues('note') && (
