@@ -11,6 +11,7 @@ import {
   showPriceInfo
 } from '@/src/store/util';
 import { COIN, PAYMENT_METHOD, coinInfo, getTickerText } from '@bcpros/lixi-models';
+import { DEFAULT_TICKER_GOODS_SERVICES } from '@/src/store/constants';
 import {
   DisputeStatus,
   EscrowOrderQueryItem,
@@ -208,7 +209,7 @@ const OrderDetailInfo = ({
 
       effectiveSetTextAmount(
         isGoodsServices
-          ? formatAmountForGoodsServices(xecPerUnit)
+          ? `${formatAmountForGoodsServices(xecPerUnit)}${order?.escrowOffer?.priceGoodsServices && (order.escrowOffer?.tickerPriceGoodsServices ?? DEFAULT_TICKER_GOODS_SERVICES) !== DEFAULT_TICKER_GOODS_SERVICES ? ` (${order.escrowOffer.priceGoodsServices} ${order.escrowOffer.tickerPriceGoodsServices ?? 'USD'})` : ''}`
           : formatAmountFor1MXEC(amountCoinOrCurrency, order?.escrowOffer?.marginPercentage, coinCurrency)
       );
     }
@@ -332,18 +333,25 @@ const OrderDetailInfo = ({
               : order?.buyerAccount.telegramUsername}
           </React.Fragment>
         )}
-        {order?.buyerAccount.id === selectedAccount?.id && (
-          <React.Fragment>
-            <span className="prefix">{order.escrowOffer.type === OfferType.Buy ? 'Ordered' : 'Offered'} by: </span>
-            {allSettings?.[`${order?.sellerAccount.id.toString()}`]?.usePublicLocalUserName
-              ? order?.sellerAccount.anonymousUsernameLocalecash
-              : order?.sellerAccount.telegramUsername}
-          </React.Fragment>
-        )}
-      </Typography>
-      <Typography variant="body1">
-        <span className="prefix">Ordered at: </span>
-        {new Date(order?.createdAt).toLocaleString('vi-VN')}
+          {(() => {
+            const baseLabel = order?.escrowOffer?.type === OfferType.Buy ? 'Buy' : 'Sell';
+            const flipped = baseLabel === 'Buy' ? 'Sell' : 'Buy';
+
+            return (
+              <>
+                {order?.sellerAccount.id === selectedAccount?.id && (
+                  <Button className="btn-order-type" size="small" color="error" variant="outlined">
+                    {order?.paymentMethod?.id === PAYMENT_METHOD.GOODS_SERVICES ? flipped : baseLabel}
+                  </Button>
+                )}
+                {order?.buyerAccount.id === selectedAccount?.id && (
+                  <Button className="btn-order-type" size="small" color="success" variant="outlined">
+                    {order?.paymentMethod?.id === PAYMENT_METHOD.GOODS_SERVICES ? baseLabel : flipped}
+                  </Button>
+                )}
+              </>
+            );
+          })()}
       </Typography>
       {showPrice && (
         <Typography variant="body1">
@@ -357,16 +365,25 @@ const OrderDetailInfo = ({
           {formatNumber(isShowDynamicValue ? effectiveAmountXEC : order?.amount)} {coinInfo[COIN.XEC].ticker}
         </div>
         <div className="order-type">
-          {order?.sellerAccount.id === selectedAccount?.id && (
-            <Button className="btn-order-type" size="small" color="error" variant="outlined">
-              Sell
-            </Button>
-          )}
-          {order?.buyerAccount.id === selectedAccount?.id && (
-            <Button className="btn-order-type" size="small" color="success" variant="outlined">
-              Buy
-            </Button>
-          )}
+          {(() => {
+            const baseLabel = order?.escrowOffer?.type === OfferType.Buy ? 'Buy' : 'Sell';
+            const flipped = baseLabel === 'Buy' ? 'Sell' : 'Buy';
+
+            return (
+              <>
+                {order?.sellerAccount.id === selectedAccount?.id && (
+                  <Button className="btn-order-type" size="small" color="error" variant="outlined">
+                    {order?.paymentMethod?.id === PAYMENT_METHOD.GOODS_SERVICES ? flipped : baseLabel}
+                  </Button>
+                )}
+                {order?.buyerAccount.id === selectedAccount?.id && (
+                  <Button className="btn-order-type" size="small" color="success" variant="outlined">
+                    {order?.paymentMethod?.id === PAYMENT_METHOD.GOODS_SERVICES ? baseLabel : flipped}
+                  </Button>
+                )}
+              </>
+            );
+          })()}
         </div>
       </Typography>
       {showPrice && (

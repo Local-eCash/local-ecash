@@ -66,6 +66,7 @@ import {
 import { styled } from '@mui/material/styles';
 import { TransitionProps } from '@mui/material/transitions';
 import React, { useContext, useEffect, useRef, useState } from 'react';
+import renderTextWithLinks from '@/src/utils/linkHelpers';
 import { Controller, useForm } from 'react-hook-form';
 import { NumericFormat } from 'react-number-format';
 import FilterListLocationModal from '../FilterList/FilterListLocationModal';
@@ -355,6 +356,8 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
   const coinValue = watch('coin');
 
   const isGoodService = option === PAYMENT_METHOD.GOODS_SERVICES;
+
+  // Use shared renderTextWithLinks utility imported above
 
   // Navigation handlers
   const handleNext = () => setActiveStep(prevStep => prevStep + 1);
@@ -1475,7 +1478,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
           {/* Headline */}
           <Grid item xs={12}>
             <Typography variant="body1">
-              <span className="prefix">Headline: </span> {getValues('message')}
+              <span className="prefix">Headline: </span> {renderTextWithLinks(getValues('message'))}
             </Typography>
           </Grid>
 
@@ -1505,7 +1508,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
           {getValues('note') && (
             <Grid item xs={12}>
               <Typography variant="body1">
-                <span className="prefix">Offer note: </span> {getValues('note')}
+                <span className="prefix">Offer note: </span> {renderTextWithLinks(getValues('note'))}
               </Typography>
             </Grid>
           )}

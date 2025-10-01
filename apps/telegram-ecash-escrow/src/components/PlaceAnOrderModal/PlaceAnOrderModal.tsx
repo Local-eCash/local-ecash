@@ -18,6 +18,7 @@ import {
   isConvertGoodsServices,
   showPriceInfo
 } from '@/src/store/util';
+import { DEFAULT_TICKER_GOODS_SERVICES } from '@/src/store/constants';
 import {
   BankInfoInput,
   COIN,
@@ -928,8 +929,13 @@ const PlaceAnOrderModal: React.FC<PlaceAnOrderModalProps> = props => {
                           <div>
                             Price:{' '}
                             {isGoodsServices ? (
-                              // Goods/Services display
-                              <>{formatAmountForGoodsServices(amountXECPerUnitGoodsServices)}</>
+                              // Goods/Services display: show XEC/unit and the offer's unit price only if unit ticker is not XEC
+                              <>
+                                {formatAmountForGoodsServices(amountXECPerUnitGoodsServices)}
+                                {post?.postOffer?.priceGoodsServices && (post.postOffer?.tickerPriceGoodsServices ?? DEFAULT_TICKER_GOODS_SERVICES) !== DEFAULT_TICKER_GOODS_SERVICES ? (
+                                  <span> ({post.postOffer.priceGoodsServices} {post.postOffer.tickerPriceGoodsServices ?? 'USD'})</span>
+                                ) : null}
+                              </>
                             ) : (
                               // Show regular price
                               <>{textAmountPer1MXEC}</>

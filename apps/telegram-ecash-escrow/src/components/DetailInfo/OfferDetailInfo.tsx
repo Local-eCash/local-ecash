@@ -2,7 +2,15 @@
 
 import { SettingContext } from '@/src/store/context/settingProvider';
 import { getOrderLimitText, showPriceInfo } from '@/src/store/util';
-import { getTickerText } from '@bcpros/lixi-models';
+import {
+  convertXECAndCurrency,
+  formatAmountFor1MXEC,
+  formatAmountForGoodsServices,
+  formatNumber,
+  isConvertGoodsServices
+} from '@/src/store/util';
+import { getTickerText, PAYMENT_METHOD, GOODS_SERVICES_UNIT, COIN } from '@bcpros/lixi-models';
+import { DEFAULT_TICKER_GOODS_SERVICES } from '@/src/store/constants';
 import {
   OfferStatus,
   OfferType,
@@ -10,6 +18,7 @@ import {
   TimelineQueryItem,
   getSeedBackupTime,
   getSelectedAccountId,
+  fiatCurrencyApi,
   openActionSheet,
   openModal,
   useSliceDispatch as useLixiSliceDispatch,
@@ -21,10 +30,12 @@ import { styled } from '@mui/material/styles';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import React, { useContext, useMemo } from 'react';
+import React, { useContext, useMemo, useEffect, useState } from 'react';
 import useAuthorization from '../Auth/use-authorization.hooks';
 import { BackupModalProps } from '../Common/BackupModal';
 import { BuyButtonStyled } from '../OfferItem/OfferItem';
+import renderTextWithLinks from '@/src/utils/linkHelpers';
+import useOfferPrice from '@/src/hooks/useOfferPrice';
 
 const OfferDetailWrap = styled('div')(({ theme }) => ({
   display: 'flex',
@@ -125,7 +136,7 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
     }
   };
 
-  const showPrice = useMemo(() => {
+  const shouldShowPrice = useMemo(() => {
     return showPriceInfo(
       offerData?.paymentMethods[0]?.paymentMethod?.id,
       offerData?.coinPayment,
@@ -144,12 +155,22 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
     );
   }, [offerData]);
 
+  const { showPrice: hookShowPrice, amountPer1MXEC, amountXECGoodsServices, isGoodsServices: _isGoodsServices } =
+    useOfferPrice({ paymentInfo: offerData, inputAmount: 1 });
+
+  // Determine the taker-facing button label and whether to show the XEC logo. For currency to currency offers, the Buy offers are showing as Sell for the taker, and Sell offers are showing as Buy.
+  // For Goods & Services offers, taker label is reversed (Buy <-> Sell).
+  const takerActionLabel = useMemo(() => {
+    const baseLabel = offerData?.type === OfferType.Buy ? 'Sell' : 'Buy';
+    return _isGoodsServices ? (baseLabel === 'Buy' ? 'Sell' : 'Buy') : baseLabel;
+  }, [offerData?.type, _isGoodsServices]);
+
   return (
     <OfferDetailWrap onClick={() => router.push(`/offer-detail?id=${offerData.postId}`)}>
       <div className="first-line-offer">
         <Typography variant="body1">
           <span className="prefix">Headline: </span>
-          {offerData?.message}
+          {renderTextWithLinks(offerData?.message, { loadImages: true })}
         </Typography>
         {isItemTimeline && (
           <IconButton onClick={e => handleClickAction(e)}>
@@ -157,10 +178,26 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
           </IconButton>
         )}
       </div>
-      {showPrice && (
+  {shouldShowPrice && (
         <Typography variant="body1">
           <span className="prefix">Price: </span>
-          Market price +{offerData?.marginPercentage}%
+          {_isGoodsServices ? (
+            <>
+              {formatNumber(amountXECGoodsServices)} XEC / {GOODS_SERVICES_UNIT}{' '}
+              {offerData?.priceGoodsServices && (offerData?.tickerPriceGoodsServices ?? DEFAULT_TICKER_GOODS_SERVICES) !== DEFAULT_TICKER_GOODS_SERVICES ? (
+                <span>({offerData.priceGoodsServices} {offerData.tickerPriceGoodsServices ?? 'USD'})</span>
+              ) : null}
+            </>
+          ) : hookShowPrice ? (
+            <>
+              <span>
+                ~ <span style={{ fontWeight: 'bold' }}>{amountPer1MXEC}</span>
+              </span>{' '}
+              ( Market price +{offerData?.marginPercentage}% )
+            </>
+          ) : (
+            <>Market price</>
+          )}
         </Typography>
       )}
       <Typography variant="body1">
@@ -176,7 +213,7 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
       {offerData?.noteOffer && (
         <Typography variant="body1">
           <span className="prefix">Note: </span>
-          {offerData.noteOffer}
+          {renderTextWithLinks(offerData.noteOffer, { loadImages: true })}
         </Typography>
       )}
 
@@ -225,9 +262,12 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
               )}
             </div>
             {isShowBuyButton && (
+              // Takers always see the opposite action; Goods & Services still hide the XEC logo
               <BuyButtonStyled style={{ height: 'fit-content' }} variant="contained" onClick={e => handleBuyClick(e)}>
-                {offerData?.type === OfferType.Buy ? 'Sell' : 'Buy'}
-                <Image width={25} height={25} src="/eCash.svg" alt="" />
+                {takerActionLabel}
+                {offerData?.paymentMethods?.[0]?.paymentMethod?.id === PAYMENT_METHOD.GOODS_SERVICES ? null : (
+                  <Image width={25} height={25} src="/eCash.svg" alt="" />
+                )}
               </BuyButtonStyled>
             )}
           </>

@@ -204,3 +204,44 @@ export function hexToUint8Array(hexString) {
 
 export const hexDecode = hexStr => Buffer.from(hexStr, 'hex').toString();
 export const hexEncode = data => Buffer.from(data).toString('hex');
+
+// --- URL helpers (shared) --------------------------------------------------
+// Keep pure JS/TS helpers here (no JSX) so other non-React code can reuse them.
+
+const IMAGE_EXT_REGEX = /\.(png|jpe?g|gif|bmp|webp)(?:[?#].*)?$/i;
+const DANGEROUS_SCHEMES = /^(javascript|data|vbscript|file|blob):/i;
+
+export function sanitizeUrl(raw?: string): string | null {
+  if (!raw || typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (DANGEROUS_SCHEMES.test(trimmed)) return null;
+  try {
+    const u = new URL(trimmed);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    // Reconstruct URL from URL object parts to avoid double-encoding. Use hostname + port + pathname + search + hash.
+    return `${u.protocol}//${u.hostname}${u.port ? ':' + u.port : ''}${u.pathname}${u.search}${u.hash}`;
+  } catch (e) {
+    return null;
+  }
+}
+
+export const parseSafeHttpUrl = (urlStr: string): URL | null => {
+  if (!urlStr || typeof urlStr !== 'string') return null;
+  const trimmed = urlStr.trim();
+  if (trimmed.toLowerCase().startsWith('data:')) return null;
+  try {
+    const u = new URL(trimmed);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    return u;
+  } catch {
+    return null;
+  }
+};
+
+export const isSafeImageUrl = (url: URL): boolean => {
+  if (!url) return false;
+  if (/\.svg(?:[?#].*)?$/i.test(url.pathname)) return false;
+  // Only check the pathname for image file extensions. Query string or hash should not be considered.
+  return IMAGE_EXT_REGEX.test(url.pathname);
+};
+
