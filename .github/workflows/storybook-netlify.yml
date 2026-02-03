@@ -33,7 +33,7 @@ jobs:
           yarn build:storybook
 
       - name: Deploy to Netlify
-        uses: nwtgck/actions-netlify@v1.2
+        uses: nwtgck/actions-netlify@v3.0
         with:
           publish-dir: './packages/ui/storybook-static'
           production-branch: develop
