@@ -1,16 +1,16 @@
 'use client';
 
-import { COIN_OTHERS, COIN_USD_STABLECOIN, COIN_USD_STABLECOIN_TICKER, DEFAULT_TICKER_GOODS_SERVICES } from '@/src/store/constants';
-import { SettingContext } from '@/src/store/context/settingProvider';
+import useOfferPrice from '@/src/hooks/useOfferPrice';
 import {
-  convertXECAndCurrency,
-  formatAmountFor1MXEC,
-  formatNumber,
-  getOrderLimitText,
-  isConvertGoodsServices,
-  showPriceInfo
-} from '@/src/store/util';
-import { COIN, GOODS_SERVICES_UNIT, PAYMENT_METHOD, getTickerText } from '@bcpros/lixi-models';
+  COIN_OTHERS,
+  COIN_USD_STABLECOIN,
+  COIN_USD_STABLECOIN_TICKER,
+  DEFAULT_TICKER_GOODS_SERVICES
+} from '@/src/store/constants';
+import { SettingContext } from '@/src/store/context/settingProvider';
+import { formatNumber, getOrderLimitText } from '@/src/store/util';
+import renderTextWithLinks from '@/src/utils/linkHelpers';
+import { GOODS_SERVICES_UNIT } from '@bcpros/lixi-models';
 import {
   OfferStatus,
   OfferType,
@@ -18,7 +18,6 @@ import {
   Role,
   TimelineQueryItem,
   accountsApi,
-  fiatCurrencyApi,
   getSeedBackupTime,
   getSelectedWalletPath,
   openModal,
@@ -33,11 +32,9 @@ import { styled } from '@mui/material/styles';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
-import React, { useContext, useEffect, useMemo, useState } from 'react';
-import renderTextWithLinks from '@/src/utils/linkHelpers';
+import React, { useContext, useEffect } from 'react';
 import useAuthorization from '../Auth/use-authorization.hooks';
 import { BackupModalProps } from '../Common/BackupModal';
-import useOfferPrice from '@/src/hooks/useOfferPrice';
 
 const CardWrapper = styled(Card)(({ theme }) => ({
   marginTop: 16,
@@ -81,24 +78,46 @@ const CardWrapper = styled(Card)(({ theme }) => ({
   }
 }));
 
-export const BuyButtonStyled = styled(Button)(({ theme }) => ({
-  display: 'flex',
-  gap: 8,
-  fontWeight: 600,
-  margin: 0,
-  background: '#0076c4',
-  width: 'fit-content',
-  filter: 'drop-shadow(0px 0px 3px #0076c4)',
-  color: 'white',
-  boxShadow: 'none',
-  borderRadius: '12px',
-  fontSize: '13px',
+export const BuyButtonStyled = styled(Button, {
+  shouldForwardProp: prop => prop !== 'actionType'
+})<{ actionType?: 'buy' | 'sell' }>(({ theme, actionType }) => {
+  let bgColor = '#0076c4';
+  let shadowColor = '#0076c4';
+  let hoverColor = '#005c99';
 
-  '&:disabled': {
-    backgroundColor: theme.palette.action.disabledBackground,
-    color: theme.palette.action.disabled
+  if (actionType === 'sell') {
+    bgColor = theme.palette.error.main;
+    shadowColor = theme.palette.error.main;
+    hoverColor = theme.palette.error.dark;
+  } else if (actionType === 'buy') {
+    bgColor = theme.palette.success.main;
+    shadowColor = theme.palette.success.main;
+    hoverColor = theme.palette.success.dark;
   }
-}));
+
+  return {
+    display: 'flex',
+    gap: 8,
+    fontWeight: 600,
+    margin: 0,
+    background: bgColor,
+    width: 'fit-content',
+    filter: `drop-shadow(0px 0px 3px ${shadowColor})`,
+    color: 'white',
+    boxShadow: 'none',
+    borderRadius: '12px',
+    fontSize: '13px',
+
+    '&:hover': {
+      backgroundColor: hoverColor
+    },
+
+    '&:disabled': {
+      backgroundColor: theme.palette.action.disabledBackground,
+      color: theme.palette.action.disabled
+    }
+  };
+});
 
 const OfferShowWrapItem = styled('div')(({ theme }) => ({
   backdropFilter: 'blur(4px)',
@@ -152,8 +171,10 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
   );
 
   // Offer price values from centralized hook
-  const { showPrice, coinCurrency, amountPer1MXEC, amountXECGoodsServices, isGoodsServices } =
-    useOfferPrice({ paymentInfo: post?.postOffer, inputAmount: 1 });
+  const { showPrice, coinCurrency, amountPer1MXEC, amountXECGoodsServices, isGoodsServices } = useOfferPrice({
+    paymentInfo: post?.postOffer,
+    inputAmount: 1
+  });
 
   const handleBuyClick = e => {
     e.stopPropagation();
@@ -210,7 +231,6 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
   };
 
   // Use shared helpers from utils/linkHelpers
-  
 
   //open placeAnOrderModal if offerId is in url
   useEffect(() => {
@@ -227,7 +247,7 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
   const OfferItem = (
     <OfferShowWrapItem>
       <div className="push-offer-wrap">
-          <Typography variant="body2" style={{ fontWeight: 'bold' }} onClick={handleItemClick}>
+        <Typography variant="body2" style={{ fontWeight: 'bold' }} onClick={handleItemClick}>
           {renderTextWithLinks(offerData?.message, { loadImages: expanded }) ?? ''}
         </Typography>
         {(accountQueryData?.getAccountByAddress.role === Role.Moderator ||
@@ -262,25 +282,30 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
         offerData.paymentMethods?.length > 0 &&
         offerData.paymentMethods.map(item => {
           return (
-            <Button size="small" color="success" variant="outlined" key={item.paymentMethod.name}>
+            <Button
+              size="small"
+              variant="outlined"
+              key={item.paymentMethod.name}
+              sx={{ color: 'text.secondary', borderColor: 'text.secondary' }}
+            >
               {item.paymentMethod.name}
             </Button>
           );
         })}
 
       {(offerData?.coinPayment === COIN_USD_STABLECOIN_TICKER || offerData?.coinPayment === COIN_OTHERS) && (
-        <Button size="small" color="success" variant="outlined">
+        <Button size="small" variant="outlined" sx={{ color: 'text.secondary', borderColor: 'text.secondary' }}>
           {offerData.coinPayment === COIN_USD_STABLECOIN_TICKER ? COIN_USD_STABLECOIN : COIN_OTHERS}
         </Button>
       )}
 
       {offerData?.coinOthers && (
-        <Button size="small" color="success" variant="outlined">
+        <Button size="small" variant="outlined" sx={{ color: 'text.secondary', borderColor: 'text.secondary' }}>
           {offerData.coinOthers}
         </Button>
       )}
       {offerData?.paymentApp && (
-        <Button size="small" color="success" variant="outlined">
+        <Button size="small" variant="outlined" sx={{ color: 'text.secondary', borderColor: 'text.secondary' }}>
           {offerData.paymentApp}
         </Button>
       )}
@@ -317,28 +342,37 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
         <Typography component={'div'} className="action-section">
           <Typography variant="body2">
             <span className="prefix">Price: </span>
-                {isGoodsServices ? (
+            {isGoodsServices ? (
               // Goods/Services display
-              <>
+              <span style={{ fontWeight: 'bold' }}>
                 {formatNumber(amountXECGoodsServices)} XEC / {GOODS_SERVICES_UNIT}{' '}
-                {offerData?.priceGoodsServices && (offerData?.tickerPriceGoodsServices ?? DEFAULT_TICKER_GOODS_SERVICES) !== DEFAULT_TICKER_GOODS_SERVICES ? (
-                  <span>({offerData.priceGoodsServices} {offerData.tickerPriceGoodsServices ?? 'USD'})</span>
+                {offerData?.priceGoodsServices &&
+                (offerData?.tickerPriceGoodsServices ?? DEFAULT_TICKER_GOODS_SERVICES) !==
+                  DEFAULT_TICKER_GOODS_SERVICES ? (
+                  <span>
+                    ({offerData.priceGoodsServices} {offerData.tickerPriceGoodsServices ?? 'USD'})
+                  </span>
                 ) : null}
-              </>
+              </span>
             ) : showPrice ? (
               // Show detailed price
               <>
                 <span>
                   ~ <span style={{ fontWeight: 'bold' }}>{amountPer1MXEC}</span>
                 </span>{' '}
-                ( Market price +{post?.postOffer?.marginPercentage ?? 0}% )
+                ( Market price {(post?.postOffer?.marginPercentage ?? 0) >= 0 ? '+' : ''}
+                {post?.postOffer?.marginPercentage ?? 0}% )
               </>
             ) : (
               // Show simple market price
               <>Market price</>
             )}
           </Typography>
-          <BuyButtonStyled variant="contained" onClick={e => handleBuyClick(e)}>
+          <BuyButtonStyled
+            variant="contained"
+            onClick={e => handleBuyClick(e)}
+            actionType={takerButtonLabel === 'Sell' ? 'sell' : 'buy'}
+          >
             {takerButtonLabel}
             {!isGoodsServices && <Image width={25} height={25} src="/eCash.svg" alt="" />}
           </BuyButtonStyled>

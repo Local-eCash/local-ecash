@@ -1,15 +1,17 @@
 'use client';
 
 import FiatRateErrorBanner from '@/src/components/Common/FiatRateErrorBanner';
+import ShoppingFilterComponent from '@/src/components/FilterOffer/ShoppingFilterComponent';
 import Header from '@/src/components/Header/Header';
 import OfferItem from '@/src/components/OfferItem/OfferItem';
+import { ShoppingFilterConfig } from '@/src/shared/models/shoppingFilterConfig';
+import { PAYMENT_METHOD } from '@bcpros/lixi-models';
 import {
   OfferOrderField,
   OrderDirection,
   TimelineQueryItem,
   fiatCurrencyApi,
   getNewPostAvailable,
-  getOfferFilterConfig,
   offerApi,
   openModal,
   setNewPostAvailable,
@@ -23,15 +25,14 @@ import SortIcon from '@mui/icons-material/Sort';
 import { Badge, Box, CircularProgress, Skeleton, Slide, Typography } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
-import FilterComponent from '../components/FilterOffer/FilterComponent';
-import MobileLayout from '../components/layout/MobileLayout';
-import { isShowAmountOrSortFilter } from '../store/util';
+import MobileLayout from '../../components/layout/MobileLayout';
+import { isShowAmountOrSortFilter } from '../../store/util';
 
 const { useGetAllFiatRateQuery } = fiatCurrencyApi;
 
-const WrapHome = styled.div``;
+const WrapShopping = styled.div``;
 
-const HomePage = styled.div`
+const ShoppingPage = styled.div`
   position: relative;
   padding: 1rem;
   padding-bottom: 85px;
@@ -79,10 +80,8 @@ const StyledBadge = styled(Badge)`
   }
 `;
 
-export default function Home() {
-  const offerFilterConfig = useLixiSliceSelector(getOfferFilterConfig);
+export default function Shopping() {
   const newPostAvailable = useLixiSliceSelector(getNewPostAvailable);
-  const { countryName, stateName, cityName } = offerFilterConfig;
   const [visible, setVisible] = useState(true);
   const dispatch = useLixiSliceDispatch();
 
@@ -93,11 +92,34 @@ export default function Home() {
     isError: fiatRateError,
     isLoading: isFiatRateLoading
   } = useGetAllFiatRateQuery(undefined, {
+    // Polling disabled for performance - only fetch once on mount
     pollingInterval: 0,
+    // Refetch on mount to ensure fresh data
     refetchOnMountOrArgChange: true
   });
 
-  const isShowSortIcon = isShowAmountOrSortFilter(offerFilterConfig);
+  // Fixed filter config for shopping: only Goods & Services sell offers
+  const [shoppingFilterConfig, setShoppingFilterConfig] = useState({
+    isBuyOffer: true, // Buy offers (users wanting to buy XEC by selling goods/services - so shoppers can buy the goods)
+    paymentMethodIds: [PAYMENT_METHOD.GOODS_SERVICES],
+    tickerPriceGoodsServices: null, // NEW: Backend filter for G&S currency
+    fiatCurrency: null,
+    coin: null,
+    amount: null,
+    countryName: null,
+    countryCode: null,
+    stateName: null,
+    adminCode: null,
+    cityName: null,
+    paymentApp: null,
+    coinOthers: null,
+    offerOrder: {
+      field: OfferOrderField.Relevance,
+      direction: OrderDirection.Desc
+    }
+  });
+
+  const isShowSortIcon = isShowAmountOrSortFilter(shoppingFilterConfig);
 
   const {
     data: dataFilter,
@@ -106,12 +128,10 @@ export default function Home() {
     fetchNext: fetchNextFilter,
     isLoading: isLoadingFilter,
     refetch
-  } = useInfiniteOfferFilterDatabaseQuery({ first: 20, offerFilterInput: offerFilterConfig }, false);
+  } = useInfiniteOfferFilterDatabaseQuery({ first: 20, offerFilterInput: shoppingFilterConfig }, false);
 
   const loadMoreItemsFilter = () => {
     if (hasNextFilter && !isFetchingFilter) {
-      fetchNextFilter();
-    } else if (hasNextFilter) {
       fetchNextFilter();
     }
   };
@@ -132,43 +152,60 @@ export default function Home() {
     dispatch(openModal('SortOfferModal', {}));
   };
 
+  const handleConfigChange = (config: ShoppingFilterConfig) => {
+    setShoppingFilterConfig(prev => ({
+      ...prev,
+      ...config
+    }));
+  };
+
   const isSorted = useMemo(
     () =>
-      offerFilterConfig?.offerOrder?.direction !== OrderDirection.Desc ||
-      offerFilterConfig?.offerOrder?.field !== OfferOrderField.Relevance,
-    [offerFilterConfig?.offerOrder]
+      shoppingFilterConfig?.offerOrder?.direction !== OrderDirection.Desc ||
+      shoppingFilterConfig?.offerOrder?.field !== OfferOrderField.Relevance,
+    [shoppingFilterConfig?.offerOrder]
   );
 
   return (
     <MobileLayout>
-      <WrapHome>
+      <WrapShopping>
         <Slide direction="down" in={newPostAvailable && visible}>
           <StyledBadge className="badge-new-offer" color="info" onClick={handleRefresh}>
             <CachedRoundedIcon color="action" /> <span className="refresh-text">Refresh</span>
           </StyledBadge>
         </Slide>
-        <HomePage>
+        <ShoppingPage>
           <Header />
 
-          <FilterComponent />
+          <ShoppingFilterComponent filterConfig={shoppingFilterConfig} setFilterConfig={handleConfigChange} />
 
           {/* Show fiat rate error banner if service is down */}
           <FiatRateErrorBanner fiatData={fiatData} fiatRateError={fiatRateError} isLoading={isFiatRateLoading} />
 
           <Section>
             <Typography className="title-offer" variant="body1" component="div">
-              <span>Offers</span>
+              <span>Goods & Services</span>
               {isShowSortIcon && (
                 <SortIcon
                   style={{ cursor: 'pointer', color: `${isSorted ? '#0076C4' : ''}` }}
                   onClick={openSortDialog}
                 />
               )}
-              {(stateName || countryName || cityName) && (
-                <span>{[cityName, stateName, countryName].filter(Boolean).join(', ')}</span>
+              {(shoppingFilterConfig.stateName ||
+                shoppingFilterConfig.countryName ||
+                shoppingFilterConfig.cityName) && (
+                <span>
+                  {[shoppingFilterConfig.cityName, shoppingFilterConfig.stateName, shoppingFilterConfig.countryName]
+                    .filter(Boolean)
+                    .join(', ')}
+                </span>
               )}
             </Typography>
-            <div className="offer-list">
+            <div
+              id="scrollableDiv"
+              className="offer-list"
+              style={{ overflow: 'auto', maxHeight: 'calc(100vh - 250px)' }}
+            >
               {!isLoadingFilter ? (
                 <InfiniteScroll
                   dataLength={dataFilter.length}
@@ -194,8 +231,8 @@ export default function Home() {
               )}
             </div>
           </Section>
-        </HomePage>
-      </WrapHome>
+        </ShoppingPage>
+      </WrapShopping>
     </MobileLayout>
   );
 }

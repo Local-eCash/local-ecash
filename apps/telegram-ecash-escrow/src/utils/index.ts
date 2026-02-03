@@ -6,14 +6,16 @@
 // changing existing implementations or breaking imports.
 
 export {
+  constructXECRatesFromFiatCurrencies,
   convertXECAndCurrency,
   formatAmountFor1MXEC,
   formatAmountForGoodsServices,
-  showPriceInfo,
   isConvertGoodsServices,
-  parseSafeHttpUrl,
   isSafeImageUrl,
-  sanitizeUrl
+  parseSafeHttpUrl,
+  sanitizeUrl,
+  showPriceInfo,
+  transformFiatRates
 } from '@/src/store/util';
 
 // Consumers can import from '@/src/utils' going forward. Example:

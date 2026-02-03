@@ -1441,14 +1441,27 @@ const OrderDetail = () => {
     currentData?.escrowOrder.dispute && setDonateOption([CLAIM_BACK_WALLET, DONATE_ARBITRATOR, DONATE_LOCAL_ECASH]);
   }, [currentData?.escrowOrder.dispute]);
 
-  if (_.isEmpty(id) || _.isNil(id) || isError) {
+  if (_.isEmpty(id) || _.isNil(id)) {
     return <div style={{ color: 'white' }}>Invalid order id</div>;
+  }
+
+  if (isError || (!currentData && !id)) {
+    return (
+      <MobileLayout>
+        <OrderDetailPage>
+          <TickerHeader title="Order Details" />
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+            <Typography style={{ color: 'white', fontSize: '18px' }}>No order here</Typography>
+          </div>
+        </OrderDetailPage>
+      </MobileLayout>
+    );
   }
 
   return (
     <MobileLayout>
       <OrderDetailPage>
-        <TickerHeader title="Order Detail" />
+        <TickerHeader title="Order Details" />
         {currentData?.escrowOrder ? (
           <OrderDetailContent>
             <OrderDetailInfo

@@ -15,6 +15,7 @@ import CircleIcon from '@mui/icons-material/Circle';
 import GavelOutlinedIcon from '@mui/icons-material/GavelOutlined';
 import InventoryOutlinedIcon from '@mui/icons-material/InventoryOutlined';
 import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
+import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import { IconButton, Slide, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
@@ -130,6 +131,12 @@ export default function Footer() {
       return;
     }
 
+    if (path === '/shopping' && currentPath === '/shopping') {
+      dispatch(offerApi.api.util.resetApiState());
+
+      return;
+    }
+
     if (path === '/my-order' && currentPath === '/my-order') {
       console.log('reset escrow api query');
       dispatch(escrowOrderApi.api.util.resetApiState());
@@ -165,12 +172,21 @@ export default function Footer() {
     currentPath !== '/order-detail' &&
     currentPath !== '/offer-detail' && (
       <StyledSlide direction="up" in={visible} className="Footer-content">
-        <Tabs style={{ gridTemplateColumns: isArbiMod ? 'repeat(5, 1fr)' : 'repeat(4, 1fr)' }}>
+        <Tabs style={{ gridTemplateColumns: isArbiMod ? 'repeat(6, 1fr)' : 'repeat(5, 1fr)' }}>
           <TabMenu className={`${currentPath === '/' && 'active'}`} onClick={() => handleIconClick('/')}>
             <IconButton>
               <SwapHorizIcon />
             </IconButton>
             <Typography variant="body2">P2P Trading</Typography>
+          </TabMenu>
+          <TabMenu
+            className={`${currentPath === '/shopping' && 'active'}`}
+            onClick={() => handleIconClick('/shopping')}
+          >
+            <IconButton>
+              <ShoppingCartOutlinedIcon />
+            </IconButton>
+            <Typography variant="body2">Shopping</Typography>
           </TabMenu>
           <TabMenu
             className={`${currentPath === '/my-offer' && 'active'}`}

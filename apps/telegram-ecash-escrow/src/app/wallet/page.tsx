@@ -10,7 +10,7 @@ import MobileLayout from '@/src/components/layout/MobileLayout';
 import { TabType } from '@/src/store/constants';
 import { SettingContext } from '@/src/store/context/settingProvider';
 import { UtxoContext } from '@/src/store/context/utxoProvider';
-import { formatNumber } from '@/src/store/util';
+import { formatNumber, transformFiatRates } from '@/src/store/util';
 import { COIN, coinInfo } from '@bcpros/lixi-models';
 import {
   WalletContextNode,
@@ -37,6 +37,8 @@ import { fromHex } from 'ecash-lib';
 import _, { Dictionary } from 'lodash';
 import React, { useContext, useEffect, useState } from 'react';
 import SwipeableViews from 'react-swipeable-views';
+
+const { useGetAllFiatRateQuery } = fiatCurrencyApi;
 
 const { getTxHistoryChronik: getTxHistoryChronikNode } = chronikNode;
 
@@ -125,8 +127,12 @@ export default function Wallet() {
   const [rateData, setRateData] = useState(null);
   const [amountConverted, setAmountConverted] = useState(0);
 
-  const { useGetAllFiatRateQuery } = fiatCurrencyApi;
-  const { data: fiatData } = useGetAllFiatRateQuery();
+  // Get fiat rates from GraphQL API with cache reuse
+  // Always needed in wallet to show balance conversion
+  const { data: fiatData } = useGetAllFiatRateQuery(undefined, {
+    refetchOnMountOrArgChange: false,
+    refetchOnFocus: false
+  });
 
   const { XPI, chronik } = Wallet;
   const seedBackupTime = settingContext?.setting?.lastSeedBackupTime ?? lastSeedBackupTimeOnDevice ?? '';
@@ -209,9 +215,16 @@ export default function Wallet() {
   }, [walletState.walletStatusNode]);
 
   useEffect(() => {
-    const rateData = fiatData?.getAllFiatRate?.find(item => item.currency === fiatCurrencyFilter);
-    setRateData(rateData?.fiatRates);
-  }, [fiatData?.getAllFiatRate]);
+    // Wallet: Transform the user's selected fiat currency filter
+    const currencyData = fiatData?.getAllFiatRate?.find(item => item.currency === fiatCurrencyFilter);
+
+    if (currencyData?.fiatRates) {
+      const transformedRates = transformFiatRates(currencyData.fiatRates);
+      setRateData(transformedRates);
+    } else {
+      setRateData(null);
+    }
+  }, [fiatData?.getAllFiatRate, fiatCurrencyFilter]);
 
   //convert to fiat
   useEffect(() => {

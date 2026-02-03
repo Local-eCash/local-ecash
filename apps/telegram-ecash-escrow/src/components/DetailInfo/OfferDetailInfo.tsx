@@ -1,16 +1,11 @@
 'use client';
 
-import { SettingContext } from '@/src/store/context/settingProvider';
-import { getOrderLimitText, showPriceInfo } from '@/src/store/util';
-import {
-  convertXECAndCurrency,
-  formatAmountFor1MXEC,
-  formatAmountForGoodsServices,
-  formatNumber,
-  isConvertGoodsServices
-} from '@/src/store/util';
-import { getTickerText, PAYMENT_METHOD, GOODS_SERVICES_UNIT, COIN } from '@bcpros/lixi-models';
+import useOfferPrice from '@/src/hooks/useOfferPrice';
 import { DEFAULT_TICKER_GOODS_SERVICES } from '@/src/store/constants';
+import { SettingContext } from '@/src/store/context/settingProvider';
+import { formatNumber, getOrderLimitText, showPriceInfo } from '@/src/store/util';
+import renderTextWithLinks from '@/src/utils/linkHelpers';
+import { GOODS_SERVICES_UNIT, PAYMENT_METHOD, getTickerText } from '@bcpros/lixi-models';
 import {
   OfferStatus,
   OfferType,
@@ -18,7 +13,6 @@ import {
   TimelineQueryItem,
   getSeedBackupTime,
   getSelectedAccountId,
-  fiatCurrencyApi,
   openActionSheet,
   openModal,
   useSliceDispatch as useLixiSliceDispatch,
@@ -30,12 +24,10 @@ import { styled } from '@mui/material/styles';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import React, { useContext, useMemo, useEffect, useState } from 'react';
+import React, { useContext, useMemo } from 'react';
 import useAuthorization from '../Auth/use-authorization.hooks';
 import { BackupModalProps } from '../Common/BackupModal';
 import { BuyButtonStyled } from '../OfferItem/OfferItem';
-import renderTextWithLinks from '@/src/utils/linkHelpers';
-import useOfferPrice from '@/src/hooks/useOfferPrice';
 
 const OfferDetailWrap = styled('div')(({ theme }) => ({
   display: 'flex',
@@ -155,8 +147,12 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
     );
   }, [offerData]);
 
-  const { showPrice: hookShowPrice, amountPer1MXEC, amountXECGoodsServices, isGoodsServices: _isGoodsServices } =
-    useOfferPrice({ paymentInfo: offerData, inputAmount: 1 });
+  const {
+    showPrice: hookShowPrice,
+    amountPer1MXEC,
+    amountXECGoodsServices,
+    isGoodsServices: _isGoodsServices
+  } = useOfferPrice({ paymentInfo: offerData, inputAmount: 1 });
 
   // Determine the taker-facing button label and whether to show the XEC logo. For currency to currency offers, the Buy offers are showing as Sell for the taker, and Sell offers are showing as Buy.
   // For Goods & Services offers, taker label is reversed (Buy <-> Sell).
@@ -178,14 +174,18 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
           </IconButton>
         )}
       </div>
-  {shouldShowPrice && (
+      {shouldShowPrice && (
         <Typography variant="body1">
           <span className="prefix">Price: </span>
           {_isGoodsServices ? (
             <>
               {formatNumber(amountXECGoodsServices)} XEC / {GOODS_SERVICES_UNIT}{' '}
-              {offerData?.priceGoodsServices && (offerData?.tickerPriceGoodsServices ?? DEFAULT_TICKER_GOODS_SERVICES) !== DEFAULT_TICKER_GOODS_SERVICES ? (
-                <span>({offerData.priceGoodsServices} {offerData.tickerPriceGoodsServices ?? 'USD'})</span>
+              {offerData?.priceGoodsServices &&
+              (offerData?.tickerPriceGoodsServices ?? DEFAULT_TICKER_GOODS_SERVICES) !==
+                DEFAULT_TICKER_GOODS_SERVICES ? (
+                <span>
+                  ({offerData.priceGoodsServices} {offerData.tickerPriceGoodsServices ?? 'USD'})
+                </span>
               ) : null}
             </>
           ) : hookShowPrice ? (
@@ -193,7 +193,8 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
               <span>
                 ~ <span style={{ fontWeight: 'bold' }}>{amountPer1MXEC}</span>
               </span>{' '}
-              ( Market price +{offerData?.marginPercentage}% )
+              ( Market price {(offerData?.marginPercentage ?? 0) >= 0 ? '+' : ''}
+              {offerData?.marginPercentage ?? 0}% )
             </>
           ) : (
             <>Market price</>

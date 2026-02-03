@@ -78,6 +78,7 @@ const WrapFilter = styled('div')(({ theme }) => ({
 
   '.filter-label': {
     display: 'flex',
+    justifyContent: 'center',
     margin: '-4px 0',
 
     button: {
@@ -342,9 +343,9 @@ const FilterComponent = () => {
           </div> */}
         </div>
         <div className="filter-label">
-          <Button variant="contained" color="success">
-            {isBuyOffer ? 'For' : 'With'}
-          </Button>
+          <Typography variant="body2" sx={{ textAlign: 'center', fontStyle: 'italic' }}>
+            {isBuyOffer ? 'for' : 'with'}
+          </Typography>
         </div>
         <div className="filter-detail">
           <div className="filter-currency">

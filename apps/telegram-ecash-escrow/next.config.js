@@ -23,6 +23,8 @@ const nextConfig = {
       '@store': path.resolve(__dirname, "node_modules/@bcpros/redux-store/build/main/store"),
       '@bcpros/redux-store': path.resolve(__dirname, "node_modules/@bcpros/redux-store"),
       "@nestjs/graphql": path.resolve(__dirname, "node_modules/@nestjs/graphql/dist/extra/graphql-model-shim"),
+      // Alias bitcore-lib-xpi to @abcpros/bitcore-lib for compatibility
+      "bitcore-lib-xpi": path.resolve(__dirname, "node_modules/@abcpros/bitcore-lib"),
     };
 
     config.experiments = { asyncWebAssembly: true, syncWebAssembly: true, layers: true };

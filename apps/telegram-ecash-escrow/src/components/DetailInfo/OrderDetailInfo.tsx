@@ -1,17 +1,18 @@
 'use client';
 
-import { securityDepositPercentage } from '@/src/store/constants';
+import { DEFAULT_TICKER_GOODS_SERVICES, securityDepositPercentage } from '@/src/store/constants';
 import { SettingContext } from '@/src/store/context/settingProvider';
 import {
+  constructXECRatesFromFiatCurrencies,
   convertXECAndCurrency,
   formatAmountFor1MXEC,
   formatAmountForGoodsServices,
   formatNumber,
   isConvertGoodsServices,
-  showPriceInfo
+  showPriceInfo,
+  transformFiatRates
 } from '@/src/store/util';
 import { COIN, PAYMENT_METHOD, coinInfo, getTickerText } from '@bcpros/lixi-models';
-import { DEFAULT_TICKER_GOODS_SERVICES } from '@/src/store/constants';
 import {
   DisputeStatus,
   EscrowOrderQueryItem,
@@ -26,6 +27,8 @@ import { Button, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { usePathname, useRouter } from 'next/navigation';
 import React, { useContext, useEffect, useMemo, useState } from 'react';
+
+const { useGetAllFiatRateQuery } = fiatCurrencyApi;
 
 const OrderDetailWrap = styled('div')(({ theme }) => ({
   display: 'flex',
@@ -158,8 +161,30 @@ const OrderDetailInfo = ({
   const selectedWalletPath = useLixiSliceSelector(getSelectedWalletPath);
   const selectedAccount = useLixiSliceSelector(getSelectedAccount);
 
-  const { useGetAllFiatRateQuery } = fiatCurrencyApi;
-  const { data: fiatData } = useGetAllFiatRateQuery();
+  // Get fiat rates from GraphQL API with cache reuse
+  // Skip if not seller or buyer (don't need to show price calculations)
+  const needsFiatRates = React.useMemo(() => {
+    const isRelevantParty = selectedWalletPath?.hash160 === order?.sellerAccount?.hash160 || isBuyOffer;
+    if (!isRelevantParty) return false;
+
+    // Check if order needs fiat conversion
+    const isGoodsServices = order?.paymentMethod?.id === PAYMENT_METHOD.GOODS_SERVICES;
+    if (isGoodsServices) return true;
+
+    return order?.escrowOffer?.coinPayment && order?.escrowOffer?.coinPayment !== 'XEC';
+  }, [
+    selectedWalletPath?.hash160,
+    order?.sellerAccount?.hash160,
+    isBuyOffer,
+    order?.paymentMethod?.id,
+    order?.escrowOffer?.coinPayment
+  ]);
+
+  const { data: fiatData } = useGetAllFiatRateQuery(undefined, {
+    skip: !needsFiatRates,
+    refetchOnMountOrArgChange: false,
+    refetchOnFocus: false
+  });
 
   const revertCompactNumber = compact => {
     const regex = /([\d.]+)([MKB]?)?/; // Match number and optional suffix
@@ -210,7 +235,7 @@ const OrderDetailInfo = ({
       effectiveSetTextAmount(
         isGoodsServices
           ? `${formatAmountForGoodsServices(xecPerUnit)}${order?.escrowOffer?.priceGoodsServices && (order.escrowOffer?.tickerPriceGoodsServices ?? DEFAULT_TICKER_GOODS_SERVICES) !== DEFAULT_TICKER_GOODS_SERVICES ? ` (${order.escrowOffer.priceGoodsServices} ${order.escrowOffer.tickerPriceGoodsServices ?? 'USD'})` : ''}`
-          : formatAmountFor1MXEC(amountCoinOrCurrency, order?.escrowOffer?.marginPercentage, coinCurrency)
+          : formatAmountFor1MXEC(amountCoinOrCurrency, order?.escrowOffer?.marginPercentage, coinCurrency, isBuyOffer)
       );
     }
 
@@ -301,12 +326,47 @@ const OrderDetailInfo = ({
   useEffect(() => {
     //just set if seller or buyOffer
     if (selectedWalletPath?.hash160 === order?.sellerAccount?.hash160 || isBuyOffer) {
-      const rateData = fiatData?.getAllFiatRate?.find(
-        item => item.currency === (order?.escrowOffer?.localCurrency ?? 'USD')
-      );
-      setRateData(rateData?.fiatRates);
+      // For Goods & Services: Always use XEC fiat rates (price is in fiat, need to convert to XEC)
+      // For Crypto Orders: Use the selected fiat currency from localCurrency (user's choice)
+      if (isGoodsServices) {
+        // Goods & Services: Transform XEC currency fiat rates
+        const xecCurrency = fiatData?.getAllFiatRate?.find(item => item.currency === 'XEC');
+
+        if (xecCurrency?.fiatRates) {
+          const transformedRates = transformFiatRates(xecCurrency.fiatRates);
+          setRateData(transformedRates);
+        } else {
+          // FALLBACK: If XEC entry is missing, construct it from fiat currencies
+          const constructedRates = constructXECRatesFromFiatCurrencies(fiatData?.getAllFiatRate);
+          if (constructedRates) {
+            const transformedRates = transformFiatRates(constructedRates);
+            setRateData(transformedRates);
+          } else {
+            setRateData(null);
+          }
+        }
+      } else {
+        // Crypto Orders: Transform the user's selected local currency
+        const currencyData = fiatData?.getAllFiatRate?.find(
+          item => item.currency === (order?.escrowOffer?.localCurrency ?? 'USD')
+        );
+
+        if (currencyData?.fiatRates) {
+          const transformedRates = transformFiatRates(currencyData.fiatRates);
+          setRateData(transformedRates);
+        } else {
+          setRateData(null);
+        }
+      }
     }
-  }, [order?.escrowOffer?.localCurrency, fiatData?.getAllFiatRate]);
+  }, [
+    order?.escrowOffer?.localCurrency,
+    fiatData?.getAllFiatRate,
+    isGoodsServices,
+    selectedWalletPath?.hash160,
+    order?.sellerAccount?.hash160,
+    isBuyOffer
+  ]);
 
   //convert to XEC
   useEffect(() => {
@@ -333,25 +393,25 @@ const OrderDetailInfo = ({
               : order?.buyerAccount.telegramUsername}
           </React.Fragment>
         )}
-          {(() => {
-            const baseLabel = order?.escrowOffer?.type === OfferType.Buy ? 'Buy' : 'Sell';
-            const flipped = baseLabel === 'Buy' ? 'Sell' : 'Buy';
+        {(() => {
+          const baseLabel = order?.escrowOffer?.type === OfferType.Buy ? 'Buy' : 'Sell';
+          const flipped = baseLabel === 'Buy' ? 'Sell' : 'Buy';
 
-            return (
-              <>
-                {order?.sellerAccount.id === selectedAccount?.id && (
-                  <Button className="btn-order-type" size="small" color="error" variant="outlined">
-                    {order?.paymentMethod?.id === PAYMENT_METHOD.GOODS_SERVICES ? flipped : baseLabel}
-                  </Button>
-                )}
-                {order?.buyerAccount.id === selectedAccount?.id && (
-                  <Button className="btn-order-type" size="small" color="success" variant="outlined">
-                    {order?.paymentMethod?.id === PAYMENT_METHOD.GOODS_SERVICES ? baseLabel : flipped}
-                  </Button>
-                )}
-              </>
-            );
-          })()}
+          return (
+            <>
+              {order?.sellerAccount.id === selectedAccount?.id && (
+                <Button className="btn-order-type" size="small" color="error" variant="outlined">
+                  {order?.paymentMethod?.id === PAYMENT_METHOD.GOODS_SERVICES ? flipped : baseLabel}
+                </Button>
+              )}
+              {order?.buyerAccount.id === selectedAccount?.id && (
+                <Button className="btn-order-type" size="small" color="success" variant="outlined">
+                  {order?.paymentMethod?.id === PAYMENT_METHOD.GOODS_SERVICES ? baseLabel : flipped}
+                </Button>
+              )}
+            </>
+          );
+        })()}
       </Typography>
       {showPrice && (
         <Typography variant="body1">

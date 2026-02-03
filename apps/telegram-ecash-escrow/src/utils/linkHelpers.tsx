@@ -1,13 +1,9 @@
-import React from 'react';
-import { parseSafeHttpUrl, isSafeImageUrl, sanitizeUrl } from '@/src/utils';
+import { isSafeImageUrl, parseSafeHttpUrl } from '@/src/utils';
 
 // Split regex (capturing) — non-global to avoid RegExp.state issues.
 const URL_SPLIT_REGEX = /(https?:\/\/[^\s]+)/i;
 
-export function renderTextWithLinks(
-  text?: string | null,
-  options: { loadImages?: boolean } = {}
-) {
+export function renderTextWithLinks(text?: string | null, options: { loadImages?: boolean } = {}) {
   if (!text) return null;
   const parts = text.split(URL_SPLIT_REGEX);
   return (
@@ -33,14 +29,28 @@ export function renderTextWithLinks(
             }
 
             return (
-              <a key={idx} href={safe} target="_blank" rel="noreferrer noopener" onClick={e => e.stopPropagation()} style={{ color: '#1976d2' }}>
+              <a
+                key={idx}
+                href={safe}
+                target="_blank"
+                rel="noreferrer noopener"
+                onClick={e => e.stopPropagation()}
+                style={{ color: '#1976d2' }}
+              >
                 View image
               </a>
             );
           }
 
           return (
-            <a key={idx} href={safe} target="_blank" rel="noreferrer noopener" onClick={e => e.stopPropagation()} style={{ color: '#1976d2' }}>
+            <a
+              key={idx}
+              href={safe}
+              target="_blank"
+              rel="noreferrer noopener"
+              onClick={e => e.stopPropagation()}
+              style={{ color: '#1976d2' }}
+            >
               {safe}
             </a>
           );

@@ -10,6 +10,7 @@ import {
 import { LIST_PAYMENT_APP } from '@/src/store/constants/list-payment-app';
 import { SettingContext } from '@/src/store/context/settingProvider';
 import { formatNumber, getNumberFromFormatNumber } from '@/src/store/util';
+import renderTextWithLinks from '@/src/utils/linkHelpers';
 import {
   COIN,
   Country,
@@ -66,7 +67,6 @@ import {
 import { styled } from '@mui/material/styles';
 import { TransitionProps } from '@mui/material/transitions';
 import React, { useContext, useEffect, useRef, useState } from 'react';
-import renderTextWithLinks from '@/src/utils/linkHelpers';
 import { Controller, useForm } from 'react-hook-form';
 import { NumericFormat } from 'react-number-format';
 import FilterListLocationModal from '../FilterList/FilterListLocationModal';
@@ -476,7 +476,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
 
   // Margin adjustment handlers
   const handleIncrease = (value: number) => setValue('percentage', Math.min(30, value + 1));
-  const handleDecrease = (value: number) => setValue('percentage', Math.max(0, value - 1));
+  const handleDecrease = (value: number) => setValue('percentage', Math.max(-100, value - 1));
 
   // Helper function for offer note placeholder text
   const getPlaceholderOfferNote = (): string => {
@@ -572,7 +572,8 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
           control={control}
           rules={{
             validate: value => {
-              if (value > 30) return 'Margin is between 0 - 30%';
+              if (value > 30) return 'Margin is between -100 - 30%';
+              if (value < -100) return 'Margin is between -100 - 30%';
               return true;
             }
           }}
@@ -588,8 +589,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
                 variant="outlined"
                 size="small"
                 InputProps={{
-                  endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                  inputProps: { min: 0 }
+                  endAdornment: <InputAdornment position="end">%</InputAdornment>
                 }}
               />
               <Button variant="contained" className="btn-plus" onClick={() => handleIncrease(field.value)}>
@@ -603,7 +603,9 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
           {isBuyOffer ? (
             <div>
               <span className="buy-offer-text-example">
-                You will pay {percentageValue}% less than the market price for every XEC you buy
+                {percentageValue >= 0
+                  ? `You will pay ${percentageValue}% less than the market price for every XEC you buy`
+                  : `You will pay ${Math.abs(percentageValue)}% more than the market price for every XEC you buy`}
               </span>
               <br />
               <span className="bold">Example: </span> If you pay{' '}
@@ -618,6 +620,12 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = props => {
             </div>
           ) : (
             <div>
+              <span className="buy-offer-text-example">
+                {percentageValue >= 0
+                  ? `You will receive ${percentageValue}% more than the market price for every XEC you sell`
+                  : `You will receive ${Math.abs(percentageValue)}% less than the market price for every XEC you sell`}
+              </span>
+              <br />
               <span className="bold">Example: </span> If you sell <span className="bold">XEC</span> worth{' '}
               <span className="bold">
                 {formatNumber(fixAmount)} {coinCurrency}

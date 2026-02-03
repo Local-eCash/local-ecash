@@ -58,7 +58,7 @@ export const formatNumber = (number: number) => {
 };
 
 export const isShowAmountOrSortFilter = (offerFilterConfig: OfferFilterInput) => {
-  return offerFilterConfig?.fiatCurrency || (offerFilterConfig?.coin && offerFilterConfig.coin !== COIN_OTHERS);
+  return !!offerFilterConfig?.fiatCurrency || (offerFilterConfig?.coin && offerFilterConfig.coin !== COIN_OTHERS);
 };
 
 export const capitalizeStr = (str: string) => {
@@ -100,7 +100,8 @@ export function showPriceInfo(
   }
 
   // Case 2: If it's COIN_OTHERS with no price or zero price, don't show
-  if (coinPayment === COIN_OTHERS && (!priceCoinOthers || priceCoinOthers === 0)) {
+  // Note: Compare case-insensitively for robustness
+  if (coinPayment?.toUpperCase() === COIN_OTHERS.toUpperCase() && (!priceCoinOthers || priceCoinOthers === 0)) {
     return false;
   }
 
@@ -114,16 +115,56 @@ export function isConvertGoodsServices(priceGoodsServices: number | null, ticker
   );
 }
 
-const getCoinRate = (isGoodsServicesConversion, coinPayment, priceGoodsServices, priceCoinOthers, rateData) => {
-  if (isGoodsServicesConversion && priceGoodsServices && priceGoodsServices > 0) {
-    return priceGoodsServices;
+export interface GetCoinRateOptions {
+  isGoodsServicesConversion: boolean;
+  coinPayment: string;
+  priceGoodsServices: number | null;
+  priceCoinOthers: number | null;
+  tickerPriceGoodsServices: string | null;
+  rateData: Array<{ coin?: string; rate?: number }>;
+}
+
+export const getCoinRate = ({
+  isGoodsServicesConversion,
+  coinPayment,
+  priceGoodsServices,
+  priceCoinOthers,
+  tickerPriceGoodsServices,
+  rateData
+}: GetCoinRateOptions): any | null => {
+  // For Goods & Services: priceGoodsServices is the PRICE (e.g., 1 USD)
+  // We need to find the USD (or tickerPriceGoodsServices) rate from rateData
+  if (isGoodsServicesConversion && tickerPriceGoodsServices) {
+    // Find the rate for the ticker currency (e.g., USD rate)
+    const tickerPriceGoodsServicesUpper = tickerPriceGoodsServices.toUpperCase();
+    const tickerRate = rateData.find(
+      (item: { coin?: string; rate?: number }) => item.coin?.toUpperCase() === tickerPriceGoodsServicesUpper
+    )?.rate;
+    if (tickerRate && priceGoodsServices && priceGoodsServices > 0) {
+      // Return the fiat currency rate multiplied by the price
+      // E.g., if 1 USD = 68027 XEC and item costs 1 USD, return 68027
+      return tickerRate * priceGoodsServices;
+    }
   }
 
-  if (coinPayment === COIN_OTHERS && priceCoinOthers && priceCoinOthers > 0) {
-    return priceCoinOthers;
+  // COIN_OTHERS: priceCoinOthers is the price per token in USD (e.g., 1 USD per EAT)
+  // We need to convert this USD price to XEC using the USD rate
+  // Note: coinPayment might be uppercased, so compare case-insensitively
+  if (coinPayment?.toUpperCase() === COIN_OTHERS.toUpperCase() && priceCoinOthers && priceCoinOthers > 0) {
+    // Find the USD rate to convert priceCoinOthers (which is in USD) to XEC
+    const usdRate = rateData.find((item: { coin?: string; rate?: number }) => item.coin?.toUpperCase() === 'USD')?.rate;
+    if (usdRate) {
+      // priceCoinOthers = 1 USD per EAT, usdRate = 68027 XEC per USD
+      // Return: 1 * 68027 = 68027 XEC per EAT
+      return usdRate * priceCoinOthers;
+    }
+    // If no USD rate is found, return undefined so callers can handle the missing rate safely
+    return undefined;
   }
 
-  return rateData.find(item => item.coin === coinPayment.toLowerCase())?.rate;
+  // Case-insensitive comparison to handle both uppercase and lowercase coin codes
+  if (!coinPayment) return undefined;
+  return rateData.find(item => item.coin?.toLowerCase() === coinPayment.toLowerCase())?.rate;
 };
 
 /**
@@ -137,22 +178,40 @@ const getCoinRate = (isGoodsServicesConversion, coinPayment, priceGoodsServices,
 export const convertXECAndCurrency = ({ rateData, paymentInfo, inputAmount }) => {
   if (!rateData || !paymentInfo) return { amountXEC: 0, amountCoinOrCurrency: 0 };
 
-  const { coinPayment, priceGoodsServices, tickerPriceGoodsServices, priceCoinOthers } = paymentInfo;
+  const { coinPayment, priceGoodsServices, tickerPriceGoodsServices, priceCoinOthers, localCurrency } = paymentInfo;
 
   const CONST_AMOUNT_XEC = 1000000; // 1M XEC
   let amountXEC = 0;
   let amountCoinOrCurrency = 0;
   const isGoodsServicesConversion = isConvertGoodsServices(priceGoodsServices, tickerPriceGoodsServices);
 
-  // Find XEC rate data
-  const rateArrayXec = rateData.find(item => item.coin === 'xec');
+  // Find XEC rate data (case-insensitive to handle both 'XEC' and 'xec')
+  const rateArrayXec = rateData.find(item => item.coin?.toLowerCase() === 'xec');
   const latestRateXec = rateArrayXec?.rate;
 
   if (!latestRateXec) return { amountXEC: 0, amountCoinOrCurrency: 0 };
 
-  // If payment is cryptocurrency (not USD stablecoin)
-  if (isGoodsServicesConversion || (coinPayment && coinPayment !== COIN_USD_STABLECOIN_TICKER)) {
-    const coinRate = getCoinRate(isGoodsServicesConversion, coinPayment, priceGoodsServices, priceCoinOthers, rateData);
+  // For P2P offers, null/undefined coinPayment means XEC (default)
+  const effectiveCoinPayment = coinPayment?.toUpperCase() || 'XEC';
+
+  // Determine if we need fiat conversion based on the display currency
+  // For XEC P2P offers with fiat localCurrency, user enters fiat amount
+  const isXecPaymentWithFiatDisplay =
+    effectiveCoinPayment === 'XEC' && localCurrency && localCurrency.toUpperCase() !== 'XEC';
+
+  // If payment is cryptocurrency (not USD stablecoin) AND not XEC with fiat display
+  if (
+    (isGoodsServicesConversion || (effectiveCoinPayment && effectiveCoinPayment !== COIN_USD_STABLECOIN_TICKER)) &&
+    !isXecPaymentWithFiatDisplay
+  ) {
+    const coinRate = getCoinRate({
+      isGoodsServicesConversion,
+      coinPayment: effectiveCoinPayment,
+      priceGoodsServices,
+      priceCoinOthers,
+      tickerPriceGoodsServices,
+      rateData
+    });
     if (!coinRate) return { amountXEC: 0, amountCoinOrCurrency: 0 };
 
     // Calculate XEC amount
@@ -163,18 +222,44 @@ export const convertXECAndCurrency = ({ rateData, paymentInfo, inputAmount }) =>
     amountCoinOrCurrency = (latestRateXec * CONST_AMOUNT_XEC) / coinRate;
   } else {
     // Convert between XEC and fiat currency
-    amountXEC = inputAmount / latestRateXec; // amount currency to XEC
-    amountCoinOrCurrency = CONST_AMOUNT_XEC * latestRateXec; // amount curreny from 1M XEC
+    // For XEC P2P with fiat display: use localCurrency rate for conversion
+    if (isXecPaymentWithFiatDisplay) {
+      const localCurrencyRate = rateData.find(item => item.coin?.toUpperCase() === localCurrency.toUpperCase())?.rate;
+      if (localCurrencyRate && localCurrencyRate > 0) {
+        amountXEC = inputAmount * localCurrencyRate; // amount fiat to XEC
+        amountCoinOrCurrency = CONST_AMOUNT_XEC / localCurrencyRate; // amount fiat from 1M XEC
+      } else {
+        // Fallback to generic conversion
+        amountXEC = inputAmount / latestRateXec;
+        amountCoinOrCurrency = CONST_AMOUNT_XEC * latestRateXec;
+      }
+    } else {
+      amountXEC = inputAmount / latestRateXec; // amount currency to XEC
+      amountCoinOrCurrency = CONST_AMOUNT_XEC * latestRateXec; // amount currency from 1M XEC
+    }
   }
 
   return { amountXEC, amountCoinOrCurrency };
 };
 
-export function formatAmountFor1MXEC(amount, marginPercentage = 0, coinCurrency = '') {
+export function formatAmountFor1MXEC(amount, marginPercentage = 0, coinCurrency = '', isBuyOffer = true) {
   if (amount === undefined || amount === null) return '';
 
-  // Apply margin percentage
-  const amountWithMargin = amount * (1 + marginPercentage / 100);
+  // Apply margin percentage based on offer type
+  // For BUY offers (maker buys XEC): Positive margin = maker pays MORE per XEC = price per 1M XEC is LOWER (taker receives less)
+  //   Formula: amount / (1 + margin/100)
+  // For SELL offers (maker sells XEC): Positive margin = maker wants MORE per XEC = price per 1M XEC is HIGHER
+  //   Formula: amount * (1 + margin/100)
+  let amountWithMargin;
+  if (isBuyOffer) {
+    // BUY offer: Higher margin = lower price display (taker gets less per XEC they sell)
+    // Guard against divide-by-zero when marginPercentage === -100
+    const divisor = 1 + marginPercentage / 100;
+    amountWithMargin = divisor !== 0 ? amount / divisor : amount;
+  } else {
+    // SELL offer: Higher margin = higher price display (taker pays more per XEC they buy)
+    amountWithMargin = amount * (1 + marginPercentage / 100);
+  }
 
   // Format the number according to rules
   let formattedAmount;
@@ -195,6 +280,87 @@ export function formatAmountFor1MXEC(amount, marginPercentage = 0, coinCurrency 
 
 export function formatAmountForGoodsServices(amount) {
   return `${formatNumber(amount)} XEC / ${GOODS_SERVICES_UNIT}`;
+}
+
+/**
+ * Transforms fiat rate data from backend format to frontend format.
+ *
+ * Backend returns: {coin: 'USD', rate: 0.0000147} meaning "1 XEC = 0.0000147 USD"
+ * Frontend needs: {coin: 'USD', rate: 68027.21} meaning "1 USD = 68027.21 XEC"
+ *
+ * This function:
+ * 1. Filters out zero/invalid rates
+ * 2. Inverts all rates (rate = 1 / originalRate)
+ * 3. Adds XEC entries with rate 1 for self-conversion
+ *
+ * @param fiatRates - Array of fiat rates from backend API
+ * @returns Transformed rate array ready for conversion calculations, or null if input is invalid
+ */
+export function transformFiatRates(fiatRates: any[]): any[] | null {
+  if (!fiatRates || fiatRates.length === 0) {
+    return null;
+  }
+
+  const transformedRates = fiatRates
+    .filter(item => item.rate && item.rate > 0) // Filter out zero/invalid rates
+    .map(item => ({
+      coin: item.coin, // Keep coin as-is (e.g., 'USD', 'EUR')
+      rate: 1 / item.rate, // INVERT: If 1 XEC = 0.0000147 USD, then 1 USD = 68027 XEC
+      ts: item.ts
+    }));
+
+  // Add XEC itself with rate 1 (1 XEC = 1 XEC)
+  transformedRates.push({ coin: 'xec', rate: 1, ts: Date.now() });
+  transformedRates.push({ coin: 'XEC', rate: 1, ts: Date.now() });
+
+  return transformedRates;
+}
+
+/**
+ * Constructs XEC fiat rates from fiat currency entries when XEC entry is missing from API.
+ *
+ * API may return: [
+ *   { currency: 'USD', fiatRates: [{ coin: 'XEC', rate: 0.0000147 }] },
+ *   { currency: 'EUR', fiatRates: [{ coin: 'XEC', rate: 0.0000135 }] }
+ * ]
+ *
+ * But we need: { currency: 'XEC', fiatRates: [{ coin: 'USD', rate: 0.0000147 }, { coin: 'EUR', rate: 0.0000135 }] }
+ *
+ * This function constructs the XEC entry by collecting XEC rates from all fiat currencies.
+ *
+ * @param getAllFiatRate - The full getAllFiatRate array from the API
+ * @returns Constructed fiat rates for XEC currency, or null if no valid data found
+ */
+export function constructXECRatesFromFiatCurrencies(getAllFiatRate: any[]): any[] | null {
+  if (!getAllFiatRate || getAllFiatRate.length === 0) {
+    return null;
+  }
+
+  const xecRates: any[] = [];
+
+  // Iterate through each fiat currency entry
+  for (const currencyEntry of getAllFiatRate) {
+    if (!currencyEntry?.currency || !currencyEntry?.fiatRates) continue;
+
+    // Find the XEC rate in this fiat currency's rates
+    const xecRate = currencyEntry.fiatRates.find((rate: any) => rate.coin?.toUpperCase() === 'XEC');
+
+    if (xecRate && xecRate.rate && xecRate.rate > 0) {
+      // Add this fiat currency with its XEC rate
+      xecRates.push({
+        coin: currencyEntry.currency,
+        rate: xecRate.rate,
+        ts: xecRate.ts || Date.now()
+      });
+    }
+  }
+
+  // Return null if we couldn't find any valid XEC rates
+  if (xecRates.length === 0) {
+    return null;
+  }
+
+  return xecRates;
 }
 
 export function hexToUint8Array(hexString) {
@@ -244,4 +410,3 @@ export const isSafeImageUrl = (url: URL): boolean => {
   // Only check the pathname for image file extensions. Query string or hash should not be considered.
   return IMAGE_EXT_REGEX.test(url.pathname);
 };
-
