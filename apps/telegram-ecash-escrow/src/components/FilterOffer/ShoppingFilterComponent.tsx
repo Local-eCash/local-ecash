@@ -18,7 +18,7 @@ import { styled } from '@mui/material/styles';
 import { debounce } from 'lodash';
 import React, { useCallback, useState } from 'react';
 import { NumericFormat } from 'react-number-format';
-import FilterCurrencyModal from '../FilterList/FilterCurrencyModal';
+import ShoppingCurrencyModal from '../FilterList/ShoppingCurrencyModal';
 
 const WrapFilter = styled('div')(({ theme }) => ({
   marginBottom: '16px',
@@ -228,7 +228,7 @@ const ShoppingFilterComponent: React.FC<ShoppingFilterComponentProps> = ({ filte
           )}
         </div>
       </WrapFilter>
-      <FilterCurrencyModal
+      <ShoppingCurrencyModal
         isOpen={openCurrencyList}
         setSelectedItem={value => handleFilterCurrency(value)}
         onDismissModal={value => setOpenCurrencyList(value)}

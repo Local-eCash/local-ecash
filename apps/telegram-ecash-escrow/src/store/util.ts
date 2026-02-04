@@ -132,17 +132,21 @@ export const getCoinRate = ({
   tickerPriceGoodsServices,
   rateData
 }: GetCoinRateOptions): any | null => {
-  // For Goods & Services: priceGoodsServices is the PRICE (e.g., 1 USD)
-  // We need to find the USD (or tickerPriceGoodsServices) rate from rateData
+  // For Goods & Services: priceGoodsServices is the PRICE (e.g., 1 USD or 25000 VND)
+  // We need to find the currency rate from rateData
   if (isGoodsServicesConversion && tickerPriceGoodsServices) {
-    // Find the rate for the ticker currency (e.g., USD rate)
     const tickerPriceGoodsServicesUpper = tickerPriceGoodsServices.toUpperCase();
+
+    // Find the direct rate for the ticker currency (USD, VND, etc.)
+    // rateData contains inverted rates: 1 USD = X XEC, 1 VND = X XEC
     const tickerRate = rateData.find(
       (item: { coin?: string; rate?: number }) => item.coin?.toUpperCase() === tickerPriceGoodsServicesUpper
     )?.rate;
+
     if (tickerRate && priceGoodsServices && priceGoodsServices > 0) {
       // Return the fiat currency rate multiplied by the price
-      // E.g., if 1 USD = 68027 XEC and item costs 1 USD, return 68027
+      // E.g., if 1 USD = 68027 XEC and item costs 1 USD, return 68027 XEC
+      // E.g., if 1 VND = 4.35 XEC and item costs 25000 VND, return 108750 XEC
       return tickerRate * priceGoodsServices;
     }
   }
@@ -279,7 +283,9 @@ export function formatAmountFor1MXEC(amount, marginPercentage = 0, coinCurrency 
 }
 
 export function formatAmountForGoodsServices(amount) {
-  return `${formatNumber(amount)} XEC / ${GOODS_SERVICES_UNIT}`;
+  // Limit XEC to 2 decimal places
+  const roundedAmount = Math.round(amount * 100) / 100;
+  return `${formatNumber(roundedAmount)} XEC / ${GOODS_SERVICES_UNIT}`;
 }
 
 /**

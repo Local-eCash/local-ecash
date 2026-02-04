@@ -98,6 +98,10 @@ export const LIST_TICKER_GOODS_SERVICES = [
   {
     id: 2,
     name: 'USD'
+  },
+  {
+    id: 3,
+    name: 'VND'
   }
 ];
 export const DEFAULT_TICKER_GOODS_SERVICES = 'XEC';

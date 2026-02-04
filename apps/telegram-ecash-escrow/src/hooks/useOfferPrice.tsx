@@ -187,7 +187,9 @@ export default function useOfferPrice({ paymentInfo, inputAmount = 1 }: UseOffer
         const priceOf1XECInLocalCurrency = xecRateEntry.rate;
         const priceOf1MXECInLocalCurrency = priceOf1XECInLocalCurrency * 1000000;
 
-        setAmountXECGoodsServices(1); // 1 XEC
+        // Round to 2 decimal places for XEC display
+        const roundedXEC = Math.round(1 * 100) / 100;
+        setAmountXECGoodsServices(roundedXEC);
         setAmountPer1MXEC(
           formatAmountFor1MXEC(priceOf1MXECInLocalCurrency, paymentInfo?.marginPercentage, coinCurrency, isBuyOffer)
         );
@@ -212,7 +214,10 @@ export default function useOfferPrice({ paymentInfo, inputAmount = 1 }: UseOffer
         ? paymentInfo.priceGoodsServices
         : 1; // Default to 1 XEC for legacy offers without price
 
-    setAmountXECGoodsServices(displayPrice);
+    // Round XEC to maximum 2 decimal places
+    const roundedPrice = Math.round(displayPrice * 100) / 100;
+
+    setAmountXECGoodsServices(roundedPrice);
     setAmountPer1MXEC(
       formatAmountFor1MXEC(amountCoinOrCurrency, paymentInfo?.marginPercentage, coinCurrency, isBuyOffer)
     );

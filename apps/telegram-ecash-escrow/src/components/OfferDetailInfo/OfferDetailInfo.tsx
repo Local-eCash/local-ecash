@@ -42,6 +42,17 @@ const OrderDetailInfo = ({ key, post }: { key: string; post: Post }) => {
     isGoodsServices: _isGoodsServices
   } = useOfferPrice({ paymentInfo: post?.offer, inputAmount: 1 });
 
+  // Format fiat price without decimals and with thousands separators for display
+  const formatFiatPrice = (price: number | string | undefined): string => {
+    if (price == null || price === '') return '';
+    const num = typeof price === 'string' ? parseFloat(price) : price;
+    if (isNaN(num)) return String(price);
+    return new Intl.NumberFormat('en-GB', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(Math.round(num));
+  };
+
   return (
     <OrderDetailWrap>
       <Typography variant="body1">
@@ -60,7 +71,7 @@ const OrderDetailInfo = ({ key, post }: { key: string; post: Post }) => {
             (post.offer?.tickerPriceGoodsServices ?? DEFAULT_TICKER_GOODS_SERVICES) !==
               DEFAULT_TICKER_GOODS_SERVICES ? (
               <span>
-                ({post.offer.priceGoodsServices} {post.offer.tickerPriceGoodsServices ?? 'USD'})
+                ({formatFiatPrice(post.offer.priceGoodsServices)} {post.offer.tickerPriceGoodsServices ?? 'USD'})
               </span>
             ) : null}
           </>

@@ -142,9 +142,10 @@ const OfferShowWrapItem = styled('div')(({ theme }) => ({
 
 type OfferItemProps = {
   timelineItem?: TimelineQueryItem;
+  hidePaymentMethods?: boolean;
 };
 
-export default function OfferItem({ timelineItem }: OfferItemProps) {
+export default function OfferItem({ timelineItem, hidePaymentMethods = false }: OfferItemProps) {
   const { status } = useSession();
   const askAuthorization = useAuthorization();
   const searchParams = useSearchParams();
@@ -163,6 +164,17 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
   const lastSeedBackupTimeOnDevice = useLixiSliceSelector(getSeedBackupTime);
   const settingContext = useContext(SettingContext);
   const seedBackupTime = settingContext?.setting?.lastSeedBackupTime ?? lastSeedBackupTimeOnDevice ?? '';
+
+  // Format fiat price without decimals and with thousands separators for display
+  const formatFiatPrice = (price: number | string | undefined): string => {
+    if (price == null || price === '') return '';
+    const num = typeof price === 'string' ? parseFloat(price) : price;
+    if (isNaN(num)) return String(price);
+    return new Intl.NumberFormat('en-GB', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(Math.round(num));
+  };
 
   const { useGetAccountByAddressQuery } = accountsApi;
   const { currentData: accountQueryData } = useGetAccountByAddressQuery(
@@ -337,7 +349,7 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
             )}
           </CardContent>
         </Collapse>
-        <CardContent>{OfferItemPaymentMethod}</CardContent>
+        {!hidePaymentMethods && <CardContent>{OfferItemPaymentMethod}</CardContent>}
 
         <Typography component={'div'} className="action-section">
           <Typography variant="body2">
@@ -350,7 +362,7 @@ export default function OfferItem({ timelineItem }: OfferItemProps) {
                 (offerData?.tickerPriceGoodsServices ?? DEFAULT_TICKER_GOODS_SERVICES) !==
                   DEFAULT_TICKER_GOODS_SERVICES ? (
                   <span>
-                    ({offerData.priceGoodsServices} {offerData.tickerPriceGoodsServices ?? 'USD'})
+                    ({formatFiatPrice(offerData.priceGoodsServices)} {offerData.tickerPriceGoodsServices ?? 'USD'})
                   </span>
                 ) : null}
               </span>

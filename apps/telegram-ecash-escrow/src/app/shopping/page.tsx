@@ -184,7 +184,7 @@ export default function Shopping() {
 
           <Section>
             <Typography className="title-offer" variant="body1" component="div">
-              <span>Goods & Services</span>
+              <span>Offers</span>
               {isShowSortIcon && (
                 <SortIcon
                   style={{ cursor: 'pointer', color: `${isSorted ? '#0076C4' : ''}` }}
@@ -201,11 +201,7 @@ export default function Shopping() {
                 </span>
               )}
             </Typography>
-            <div
-              id="scrollableDiv"
-              className="offer-list"
-              style={{ overflow: 'auto', maxHeight: 'calc(100vh - 250px)' }}
-            >
+            <div className="offer-list">
               {!isLoadingFilter ? (
                 <InfiniteScroll
                   dataLength={dataFilter.length}
@@ -217,11 +213,10 @@ export default function Shopping() {
                       <Skeleton variant="text" />
                     </>
                   }
-                  scrollableTarget="scrollableDiv"
                   scrollThreshold={'100px'}
                 >
                   {dataFilter.map(item => {
-                    return <OfferItem key={item.id} timelineItem={item as TimelineQueryItem} />;
+                    return <OfferItem key={item.id} timelineItem={item as TimelineQueryItem} hidePaymentMethods />;
                   })}
                 </InfiniteScroll>
               ) : (

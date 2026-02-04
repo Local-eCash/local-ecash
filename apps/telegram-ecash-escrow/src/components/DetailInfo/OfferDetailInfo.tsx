@@ -96,6 +96,17 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
 
   const isOwner = (postData ?? post)?.accountId === selectedAccountId;
 
+  // Format fiat price without decimals and with thousands separators for display
+  const formatFiatPrice = (price: number | string | undefined): string => {
+    if (price == null || price === '') return '';
+    const num = typeof price === 'string' ? parseFloat(price) : price;
+    if (isNaN(num)) return String(price);
+    return new Intl.NumberFormat('en-GB', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(Math.round(num));
+  };
+
   const handleClickAction = e => {
     e.stopPropagation();
     dispatch(openActionSheet('OfferActionSheet', { post: postData }));
@@ -184,7 +195,7 @@ const OfferDetailInfo = ({ timelineItem, post, isShowBuyButton = false, isItemTi
               (offerData?.tickerPriceGoodsServices ?? DEFAULT_TICKER_GOODS_SERVICES) !==
                 DEFAULT_TICKER_GOODS_SERVICES ? (
                 <span>
-                  ({offerData.priceGoodsServices} {offerData.tickerPriceGoodsServices ?? 'USD'})
+                  ({formatFiatPrice(offerData.priceGoodsServices)} {offerData.tickerPriceGoodsServices ?? 'USD'})
                 </span>
               ) : null}
             </>
